@@ -41,3 +41,17 @@ services:
     container_name: redis
     ports:
       - "6379:6379"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+    - PATH=/usr/share/grafana/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    - GF_PATHS_CONFIG=/etc/grafana/grafana.ini
+    - GF_PATHS_DATA=/var/lib/grafana
+    - GF_PATHS_HOME=/usr/share/grafana
+    - GF_PATHS_LOGS=/var/log/grafana
+    - GF_PATHS_PLUGINS=/var/lib/grafana/plugins
+    - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
