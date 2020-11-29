@@ -3,7 +3,10 @@ package db
 import (
 	"context"
 	"fmt"
+	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgxpool"
+	"lightning/utils/structs"
+	"time"
 )
 
 const (
@@ -19,8 +22,27 @@ var polygonStocksAggCandlesInsertTemplate = fmt.Sprintf(
 	polygonStocksAggCandlesIdx,
 )
 
-func PushIntoDB(target interface{}, connPool *pgxpool.Pool) {
-	if _, err := connPool.Exec(context.Background(), polygonStocksAggCandlesInsertTemplate, target); err != nil {
-		fmt.Println("Insert Error: ", err)
+func PushIntoDB(target structs.StocksAggResponseParams, connPool *pgxpool.Pool, timespan string, multiplier int, layout string) {
+	batch := &pgx.Batch{}
+	numInserts := len(target.Results)
+
+	for i := range target.Results {
+		var r structs.AggV2
+		r = target.Results[i]
+		t := time.Unix(0, int64(r.T))
+		batch.Queue(polygonStocksAggCandlesInsertTemplate, target.Ticker, timespan, multiplier, r.V, r.Vw, r.O, r.C, r.H, r.L, t.Format(layout))
+	}
+
+	br := connPool.SendBatch(context.Background(), batch)
+	for i := 0; i < numInserts; i++ {
+		_, err := br.Exec()
+		if err != nil {
+			fmt.Println("Unable to execute statement in batched queue: ", err)
+		}
+	}
+
+	err := br.Close()
+	if err != nil {
+		fmt.Println("Unable to close batch: ", err)
 	}
 }
