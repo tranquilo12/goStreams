@@ -21,6 +21,18 @@ type (
 		Results      []AggV2 `json:"results"`
 		RequestId    string  `json:"request_id"`
 	}
+	ExpandedStocksAggResponseParams struct {
+		Ticker     string
+		Timespan   string
+		Multiplier int
+		V          float64
+		Vw         float64
+		O          float64
+		C          float64
+		H          float64
+		L          float64
+		T          string
+	}
 	StocksAggRequestsURL struct {
 		Url string `json:"url"`
 	}

@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/jackc/pgx/pgxpool"
-	"github.com/schollz/progressbar"
+	"github.com/vbauerster/mpb/decor"
+
+	"github.com/vbauerster/mpb"
 	"go.uber.org/ratelimit"
 	"lightning/utils/config"
 	"lightning/utils/db"
 	"lightning/utils/structs"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"path"
@@ -56,43 +59,56 @@ func MakeAllStocksAggsQueries(tickers []string, timespan string, from_ string, t
 	return urls
 }
 
-func MakeAllStocksAggsRequests(urls []*url.URL) <-chan structs.StocksAggResponseParams {
+func MakeAllStocksAggsRequests(urls []*url.URL, p *mpb.Progress) <-chan structs.StocksAggResponseParams {
 
 	rateLimiter := ratelimit.New(rateLimit)
 	c := make(chan structs.StocksAggResponseParams, len(urls))
-	bar := progressbar.Default(int64(len(urls)), "Downloading")
 	prev := time.Now()
 
 	go func() {
 		var wg sync.WaitGroup
 		wg.Add(len(urls))
 
-		for _, u := range urls {
-			err := bar.Add(1)
-			if err != nil {
-				fmt.Println("Some Error with the progress bar: ", err)
-			}
+		for i, u := range urls {
+			task := fmt.Sprintf("Url#%02d:", i)
+			job := "downloading"
+			b := p.AddBar(rand.Int63n(201)+100,
+				mpb.PrependDecorators(
+					decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
+					decor.Name(job, decor.WCSyncSpaceR),
+					decor.CountersNoUnit("%d / %d", decor.WCSyncWidth),
+				),
+				mpb.AppendDecorators(decor.Percentage(decor.WC{W: 5})),
+			)
 
 			now := rateLimiter.Take()
 			target := new(structs.StocksAggResponseParams)
 
-			go func(u *url.URL) {
+			go func(u *url.URL, bar *mpb.Bar, incr int) {
 				defer wg.Done()
-				resp, err := http.Get(u.String())
-				if err != nil {
-					fmt.Println("Some error: ", err)
-				} else {
-					err = json.NewDecoder(resp.Body).Decode(&target)
-					c <- *target
+				for !bar.Completed() {
+					start := time.Now()
+
+					resp, err := http.Get(u.String())
+					if err != nil {
+						fmt.Println("Some error: ", err)
+					} else {
+						err = json.NewDecoder(resp.Body).Decode(&target)
+						c <- *target
+					}
+					resp.Body.Close()
+
+					bar.IncrBy(incr)
+					bar.DecoratorEwmaUpdate(time.Since(start))
 				}
-				resp.Body.Close()
-			}(u)
+			}(u, b, i+1)
 
 			now.Sub(prev)
 			prev = now
+			//bars = append(bars, b)
 		}
 
-		wg.Wait()
+		p.Wait()
 		close(c)
 	}()
 
@@ -100,7 +116,9 @@ func MakeAllStocksAggsRequests(urls []*url.URL) <-chan structs.StocksAggResponse
 }
 
 func main() {
+	var allOutputs []structs.ExpandedStocksAggResponseParams
 	var urls []*url.URL
+	j := 0
 
 	// Read all the equities into a list, grab the length
 	equitiesList := config.ReadEquitiesList()
@@ -140,15 +158,45 @@ func main() {
 	}
 	defer connPool.Close()
 
-	c := MakeAllStocksAggsRequests(urls)
+	DownloadingWg := new(sync.WaitGroup)
+	p := mpb.New(mpb.WithWaitGroup(DownloadingWg))
+	c := MakeAllStocksAggsRequests(urls, p)
 
-	bar2 := progressbar.Default(int64(len(urls)), "Uploading")
 	for payload := range c {
-		db.PushIntoDB(payload, connPool, timespan, multiplier, layout)
-		err2 := bar2.Add(1)
-		if err2 != nil {
-			fmt.Println("Some Error with the progress bar: ", err2)
+
+		// ANSI escape sequences are not supported on Windows OS
+		task := fmt.Sprintf("Flatten Array#%02d:", j)
+		job := fmt.Sprintf("Quickly...")
+
+		// iterate up
+		j += 1
+
+		// preparing delayed bars
+		b := p.AddBar(rand.Int63n(101)+100,
+			//mpb.BarQueueAfter(bars[j]),
+			mpb.BarFillerClearOnComplete(),
+			mpb.PrependDecorators(
+				decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
+				decor.OnComplete(decor.Name(job, decor.WCSyncSpaceR), "done!"),
+				decor.OnComplete(decor.EwmaETA(decor.ET_STYLE_MMSS, 0, decor.WCSyncWidth), ""),
+			),
+			mpb.AppendDecorators(
+				decor.OnComplete(decor.Percentage(decor.WC{W: 5}), ""),
+			),
+		)
+
+		for !b.Completed() {
+			start := time.Now()
+			output := db.FlattenPayloadBeforeInsert(payload, timespan, multiplier, layout)
+			allOutputs = append(
+				allOutputs,
+				output...,
+			)
+			b.IncrBy(j + 1)
+			b.DecoratorEwmaUpdate(time.Since(start))
 		}
+
 	}
 
+	db.PushGiantPayloadIntoDB(allOutputs, connPool, p)
 }
