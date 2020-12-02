@@ -4,17 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/jackc/pgx/pgxpool"
-	"github.com/vbauerster/mpb/decor"
-
-	"github.com/vbauerster/mpb"
+	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/schollz/progressbar/v3"
 	"go.uber.org/ratelimit"
 	"lightning/utils/config"
 	"lightning/utils/db"
 	"lightning/utils/structs"
-	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"sync"
 	"time"
@@ -59,7 +58,7 @@ func MakeAllStocksAggsQueries(tickers []string, timespan string, from_ string, t
 	return urls
 }
 
-func MakeAllStocksAggsRequests(urls []*url.URL, p *mpb.Progress) <-chan structs.StocksAggResponseParams {
+func MakeAllStocksAggsRequests(urls []*url.URL, bar *progressbar.ProgressBar) <-chan structs.StocksAggResponseParams {
 
 	rateLimiter := ratelimit.New(rateLimit)
 	c := make(chan structs.StocksAggResponseParams, len(urls))
@@ -69,56 +68,125 @@ func MakeAllStocksAggsRequests(urls []*url.URL, p *mpb.Progress) <-chan structs.
 		var wg sync.WaitGroup
 		wg.Add(len(urls))
 
-		for i, u := range urls {
-			task := fmt.Sprintf("Url#%02d:", i)
-			job := "downloading"
-			b := p.AddBar(rand.Int63n(201)+100,
-				mpb.PrependDecorators(
-					decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
-					decor.Name(job, decor.WCSyncSpaceR),
-					decor.CountersNoUnit("%d / %d", decor.WCSyncWidth),
-				),
-				mpb.AppendDecorators(decor.Percentage(decor.WC{W: 5})),
-			)
-
+		for _, u := range urls {
 			now := rateLimiter.Take()
 			target := new(structs.StocksAggResponseParams)
 
-			go func(u *url.URL, bar *mpb.Bar, incr int) {
+			go func(u *url.URL) {
 				defer wg.Done()
-				for !bar.Completed() {
-					start := time.Now()
-
-					resp, err := http.Get(u.String())
-					if err != nil {
-						fmt.Println("Some error: ", err)
-					} else {
-						err = json.NewDecoder(resp.Body).Decode(&target)
-						c <- *target
-					}
-					resp.Body.Close()
-
-					bar.IncrBy(incr)
-					bar.DecoratorEwmaUpdate(time.Since(start))
+				resp, err := http.Get(u.String())
+				if err != nil {
+					fmt.Println("Some error: ", err)
+				} else {
+					err = json.NewDecoder(resp.Body).Decode(&target)
+					c <- *target
 				}
-			}(u, b, i+1)
+				resp.Body.Close()
+			}(u)
 
 			now.Sub(prev)
 			prev = now
-			//bars = append(bars, b)
+			var err = bar.Add(1)
+			if err != nil {
+				fmt.Println("\nSomething wrong with bar1: ", err)
+			}
 		}
 
-		p.Wait()
+		wg.Wait()
 		close(c)
 	}()
 
 	return c
 }
 
+func PushGiantPayloadIntoDB(output []structs.ExpandedStocksAggResponseParams, connPool *pgxpool.Pool) {
+
+	batch := &pgx.Batch{}
+	numInserts := len(output)
+	for k := range output[0 : numInserts-1] {
+		batch.Queue(db.PolygonStocksAggCandlesInsertTemplate,
+			output[k].Ticker,
+			output[k].Timespan,
+			output[k].Multiplier,
+			output[k].V,
+			output[k].Vw,
+			output[k].O,
+			output[k].C,
+			output[k].H,
+			output[k].L,
+			output[k].T)
+	}
+
+	// pull through the batch and exec each statement
+	br := connPool.SendBatch(context.Background(), batch)
+	for k := 0; k < numInserts-1; k++ {
+		_, err := br.Exec()
+		if err != nil {
+			fmt.Println("Unable to execute statement in batched queue: ", err)
+			os.Exit(1)
+		}
+	}
+
+	// Close this batch pool
+	var err = br.Close()
+	if err != nil {
+		fmt.Println("Unable to close batch: ", err)
+	}
+}
+
+func PushBatchedPayloadIntoDB(output []structs.ExpandedStocksAggResponseParams, connPool *pgxpool.Pool, batchSize int) {
+	var i int
+	var j int
+	batch := &pgx.Batch{}
+	numInserts := len(output)
+
+	bar := progressbar.Default(int64(numInserts/batchSize), "Uploading...")
+	for i = 0; i < numInserts-1; i += batchSize {
+		if ((numInserts - 1) - i) == 1 {
+			j = i + 1
+		} else {
+			j = i + batchSize
+		}
+
+		for k := range output[i:j] {
+			batch.Queue(db.PolygonStocksAggCandlesInsertTemplate,
+				output[k].Ticker,
+				output[k].Timespan,
+				output[k].Multiplier,
+				output[k].V,
+				output[k].Vw,
+				output[k].O,
+				output[k].C,
+				output[k].H,
+				output[k].L,
+				output[k].T)
+		}
+
+		// pull through the batch and exec each statement
+		br := connPool.SendBatch(context.Background(), batch)
+		for k := 0; k < (j - i); k++ {
+			_, err := br.Exec()
+			if err != nil {
+				fmt.Println("Unable to execute statement in batched queue: ", err)
+				os.Exit(1)
+			}
+		}
+
+		// Close this batch pool
+		var err = br.Close()
+		if err != nil {
+			fmt.Println("Unable to close batch: ", err)
+		}
+
+		err = bar.Add(1)
+		if err != nil {
+			fmt.Println("Something wrong with inserting batches bar ", err)
+		}
+	}
+}
+
 func main() {
-	var allOutputs []structs.ExpandedStocksAggResponseParams
 	var urls []*url.URL
-	j := 0
 
 	// Read all the equities into a list, grab the length
 	equitiesList := config.ReadEquitiesList()
@@ -158,45 +226,26 @@ func main() {
 	}
 	defer connPool.Close()
 
-	DownloadingWg := new(sync.WaitGroup)
-	p := mpb.New(mpb.WithWaitGroup(DownloadingWg))
-	c := MakeAllStocksAggsRequests(urls, p)
+	bar1 := progressbar.Default(int64(len(urls)), "Downloading...")
+	c := MakeAllStocksAggsRequests(urls, bar1)
+
+	bar2 := progressbar.Default(int64(len(urls)), "Flattening...")
+	var bigPayload []structs.ExpandedStocksAggResponseParams
 
 	for payload := range c {
+		output := db.FlattenPayloadBeforeInsert(payload, timespan, multiplier, layout)
 
-		// ANSI escape sequences are not supported on Windows OS
-		task := fmt.Sprintf("Flatten Array#%02d:", j)
-		job := fmt.Sprintf("Quickly...")
-
-		// iterate up
-		j += 1
-
-		// preparing delayed bars
-		b := p.AddBar(rand.Int63n(101)+100,
-			//mpb.BarQueueAfter(bars[j]),
-			mpb.BarFillerClearOnComplete(),
-			mpb.PrependDecorators(
-				decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
-				decor.OnComplete(decor.Name(job, decor.WCSyncSpaceR), "done!"),
-				decor.OnComplete(decor.EwmaETA(decor.ET_STYLE_MMSS, 0, decor.WCSyncWidth), ""),
-			),
-			mpb.AppendDecorators(
-				decor.OnComplete(decor.Percentage(decor.WC{W: 5}), ""),
-			),
-		)
-
-		for !b.Completed() {
-			start := time.Now()
-			output := db.FlattenPayloadBeforeInsert(payload, timespan, multiplier, layout)
-			allOutputs = append(
-				allOutputs,
-				output...,
-			)
-			b.IncrBy(j + 1)
-			b.DecoratorEwmaUpdate(time.Since(start))
+		if len(output) > 0 {
+			//	PushGiantPayloadIntoDB(output, connPool)
+			bigPayload = append(bigPayload, output...)
 		}
 
+		err = bar2.Add(1)
+		if err != nil {
+			fmt.Println("\nSomething wrong with bar2: ", err)
+		}
 	}
 
-	db.PushGiantPayloadIntoDB(allOutputs, connPool, p)
+	PushBatchedPayloadIntoDB(bigPayload, connPool, 5000)
+
 }
