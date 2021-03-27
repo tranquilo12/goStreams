@@ -35,8 +35,6 @@ func AggBarFlattenPayloadBeforeInsert1(target structs.AggregatesBarsResponse, ti
 			Querycount:   target.Querycount,
 			Resultscount: target.Resultscount,
 			Adjusted:     target.Adjusted,
-			Timespan:     timespan,
-			Multiplier:   multiplier,
 			V:            r.V,
 			Vw:           r.Vw,
 			O:            r.O,
@@ -44,10 +42,52 @@ func AggBarFlattenPayloadBeforeInsert1(target structs.AggregatesBarsResponse, ti
 			H:            r.H,
 			L:            r.L,
 			T:            t,
+			N:            r.N,
+			RequestID:    target.RequestID,
+			Multiplier:   multiplier,
+			Timespan:     timespan,
 		}
 		output = append(output, newArr)
 	}
 	return output
+}
+
+func TickerTypesFlattenPayloadBeforeInsert(insertIntoDB *structs.TickerTypeResponse) structs.TickerType {
+	var Tt structs.TickerType
+	Tt.Cs = insertIntoDB.Results.Types.Cs
+	Tt.Adr = insertIntoDB.Results.Types.Adr
+	Tt.Nvdr = insertIntoDB.Results.Types.Nvdr
+	Tt.Gdr = insertIntoDB.Results.Types.Gdr
+	Tt.Sdr = insertIntoDB.Results.Types.Sdr
+	Tt.Cef = insertIntoDB.Results.Types.Cef
+	Tt.Etp = insertIntoDB.Results.Types.Etp
+	Tt.Reit = insertIntoDB.Results.Types.Reit
+	Tt.Mlp = insertIntoDB.Results.Types.Mlp
+	Tt.Wrt = insertIntoDB.Results.Types.Wrt
+	Tt.Pub = insertIntoDB.Results.Types.Pub
+	Tt.Nyrs = insertIntoDB.Results.Types.Nyrs
+	Tt.Unit = insertIntoDB.Results.Types.Unit
+	Tt.Right = insertIntoDB.Results.Types.Right
+	Tt.Track = insertIntoDB.Results.Types.Track
+	Tt.Ltdp = insertIntoDB.Results.Types.Ltdp
+	Tt.Rylt = insertIntoDB.Results.Types.Rylt
+	Tt.Mf = insertIntoDB.Results.Types.Mf
+	Tt.Pfd = insertIntoDB.Results.Types.Pfd
+	Tt.Fdr = insertIntoDB.Results.Types.Fdr
+	Tt.Ost = insertIntoDB.Results.Types.Ost
+	Tt.Fund = insertIntoDB.Results.Types.Fund
+	Tt.Sp = insertIntoDB.Results.Types.Sp
+	Tt.Si = insertIntoDB.Results.Types.Si
+	Tt.Index = insertIntoDB.Results.IndexTypes.Index
+	Tt.Etf = insertIntoDB.Results.IndexTypes.Etf
+	Tt.Etn = insertIntoDB.Results.IndexTypes.Etf
+	Tt.Etmf = insertIntoDB.Results.IndexTypes.Etmf
+	Tt.Settlement = insertIntoDB.Results.IndexTypes.Settlement
+	Tt.Spot = insertIntoDB.Results.IndexTypes.Spot
+	Tt.Subprod = insertIntoDB.Results.IndexTypes.Subprod
+	Tt.Wc = insertIntoDB.Results.IndexTypes.Wc
+	Tt.Alphaindex = insertIntoDB.Results.IndexTypes.Alphaindex
+	return Tt
 }
 
 //func AggBarFlattenPayloadBeforeInsert(inputChan <- chan structs.AggregatesBarsResponse, timespan string, multiplier int) <- chan structs.AggregatesBars {

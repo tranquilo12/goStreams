@@ -12,9 +12,11 @@ import (
 import "net/url"
 import "go.uber.org/ratelimit"
 
-func MakeAllAggRequests(urls []*url.URL, bar *progressbar.ProgressBar, timespan string, multiplier int) <-chan []structs.AggregatesBars {
+func MakeAllAggRequests(urls []*url.URL, timespan string, multiplier int) <-chan []structs.AggregatesBars {
 	// we are already receiving the AggregatesBarsRequests (un-flattened) here, so the job is to send over this data
 	// to the flattener
+
+	bar := progressbar.Default(int64(len(urls)), "Downloading...")
 
 	// create a rate limiter to stop over-requesting
 	rateLimiter := ratelimit.New(rateLimit)
@@ -59,4 +61,21 @@ func MakeAllAggRequests(urls []*url.URL, bar *progressbar.ProgressBar, timespan 
 	close(c)
 
 	return c
+}
+
+func MakeTickerTypesRequest(apiKey string) *structs.TickerTypeResponse {
+	TickerTypesUrl := MakeTickerTypesUrl(apiKey)
+	TickerTypesTarget := new(structs.TickerTypeResponse)
+
+	resp, err := http.Get(TickerTypesUrl.String())
+	if err != nil {
+		panic(err)
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&TickerTypesTarget)
+	if err != nil {
+		panic(err)
+	}
+
+	return TickerTypesTarget
 }

@@ -8,7 +8,8 @@ import (
 
 const (
 	//Scheme               = "https" // universal for all schemes here
-	aggsHost = "api.polygon.io/v2/aggs"
+	aggsHost        = "api.polygon.io/v2/aggs"
+	tickerTypesHost = "api.polygon.io/v2/reference/types"
 	//dailyOpenCloseHost   = "api.polygon.io/v1/open-close"
 	//groupedDailyBarsHost = "api.polygon.io/v2/aggs/grouped/locale/us/market/stocks"
 
@@ -108,4 +109,19 @@ func MakeAllStocksAggsQueries(tickers []string, timespan string, from_ string, t
 		urls = append(urls, u)
 	}
 	return urls
+}
+
+func MakeTickerTypesUrl(apiKey string) *url.URL {
+	p, err := url.Parse("http://" + tickerTypesHost)
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+
+	// make the url values
+	q := url.Values{}
+	q.Add("apiKey", apiKey)
+	p.RawQuery = q.Encode()
+
+	return p
 }

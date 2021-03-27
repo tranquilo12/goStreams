@@ -45,6 +45,11 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
+    restart: always
+    volumes:
+      - grafana-storage:/var/lib/grafana grafana/grafana
+      - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./config/provisioning:/etc/grafana/provisioning
     ports:
       - "3000:3000"
     depends_on:
@@ -56,4 +61,9 @@ services:
       - GF_PATHS_HOME=/usr/share/grafana
       - GF_PATHS_LOGS=/var/log/grafana
       - GF_PATHS_PLUGINS=/var/lib/grafana/plugins
+      - GF_PATHS_DASHBOARDS=/etc/grafana/provisioning/dashboards
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+
+volumes:
+  grafana-storage:
+    external: true

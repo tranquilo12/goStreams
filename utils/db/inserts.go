@@ -1,7 +1,9 @@
 package db
 
 import (
+	"fmt"
 	"github.com/go-pg/pg/v10"
+	"github.com/schollz/progressbar/v3"
 	"lightning/utils/structs"
 	"sync"
 )
@@ -11,7 +13,7 @@ import (
 //	AggBarsPlaceHolders = "$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17"
 //	AggBarsIdx          = "insert_date, vw, t, multiplier, timespan"
 //)
-
+//
 //var AggBarsInsertTemplate = fmt.Sprintf(
 //	"INSERT INTO aggregates_bars(%s) VALUES (%s) ON CONFLICT (%s) DO NOTHING;",
 //	AggBarsCols,
@@ -76,21 +78,37 @@ func PushGiantPayloadIntoDB1(insertIntoDB <-chan []structs.AggregatesBars, db *p
 	// create a buffer of the waitGroup, of the same length as urls
 	wg.Add(len(insertIntoDB))
 
+	bar := progressbar.Default(int64(len(insertIntoDB)), "Uploading to db...")
+
 	// for each insertIntoDB that follows...spin off another go routine
 	for val, ok := <-insertIntoDB; ok; val, ok = <-insertIntoDB {
 		if ok {
 			go func(val []structs.AggregatesBars) {
 				defer wg.Done()
 
-				_, err := db.Model(&val).Insert()
+				_, err := db.Model(&val).OnConflict("(insert_date, t, vw, multiplier, timespan) DO NOTHING").Insert()
 				if err != nil {
 					panic(err)
 				}
 
+				var barerr = bar.Add(1)
+				if barerr != nil {
+					fmt.Println("\nSomething wrong with bar: ", barerr)
+				}
 			}(val)
 		}
 	}
 	wg.Wait()
 
+	return nil
+}
+
+func PushTickerTypesIntoDB(insertIntoDB *structs.TickerTypeResponse, db *pg.DB) error {
+	flattenedInsertIntoDB := TickerTypesFlattenPayloadBeforeInsert(insertIntoDB)
+	_, err := db.Model(&flattenedInsertIntoDB).Insert()
+	if err != nil {
+		panic(err)
+	}
+	println("Inserted all TickerTypes into the DB...")
 	return nil
 }
