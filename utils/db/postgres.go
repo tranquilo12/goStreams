@@ -22,7 +22,7 @@ func GetPostgresDB() *pg.DB {
 		RetryStatementTimeout: false,
 		MinRetryBackoff:       0,
 		MaxRetryBackoff:       0,
-		PoolSize:              0,
+		PoolSize:              100,
 		MinIdleConns:          0,
 		MaxConnAge:            0,
 		PoolTimeout:           0,

@@ -74,11 +74,11 @@ type (
 		Currency    string    `json:"currency"`
 		Active      bool      `json:"active"`
 		Primaryexch string    `json:"primaryExch"`
-		Type        string    `json:"type,omitempty"`
-		Codes       Codes     `json:"codes,omitempty"`
+		Type        *string   `json:"type,omitempty"`
+		Codes       *Codes    `json:"codes,omitempty"`
 		Updated     time.Time `json:"updated"`
 		URL         string    `json:"url"`
-		Attrs       Attrs     `json:"attrs,omitempty"`
+		Attrs       *Attrs    `json:"attrs,omitempty"`
 	}
 	TickersResponse struct {
 		Page    int            `json:"page"`
@@ -100,7 +100,7 @@ type (
 		Currency     string    `json:"currency"`
 		Active       bool      `json:"active"`
 		Primaryexch  string    `json:"primaryExch"`
-		Type         string    `json:"type,omitempty"`
+		Type         *string   `json:"type,omitempty"`
 		Cik          string    `json:"cik"`
 		Figiuid      string    `json:"figiuid"`
 		Scfigi       string    `json:"scfigi"`
@@ -116,14 +116,14 @@ type (
 
 // tickers VX
 type (
-	TickersVxInnerResponse struct {
+	TickerVxInnerResponse struct {
 		Ticker          string `json:"ticker"`
 		Name            string `json:"name"`
 		Market          string `json:"market"`
 		Locale          string `json:"locale"`
 		PrimaryExchange string `json:"primary_exchange"`
 		Type            string `json:"type"`
-		Active          string `json:"active"`
+		Active          bool   `json:"active"`
 		CurrencyName    string `json:"currency_name"`
 		Cik             string `json:"cik"`
 		CompositeFigi   string `json:"composite_figi"`
@@ -131,7 +131,11 @@ type (
 		LastUpdatedUtc  string `json:"last_updated_utc"`
 	}
 	TickersVxResponse struct {
-		Results TickersVxInnerResponse `json:"results"`
+		Results      []TickerVxInnerResponse `json:"results"`
+		Status       string                  `json:"status"`
+		RequestId    string                  `json:"request_id"`
+		Count        int64                   `json:"count"`
+		NextPagePath string                  `json:"next_page_path"`
 	}
 	TickerVx struct {
 		InsertDatetime  time.Time `json:"insert_datetime"`
@@ -141,7 +145,7 @@ type (
 		Locale          string    `json:"locale"`
 		PrimaryExchange string    `json:"primary_exchange"`
 		Type            string    `json:"type"`
-		Active          string    `json:"active"`
+		Active          bool      `json:"active"`
 		CurrencyName    string    `json:"currency_name"`
 		Cik             string    `json:"cik"`
 		CompositeFigi   string    `json:"composite_figi"`

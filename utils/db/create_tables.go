@@ -10,6 +10,7 @@ import (
 func createSchema(db *pg.DB) error {
 	models := []interface{}{
 		(*structs.DailyOpenClose)(nil),
+		(*structs.Tickers)(nil),
 		(*structs.TickerVx)(nil), // rename in db to Tickers_VX
 		(*structs.TickerType)(nil),
 		(*structs.TickerDetails)(nil),

@@ -5,6 +5,9 @@ import (
 	"github.com/akamensky/argparse"
 	"lightning/utils/db"
 	"lightning/utils/structs"
+	"time"
+
+	//url2 "net/url"
 	"os"
 )
 
@@ -19,7 +22,7 @@ const (
 
 func main() {
 	parser := argparse.NewParser("lightning", "Which program do you want to execute?")
-	prog := parser.String("p", "program", &argparse.Options{Required: true, Help: "TickerTypes(tt) or Aggregates(ag)?"})
+	prog := parser.String("p", "program", &argparse.Options{Required: true, Help: "TickerTypes(tt) or Aggregates(ag) or TickersVx(vx)?"})
 	err := parser.Parse(os.Args)
 	if err != nil {
 		// In case of error print error and print usage
@@ -41,6 +44,29 @@ func main() {
 		}
 	}
 
+	if *prog == "vx" {
+		estLoc, _ := time.LoadLocation("America/New_York")
+		startDate := time.Date(2021, 1, 1, 0, 0, 0, 0, estLoc)
+		endDate := time.Date(2021, 1, 1, 0, 0, 0, 0, estLoc)
+
+		urls := db.MakeAllTickersVxSourceQueries(apiKey, startDate, endDate)
+		unexpandedChan := db.MakeAllTickersVxRequests(urls)
+
+		err := db.PushTickerVxIntoDB(unexpandedChan, postgresDB)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if *prog == "ti" {
+		urls := db.MakeAllTickersQuery(apiKey, 1000)
+		unexpandedChan := db.MakeAllTickersRequests(urls)
+		err := db.PushTickerIntoDB(unexpandedChan, postgresDB)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	if *prog == "ag" {
 		// get all ticker
 		var tickers = []string{"AAPL", "GME"}
@@ -54,4 +80,9 @@ func main() {
 			panic(err)
 		}
 	}
+
+	if *prog == "tb" {
+		db.ExecCreateAllTablesModels()
+	}
+
 }

@@ -78,7 +78,7 @@ func PushGiantPayloadIntoDB1(insertIntoDB <-chan []structs.AggregatesBars, db *p
 	// create a buffer of the waitGroup, of the same length as urls
 	wg.Add(len(insertIntoDB))
 
-	bar := progressbar.Default(int64(len(insertIntoDB)), "Uploading to db...")
+	bar := progressbar.Default(int64(len(insertIntoDB)), "Uploading Aggs to db...")
 
 	// for each insertIntoDB that follows...spin off another go routine
 	for val, ok := <-insertIntoDB; ok; val, ok = <-insertIntoDB {
@@ -99,7 +99,6 @@ func PushGiantPayloadIntoDB1(insertIntoDB <-chan []structs.AggregatesBars, db *p
 		}
 	}
 	wg.Wait()
-
 	return nil
 }
 
@@ -110,5 +109,78 @@ func PushTickerTypesIntoDB(insertIntoDB *structs.TickerTypeResponse, db *pg.DB) 
 		panic(err)
 	}
 	println("Inserted all TickerTypes into the DB...")
+	return nil
+}
+
+func PushTickerVxIntoDB(insertIntoDB <-chan []structs.TickerVx, db *pg.DB) error {
+
+	// use WaitGroup to make things more smooth with channels
+	var wg sync.WaitGroup
+
+	// create a buffer of the waitGroup, of the same length as urls
+	//wg.Add(len(insertIntoDB))
+
+	bar := progressbar.Default(500, "Uploading TickerVx to db...")
+
+	// for each insertIntoDB that follows...spin off another go routine
+	for val, ok := <-insertIntoDB; ok; val, ok = <-insertIntoDB {
+		if ok && val != nil {
+			wg.Add(1)
+
+			go func(val []structs.TickerVx) {
+				defer wg.Done()
+
+				_, err := db.Model(&val).
+					OnConflict("(ticker, market, last_updated_utc) DO NOTHING").
+					//OnConflict("(ticker, market, last_updated_utc) DO UPDATE").
+					//Set("last_updated_utc = EXCLUDED.last_updated_utc").
+					Insert()
+
+				if err != nil {
+					panic(err)
+				}
+
+				var barerr = bar.Add(1)
+				if barerr != nil {
+					fmt.Println("\nSomething wrong with bar: ", barerr)
+				}
+			}(val)
+		}
+	}
+	wg.Wait()
+	return nil
+}
+
+func PushTickerIntoDB(insertIntoDB <-chan []structs.Tickers, db *pg.DB) error {
+
+	// use WaitGroup to make things more smooth with channels
+	var wg sync.WaitGroup
+
+	// create a buffer of the waitGroup, of the same length as urls
+	//wg.Add(len(insertIntoDB))
+
+	bar := progressbar.Default(int64(len(insertIntoDB)), "Uploading Tickers to db...")
+
+	// for each insertIntoDB that follows...spin off another go routine
+	for val, ok := <-insertIntoDB; ok; val, ok = <-insertIntoDB {
+		if ok {
+			wg.Add(1)
+
+			go func(val []structs.Tickers) {
+				defer wg.Done()
+
+				_, err := db.Model(&val).OnConflict("(ticker, market) DO NOTHING").Insert()
+				if err != nil {
+					panic(err)
+				}
+
+				var barerr = bar.Add(1)
+				if barerr != nil {
+					fmt.Println("\nSomething wrong with bar: ", barerr)
+				}
+			}(val)
+		}
+	}
+	wg.Wait()
 	return nil
 }
