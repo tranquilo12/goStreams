@@ -134,3 +134,12 @@ package main
 
 //PushBatchedPayloadIntoDB(bigPayload, poolConfig, 5000)
 //}
+
+//go get -u github.com/spf13/cobra
+//package main
+//
+//import "lightning/cmd"
+//
+//func main() {
+//	cmd.Execute()
+//}

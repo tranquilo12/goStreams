@@ -1,26 +1,26 @@
 version: '3.2'
 services:
 
-#  zookeeper:
-#    image: "docker.io/bitnami/zookeeper:3"
-#    ports:
-#      - "2181:2181"
-#    volumes:
-#      - "zookeeper_data:/bitnami"
-#    environment:
-#      - ALLOW_ANONYMOUS_LOGIN=yes
-#  kafka:
-#    image: "docker.io/bitnami/kafka:2-debian-10"
-#    ports:
-#      - "9092:9092"
-#    volumes:
-#      - "kafka_data:/bitnami"
-#      - ./config/kafka/persistence:/bitnami/kafka
-#    environment:
-#      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
-#      - ALLOW_PLAINTEXT_LISTENER=yes
-#    depends_on:
-#      - zookeeper
+  #  zookeeper:
+  #    image: "docker.io/bitnami/zookeeper:3"
+  #    ports:
+  #      - "2181:2181"
+  #    volumes:
+  #      - "zookeeper_data:/bitnami"
+  #    environment:
+  #      - ALLOW_ANONYMOUS_LOGIN=yes
+  #  kafka:
+  #    image: "docker.io/bitnami/kafka:2-debian-10"
+  #    ports:
+  #      - "9092:9092"
+  #    volumes:
+  #      - "kafka_data:/bitnami"
+  #      - ./config/kafka/persistence:/bitnami/kafka
+  #    environment:
+  #      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+  #      - ALLOW_PLAINTEXT_LISTENER=yes
+  #    depends_on:
+  #      - zookeeper
 
   pgbouncer:
     image: edoburu/pgbouncer:latest
@@ -32,7 +32,6 @@ services:
       - ./config/pgbouncer/log:/var/log/pgbouncer/
     ports:
       - "6432:6432"
-
 
   prometheus:
     image: prom/prometheus:latest
@@ -70,10 +69,35 @@ services:
       - redis
 
   redis:
-    image: redis:latest
+    image: redislabs/rejson:latest
     container_name: redis
+    volumes:
+      - ./config/redis/data:/data # persistence
+      - ./config/redis/conf:/usr/local/etc/redis # for config files
+    networks:
+      - data_sharing
     ports:
-      - "6379:6379"
+      - "7000:6379"
+    environment:
+      - REDIS_URL=redis://redis:6379
+  publisher:
+    # Makes the compose- build our Image based on the files in publisher folder
+    build:
+      context: ../publisher
+      dockerfile: Dockerfile
+    depends_on:
+      - redis
+    networks:
+      - data_sharing
+  subscriber:
+    build:
+      context: ../subscriber
+      dockerfile: Dockerfile
+    depends_on:
+      - redis
+      - publisher
+    networks:
+      - data_sharing
 
   grafana:
     image: grafana/grafana:latest
@@ -96,6 +120,10 @@ services:
       - GF_PATHS_PLUGINS=/var/lib/grafana/plugins
       - GF_PATHS_DASHBOARDS=/etc/grafana/provisioning/dashboards
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+
+networks:
+  data_sharing:
+    driver: bridge
 
 volumes:
   grafana-storage:

@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"path"
 	"strconv"
-	strings "strings"
+	"strings"
 	"time"
 )
 
@@ -86,7 +86,7 @@ const (
 //	return urls
 //}
 
-// aggregates bars url: /v2/aggs/ticker/{stocksTicker}/range/{multiplier}/{timespan}/{from}/{to}
+// MakeAggQueryStr aggregates bars url: /v2/aggs/ticker/{stocksTicker}/range/{multiplier}/{timespan}/{from}/{to}
 func MakeAggQueryStr(stocksTicker string, multiplier string, timespan string, from_ string, to_ string, apiKey string) *url.URL {
 	p, err := url.Parse("https://" + aggsHost)
 	if err != nil {
@@ -108,6 +108,7 @@ func MakeAggQueryStr(stocksTicker string, multiplier string, timespan string, fr
 }
 
 func MakeAllStocksAggsQueries(tickers []string, timespan string, from_ string, to_ string, apiKey string) []*url.URL {
+	// no need for channels in this yet, just a quick function that makes all the queries and sends it back
 	var urls []*url.URL
 	for _, ticker := range tickers {
 		u := MakeAggQueryStr(ticker, "1", timespan, from_, to_, apiKey)
