@@ -85,7 +85,10 @@ func MakeAllStocksAggsRequests(urls []*url.URL) <-chan structs.StocksAggResponse
 					err = json.NewDecoder(resp.Body).Decode(&target)
 					c <- *target
 				}
-				resp.Body.Close()
+				err = resp.Body.Close()
+				if err != nil {
+					return
+				}
 			}(u)
 
 			now.Sub(prev)

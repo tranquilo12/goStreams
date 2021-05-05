@@ -89,7 +89,12 @@ func ReadEquitiesList() []string {
 	if err != nil {
 		log.Fatal("Unable to read input file "+"equities_list.csv", err)
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+
+		}
+	}(f)
 
 	csvReader := csv.NewReader(f)
 	records, err := csvReader.ReadAll()
