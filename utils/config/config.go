@@ -7,6 +7,7 @@ import (
 	"os"
 )
 
+// DbParams Struct for the Postgres db parameters.
 type DbParams struct {
 	Host     string
 	Port     string
@@ -15,6 +16,7 @@ type DbParams struct {
 	Dbname   string
 }
 
+// RedisParams Struct for Redis db parameters.
 type RedisParams struct {
 	Host          string
 	Port          string
@@ -23,6 +25,8 @@ type RedisParams struct {
 	SocketTimeout string
 }
 
+// SetDBParams Function that reads the config.ini file within the directory, setting the Postgres db parameters.
+// param user has options 'grafana' and 'postgres'.
 func SetDBParams(params *DbParams, user string) error {
 	pwd, err := os.Getwd()
 	config, err := ini.Load(pwd + "/config.ini")
@@ -47,6 +51,8 @@ func SetDBParams(params *DbParams, user string) error {
 	return err
 }
 
+// SetPolygonCred Function that reads the config.ini file within the directory, and returns the API Key.
+// param user has options 'me' and 'other'.
 func SetPolygonCred(user string) string {
 	pwd, err := os.Getwd()
 	config, err := ini.Load(pwd + "/config.ini")
@@ -66,6 +72,7 @@ func SetPolygonCred(user string) string {
 	return appId
 }
 
+// SetRedisCred Function that reads the config.ini file within the directory, setting the Redis db parameters.
 func SetRedisCred(params *RedisParams) error {
 	config, err := ini.Load("config.ini")
 	if err != nil {
@@ -81,6 +88,7 @@ func SetRedisCred(params *RedisParams) error {
 	return err
 }
 
+// ReadEquitiesList Function that reads the file /utils/config/equities_list.csv, to return the list of equities.
 func ReadEquitiesList() []string {
 	var res []string
 

@@ -42,7 +42,7 @@ func MakeAllAggRequests(urls []*url.URL, timespan string, multiplier int) <-chan
 				panic(err)
 			} else {
 				err = json.NewDecoder(resp.Body).Decode(&target)
-				flattenedTarget := AggBarFlattenPayloadBeforeInsert1(*target, timespan, multiplier)
+				flattenedTarget := AggBarFlattenPayloadBeforeInsert(*target, timespan, multiplier)
 				c <- flattenedTarget
 			}
 			resp.Body.Close()
@@ -121,7 +121,7 @@ func MakeAllTickersVxRequests(urls []*url.URL) <-chan []structs.TickerVx {
 				}
 
 				// First nextPagePath is a string, then it will be changed to URL type later
-				nextPagePath := &firstResponse.NextPagePath
+				nextPagePath := &firstResponse.NextUrl
 				for *nextPagePath != "" {
 					nextFlattenedTarget := new(structs.TickersVxResponse)
 					// change the type to URL here
@@ -133,7 +133,7 @@ func MakeAllTickersVxRequests(urls []*url.URL) <-chan []structs.TickerVx {
 					} else {
 						err = json.NewDecoder(nextResponse.Body).Decode(&nextFlattenedTarget)
 						// nextPagePath will be re-written here...
-						nextPagePath = &nextFlattenedTarget.NextPagePath
+						nextPagePath = &nextFlattenedTarget.NextUrl
 						// flatten the payload here as well
 						nextFlattenedTarget := TickersVxFlattenPayloadBeforeInsert(*nextFlattenedTarget)
 						c <- nextFlattenedTarget

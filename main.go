@@ -18,12 +18,11 @@ package main
 import (
 	"fmt"
 	"github.com/akamensky/argparse"
+	"github.com/go-pg/pg"
 	"lightning/utils/db"
 	"lightning/utils/structs"
-	"time"
-
-	//url2 "net/url"
 	"os"
+	"time"
 )
 
 const (
@@ -47,7 +46,12 @@ func main() {
 
 	// get database conn
 	postgresDB := db.GetPostgresDB()
-	defer postgresDB.Close()
+	defer func(postgresDB *pg.DB) {
+		err := postgresDB.Close()
+		if err != nil {
+
+		}
+	}(postgresDB)
 
 	if *prog == "tt" {
 		var insertIntoDB *structs.TickerTypeResponse

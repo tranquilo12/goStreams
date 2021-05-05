@@ -1,9 +1,8 @@
-// File that contains multiple functions that can be called by main.go
 package db
 
 import "github.com/go-pg/pg/v10"
 
-// make sure the connection to postgres is fine
+// GetPostgresDB Makes sure the connection object to the postgres instance is returned.
 func GetPostgresDB() *pg.DB {
 	var postgresDB = pg.Connect(&pg.Options{
 		Network:               "",
@@ -32,7 +31,7 @@ func GetPostgresDB() *pg.DB {
 	return postgresDB
 }
 
-// make sure all table models are made
+// ExecCreateAllTablesModels Makes sure CreateAllTablesModels() is called and all table models are made.
 func ExecCreateAllTablesModels() {
 	err := CreateAllTablesModel()
 	if err != nil {

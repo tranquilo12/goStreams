@@ -53,7 +53,12 @@ func CreateAllTablesModel() error {
 		Password: "rogerthat",
 		Database: "TimeScaleDB",
 	})
-	defer db.Close()
+	defer func(db *pg.DB) {
+		err := db.Close()
+		if err != nil {
+
+		}
+	}(db)
 
 	err := createSchema(db)
 	if err != nil {

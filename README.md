@@ -12,14 +12,14 @@ To remain OS agnostic, postgres, pgbouncer and Redis are all docker containers.
     - The containers might be running, but are they really functional? Check all with the script `check_docker_status.sh`
   
 ### Postgres 
-- Postgres settings can  be found in `./docker/config/postgres`
+- Postgres' settings can  be found in `./docker/config/postgres`
 - If you don't want to use your local postgres instance, you can uncomment lines 25-37 in 
   `docker-compose.yaml`
 - If you're using a local instance, make sure there's a database called "TimeScaleDB" in it.
 - Once running, to connect to the docker postgres instance, try: 
   `psql postgresq://{username}:{password}@localhost:{port}/{database_name}`.
   
-#### WSL/Windows issues
+#### WSL2(Win 10) issues
 - If you're looking to connect to your Windows Postgres instance, from your WSL2 instance... you're in for some effort.
 - These are all things that must be done, I have not tested if some of these can be eliminated.
   - Make sure the Windows Firewall accepts incoming connections from the WSL2 instance. 
@@ -31,7 +31,7 @@ To remain OS agnostic, postgres, pgbouncer and Redis are all docker containers.
       - Make sure the IPv6 local connections looks like:
         `host    all             all             ::/0                    md`
       - The above settings make the damn database accessible by everybody.
-      - **BE CAREFUL WHEN IN PRODUCTION**.
+      - **CAREFUL WHEN IN PRODUCTION**.
   - In `postgresql.conf` found in `C:\Program Files\PostgreSQL\{version}\data\`: 
       - Change `listen_addresses` to `*`.
       - Make sure `port` is `5432`.
@@ -56,3 +56,10 @@ To remain OS agnostic, postgres, pgbouncer and Redis are all docker containers.
   
 ### Useful commands
 - (In Windows) `pg_ctl -D "P:\pg_db\data\" restart/start/stop;` - Start and stop postgres instance.
+
+## Documentation 1. 
+
+### utils/db
+
+Arguably the most important subdirectory. 
+- postgres.go: 

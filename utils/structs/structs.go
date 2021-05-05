@@ -131,11 +131,11 @@ type (
 		LastUpdatedUtc  string `json:"last_updated_utc"`
 	}
 	TickersVxResponse struct {
-		Results      []TickerVxInnerResponse `json:"results"`
-		Status       string                  `json:"status"`
-		RequestId    string                  `json:"request_id"`
-		Count        int64                   `json:"count"`
-		NextPagePath string                  `json:"next_page_path"`
+		Results   []TickerVxInnerResponse `json:"results"`
+		Status    string                  `json:"status"`
+		RequestId string                  `json:"request_id"`
+		Count     int64                   `json:"count"`
+		NextUrl   string                  `json:"next_url"`
 	}
 	TickerVx struct {
 		InsertDatetime  time.Time `json:"insert_datetime"`
@@ -182,7 +182,6 @@ type (
 		Sp    string `json:"SP"`
 		Si    string `json:"SI"`
 	}
-
 	IndexTypesResponse struct {
 		Index      string `json:"INDEX"`
 		Etf        string `json:"ETF"`
@@ -194,17 +193,14 @@ type (
 		Wc         string `json:"WC"`
 		Alphaindex string `json:"ALPHAINDEX"`
 	}
-
 	TotalResponse struct {
 		Types      TypesResponse      `json:"types"`
 		IndexTypes IndexTypesResponse `json:"indexTypes"`
 	}
-
 	TickerTypeResponse struct {
 		Status  string        `json:"status"`
 		Results TotalResponse `json:"results"`
 	}
-
 	TickerType struct {
 		Cs         string `json:"CS"`
 		Adr        string `json:"ADR"`
@@ -242,7 +238,7 @@ type (
 	}
 )
 
-// ticker details
+// TickerDetails
 type TickerDetails struct {
 	Logo           string   `json:"logo"`
 	Listdate       string   `json:"listdate"`
@@ -273,7 +269,7 @@ type TickerDetails struct {
 	Active         bool     `json:"active"`
 }
 
-// ticker news
+// TickerNews
 type TickerNews struct {
 	Symbols   []string `json:"symbols"`
 	Timestamp string   `json:"timestamp"`
@@ -351,7 +347,7 @@ type (
 	}
 )
 
-// stock dividends
+// StockDividendsResponse
 type StockDividendsResponse struct {
 	Status  string `json:"status"`
 	Count   int    `json:"count"`
@@ -365,6 +361,7 @@ type StockDividendsResponse struct {
 	} `json:"results"`
 }
 
+// StockDividends
 type StockDividends struct {
 	InsertDate   time.Time `json:"insert_date"`
 	Status       string    `json:"status"`
@@ -377,7 +374,7 @@ type StockDividends struct {
 	Declareddate string    `json:"declaredDate,omitempty"`
 }
 
-// stock financials
+// StockFinancialsResponse
 type StockFinancialsResponse struct {
 	Status  string `json:"status"`
 	Results []struct {
@@ -495,6 +492,7 @@ type StockFinancialsResponse struct {
 	} `json:"results"`
 }
 
+// StockFinancials
 type StockFinancials struct {
 	Status                                                 string    `json:"status"`
 	InsertDate                                             time.Time `json:"insert_date"`
@@ -611,7 +609,7 @@ type StockFinancials struct {
 	Returnonsales                                          float64   `json:"returnOnSales,omitempty"`
 }
 
-// market holidays
+// MarketHolidays
 type MarketHolidays struct {
 	Exchange string    `json:"exchange"`
 	Name     string    `json:"name"`
@@ -621,7 +619,7 @@ type MarketHolidays struct {
 	Close    time.Time `json:"close,omitempty"`
 }
 
-// market status []
+// MarketStatusResponse []
 type MarketStatusResponse []struct {
 	Market     string    `json:"market"`
 	Servertime time.Time `json:"serverTime"`
@@ -636,6 +634,7 @@ type MarketStatusResponse []struct {
 	} `json:"currencies"`
 }
 
+// MarketStatus
 type MarketStatus struct {
 	InsertDate time.Time `json:"insert_date"`
 	Market     string    `json:"market"`
@@ -647,7 +646,7 @@ type MarketStatus struct {
 	Crypto     string    `json:"crypto"`
 }
 
-// stock exchanges []
+// StockExchanges []
 type StockExchanges struct {
 	ID     int    `json:"id"`
 	Type   string `json:"type"`
@@ -658,7 +657,7 @@ type StockExchanges struct {
 	Code   string `json:"code,omitempty"`
 }
 
-// condition mappings
+// ConditionMappings
 type ConditionsMapping struct {
 	Num0  string `json:"0"`
 	Num1  string `json:"1"`
@@ -717,7 +716,7 @@ type ConditionsMapping struct {
 	Num54 string `json:"54"`
 }
 
-// crypto exchanges []
+// CryptoExchangesResponse []
 type CryptoExchangesResponse []struct {
 	ID     int    `json:"id"`
 	Market string `json:"market"`
@@ -727,6 +726,7 @@ type CryptoExchangesResponse []struct {
 	Locale string `json:"locale"`
 }
 
+// CryptoExchanges
 type CryptoExchanges struct {
 	InsertDate time.Time `json:"insert_date"`
 	ID         int       `json:"id"`
@@ -737,7 +737,7 @@ type CryptoExchanges struct {
 	Locale     string    `json:"locale"`
 }
 
-// daily open and close
+// DailyOpenClose
 type DailyOpenClose struct {
 	Status     string  `json:"status"`
 	From       string  `json:"from"`
@@ -751,7 +751,7 @@ type DailyOpenClose struct {
 	PreMarket  float64 `json:"preMarket"`
 }
 
-// Aggregates Bars
+// AggregatesBarsResults
 type (
 	AggregatesBarsResults struct {
 		V  float64 `json:"v"`
