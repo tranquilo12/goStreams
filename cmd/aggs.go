@@ -18,19 +18,13 @@ limitations under the License.
 
 import (
 	"fmt"
-	"lightning/utils/db"
-	"time"
-
 	"github.com/spf13/cobra"
+	"lightning/utils/db"
 )
 
-const (
-	TimeLayout = "2006-01-02"
-)
-
-// tickerVxesCmd represents the tickerVxes command
-var tickerVxesCmd = &cobra.Command{
-	Use:   "tickerVxes",
+// aggsCmd represents the aggs command
+var aggsCmd = &cobra.Command{
+	Use:   "aggs",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -39,7 +33,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("tickerVxes called")
+		fmt.Println("aggs called")
 		user, _ := cmd.Flags().GetString("user")
 		if user == "" {
 			user = "postgres"
@@ -90,14 +84,13 @@ to quickly create a Cobra application.`,
 		postgresDB := db.GetPostgresDB(user, password, database, host, port)
 		defer postgresDB.Close()
 
-		estLoc, _ := time.LoadLocation("America/New_York")
-		to, _ := time.ParseInLocation(TimeLayout, to_, estLoc)
-		from, _ := time.ParseInLocation(TimeLayout, from_, estLoc)
+		var tickers = []string{"AAPL", "GME"}
 
-		urls := db.MakeAllTickersVxSourceQueries(apiKey, from, to)
-		unexpandedChan := db.MakeAllTickersVxRequests(urls)
+		urls := db.MakeAllStocksAggsQueries(tickers, timespan, from_, to_, apiKey)
+		unexpandedChan := db.MakeAllAggRequests(urls, timespan, multiplier)
 
-		err := db.PushTickerVxIntoDB(unexpandedChan, postgresDB)
+		// insert all the data quickly!
+		err := db.PushGiantPayloadIntoDB1(unexpandedChan, postgresDB)
 		if err != nil {
 			panic(err)
 		}
@@ -105,20 +98,24 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	rootCmd.AddCommand(tickerVxesCmd)
+	rootCmd.AddCommand(aggsCmd)
 
 	// Here you will define your flags and configuration settings.
-	tickerVxesCmd.Flags().StringP("user", "u", "", "Postgres username")
-	tickerVxesCmd.Flags().StringP("password", "P", "", "Postgres password")
-	tickerVxesCmd.Flags().StringP("database", "d", "", "Postgres database name")
-	tickerVxesCmd.Flags().StringP("host", "H", "127.0.0.1", "Postgres host (default localhost)")
-	tickerVxesCmd.Flags().StringP("port", "p", "5432", "Postgres port (default 5432)")
+	aggsCmd.Flags().StringP("user", "u", "", "Postgres username")
+	aggsCmd.Flags().StringP("password", "P", "", "Postgres password")
+	aggsCmd.Flags().StringP("database", "d", "", "Postgres database name")
+	aggsCmd.Flags().StringP("host", "H", "127.0.0.1", "Postgres host (default localhost)")
+	aggsCmd.Flags().StringP("port", "p", "5432", "Postgres port (default 5432)")
+	aggsCmd.Flags().StringP("timespan", "T", "", "Timespan (minute, hour, day...)")
+	aggsCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")
+	aggsCmd.Flags().StringP("to", "t", "", "To which date? (format = %Y-%m-%d)")
+	aggsCmd.Flags().IntP("mult", "m", 2, "Multiplier to use with Timespan")
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// tickerVxesCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// aggsCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// tickerVxesCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// aggsCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
