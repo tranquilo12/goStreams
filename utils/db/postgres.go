@@ -1,39 +1,26 @@
 package db
 
-import "github.com/go-pg/pg/v10"
+import (
+	"fmt"
+	"github.com/go-pg/pg/v10"
+)
 
 // GetPostgresDB Makes sure the connection object to the postgres instance is returned.
-func GetPostgresDB() *pg.DB {
+func GetPostgresDB(user string, password string, database string, host string, port string) *pg.DB {
+	addr := fmt.Sprintf("%s:%s", host, port)
 	var postgresDB = pg.Connect(&pg.Options{
-		Network:               "",
-		Addr:                  "127.0.0.1:5432",
-		Dialer:                nil,
-		OnConnect:             nil,
-		User:                  "postgres",
-		Password:              "rogerthat",
-		Database:              "TimeScaleDB",
-		ApplicationName:       "",
-		TLSConfig:             nil,
-		DialTimeout:           0,
-		ReadTimeout:           0,
-		WriteTimeout:          0,
-		MaxRetries:            0,
-		RetryStatementTimeout: false,
-		MinRetryBackoff:       0,
-		MaxRetryBackoff:       0,
-		PoolSize:              100,
-		MinIdleConns:          0,
-		MaxConnAge:            0,
-		PoolTimeout:           0,
-		IdleTimeout:           0,
-		IdleCheckFrequency:    0,
+		Addr:     addr,
+		User:     user,
+		Password: password,
+		Database: database,
+		PoolSize: 100,
 	})
 	return postgresDB
 }
 
 // ExecCreateAllTablesModels Makes sure CreateAllTablesModels() is called and all table models are made.
-func ExecCreateAllTablesModels() {
-	err := CreateAllTablesModel()
+func ExecCreateAllTablesModels(user string, password string, database string, host string, port string) {
+	err := CreateAllTablesModel(user, password, database, host, port)
 	if err != nil {
 		panic(err)
 	}

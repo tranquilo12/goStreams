@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"github.com/go-pg/pg/v10"
 	"github.com/go-pg/pg/v10/orm"
 	"lightning/utils/structs"
@@ -45,13 +46,14 @@ func createSchema(db *pg.DB) error {
 	return nil
 }
 
-func CreateAllTablesModel() error {
+func CreateAllTablesModel(user string, password string, database string, host string, port string) error {
 
+	addr := fmt.Sprintf("%s:%s", host, port)
 	db := pg.Connect(&pg.Options{
-		Addr:     "127.0.0.1:5432",
-		User:     "postgres",
-		Password: "rogerthat",
-		Database: "TimeScaleDB",
+		Addr:     addr,
+		User:     user,
+		Password: password,
+		Database: database,
 	})
 	defer func(db *pg.DB) {
 		err := db.Close()

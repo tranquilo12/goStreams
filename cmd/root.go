@@ -1,3 +1,5 @@
+package cmd
+
 /*
 Copyright © 2021 NAME HERE <EMAIL ADDRESS>
 
@@ -13,10 +15,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
 
 import (
-	fmt "fmt"
+	"fmt"
 	"github.com/spf13/cobra"
 	"os"
 
@@ -54,8 +55,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	usage := "config file (default is $HOME/.lightning.yaml) but is currently $HOME/config.ini"
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "$HOME/config.ini", usage)
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.lightning.yaml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.

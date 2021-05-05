@@ -24,17 +24,18 @@ services:
 
 ##### IF there's no local instance of the postgres running/ if you dont want to mix the local instance
 ##### with the docker instance...
-#  db:
-#    image: postgres
-#    restart: unless-stopped
-#    volumes:
-#      - ./postgres/data/db:/var/lib/postgresql/data
-#    environment:
-#      - POSTGRES_DB=postgres
-#      - POSTGRES_USER=postgres
-#      - POSTGRES_PASSWORD=postgres
-#    ports:
-#      - "5432:5432"
+  db:
+    image: postgres
+    restart: unless-stopped
+    volumes:
+      - ./postgres/data/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=polygonio
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=Complicated@Password@Here
+      - PGHOST=localhost
+    ports:
+      - "5432:5432"
 
   pgbouncer:
     image: edoburu/pgbouncer:latest
@@ -94,24 +95,26 @@ services:
       - "7000:6379"
     environment:
       - REDIS_URL=redis://redis:6379
-  publisher:
-    # Makes the compose- build our Image based on the files in publisher folder
-    build:
-      context: ../publisher
-      dockerfile: Dockerfile
-    depends_on:
-      - redis
-    networks:
-      - data_sharing
-  subscriber:
-    build:
-      context: ../subscriber
-      dockerfile: Dockerfile
-    depends_on:
-      - redis
-      - publisher
-    networks:
-      - data_sharing
+
+#  publisher:
+#    # Makes the compose- build our Image based on the files in publisher folder
+#    build:
+#      context: ../publisher
+#      dockerfile: Dockerfile
+#    depends_on:
+#      - redis
+#    networks:
+#      - data_sharing
+#
+#  subscriber:
+#    build:
+#      context: ../subscriber
+#      dockerfile: Dockerfile
+#    depends_on:
+#      - redis
+#      - publisher
+#    networks:
+#      - data_sharing
 
   grafana:
     image: grafana/grafana:latest
