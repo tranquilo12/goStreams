@@ -86,7 +86,7 @@ const (
 //	return urls
 //}
 
-// MakeAggQueryStr aggregates bars url: /v2/aggs/ticker/{stocksTicker}/range/{multiplier}/{timespan}/{from}/{to}
+// MakeAggQueryStr A function that makes urls like: /v2/aggs/ticker/{stocksTicker}/range/{multiplier}/{timespan}/{from}/{to}
 func MakeAggQueryStr(stocksTicker string, multiplier string, timespan string, from_ string, to_ string, apiKey string) *url.URL {
 	p, err := url.Parse("https://" + aggsHost)
 	if err != nil {
@@ -107,6 +107,8 @@ func MakeAggQueryStr(stocksTicker string, multiplier string, timespan string, fr
 	return p
 }
 
+// MakeAllStocksAggsQueries A quick function that uses MakeAggQueryStr and iterates through combos and returns a
+// list of urls that will be queried.
 func MakeAllStocksAggsQueries(tickers []string, timespan string, from_ string, to_ string, apiKey string) []*url.URL {
 	// no need for channels in this yet, just a quick function that makes all the queries and sends it back
 	var urls []*url.URL
@@ -117,8 +119,9 @@ func MakeAllStocksAggsQueries(tickers []string, timespan string, from_ string, t
 	return urls
 }
 
+// MakeTickerTypesUrl A function that takes the API Key and generates the TickerTypes host.
 func MakeTickerTypesUrl(apiKey string) *url.URL {
-	p, err := url.Parse("http://" + tickerTypesHost)
+	p, err := url.Parse("https://" + tickerTypesHost)
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
@@ -132,6 +135,7 @@ func MakeTickerTypesUrl(apiKey string) *url.URL {
 	return p
 }
 
+// MakeTickerVxQuery A function that takes the API string and time, and generates a url.
 func MakeTickerVxQuery(apiKey string, date time.Time) *url.URL {
 	p, err := url.Parse("https://" + tickersVxHost)
 	if err != nil {
@@ -141,7 +145,6 @@ func MakeTickerVxQuery(apiKey string, date time.Time) *url.URL {
 
 	// make the url values
 	q := url.Values{}
-	//q.Add("page", strconv.Itoa(page))
 	q.Add("date", date.Format("2006-01-02"))
 	q.Add("active", "true")
 	q.Add("limit", "500")
@@ -151,6 +154,19 @@ func MakeTickerVxQuery(apiKey string, date time.Time) *url.URL {
 	return p
 }
 
+// MakeAllTickersVxSourceQueries A function that takes a range of dates and makes a series of "Source" urls,
+// that can then be passed on to the 'MakeTickersVxNextQueries' to get the next queries string(s).
+func MakeAllTickersVxSourceQueries(apiKey string, startDate time.Time, endDate time.Time) []*url.URL {
+	var urls []*url.URL
+	for d := startDate; d.After(endDate) == false; d = d.AddDate(0, 0, 1) {
+		u := MakeTickerVxQuery(apiKey, d)
+		urls = append(urls, u)
+	}
+	return urls
+}
+
+// MakeTickersVxNextQueries A function that take the "next" page url from the first 'MakeTickersVxQuery' result
+// and extracts the nextPagePathString, to make the new url.
 func MakeTickersVxNextQueries(nextPagePath *string) *url.URL {
 	nextPagePathArr := strings.Split(*nextPagePath, "/")
 	nextPagePathString := strings.Join(nextPagePathArr[3:], "/")
@@ -170,15 +186,7 @@ func MakeTickersVxNextQueries(nextPagePath *string) *url.URL {
 	return p
 }
 
-func MakeAllTickersVxSourceQueries(apiKey string, startDate time.Time, endDate time.Time) []*url.URL {
-	var urls []*url.URL
-	for d := startDate; d.After(endDate) == false; d = d.AddDate(0, 0, 1) {
-		u := MakeTickerVxQuery(apiKey, d)
-		urls = append(urls, u)
-	}
-	return urls
-}
-
+// MakeTickersQuery A function that takes in the apikey + page number to make urls.
 func MakeTickersQuery(apiKey string, page int) *url.URL {
 	p, err := url.Parse("https://" + tickersHost)
 	if err != nil {
@@ -196,6 +204,7 @@ func MakeTickersQuery(apiKey string, page int) *url.URL {
 	return p
 }
 
+// MakeAllTickersQuery A function that iterates through 'MakeTickersQuery' using the numPages parameter.
 func MakeAllTickersQuery(apiKey string, numPages int) []*url.URL {
 	var urls []*url.URL
 	for i := 1; i <= numPages; i++ {
