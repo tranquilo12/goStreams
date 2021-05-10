@@ -40,30 +40,6 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("tickerVxes called")
-		user, _ := cmd.Flags().GetString("user")
-		if user == "" {
-			user = "postgres"
-		}
-
-		password, _ := cmd.Flags().GetString("password")
-		if password == "" {
-			panic("Cmon, pass a password!")
-		}
-
-		database, _ := cmd.Flags().GetString("database")
-		if database == "" {
-			database = "postgres"
-		}
-
-		host, _ := cmd.Flags().GetString("host")
-		if host == "" {
-			host = "127.0.0.1"
-		}
-
-		port, _ := cmd.Flags().GetString("port")
-		if port == "" {
-			port = "5432"
-		}
 
 		timespan, _ := cmd.Flags().GetString("timespan")
 		if timespan == "" {
@@ -80,14 +56,15 @@ to quickly create a Cobra application.`,
 			to_ = "2021-03-01"
 		}
 
-		multiplier, _ := cmd.Flags().GetInt("mult")
 		// make multiplier 1 always
+		multiplier, _ := cmd.Flags().GetInt("mult")
 		if multiplier == 2 {
 			multiplier = 1
 		}
 
 		// get database conn
-		postgresDB := db.GetPostgresDB(user, password, database, host, port)
+		DBParams := db.ReadPostgresDBParamsFromCMD(cmd)
+		postgresDB := db.GetPostgresDBConn(&DBParams)
 		defer postgresDB.Close()
 
 		estLoc, _ := time.LoadLocation("America/New_York")

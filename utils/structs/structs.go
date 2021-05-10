@@ -2,6 +2,15 @@ package structs
 
 import "time"
 
+// DBParams struct for storing the postgres db's details
+type DBParams struct {
+	User     string
+	Password string
+	Dbname   string
+	Host     string
+	Port     string
+}
+
 // structs for response from the above http query
 type (
 	AggV2 struct {

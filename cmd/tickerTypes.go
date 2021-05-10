@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"lightning/utils/db"
-	"lightning/utils/structs"
 )
 
 const (
@@ -35,37 +34,12 @@ var tickertypesCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("tickertypes called")
 
-		user, _ := cmd.Flags().GetString("user")
-		if user == "" {
-			user = "postgres"
-		}
-
-		password, _ := cmd.Flags().GetString("password")
-		if password == "" {
-			panic("Cmon, pass a password!")
-		}
-
-		database, _ := cmd.Flags().GetString("database")
-		if database == "" {
-			database = "postgres"
-		}
-
-		host, _ := cmd.Flags().GetString("host")
-		if host == "" {
-			host = "127.0.0.1"
-		}
-
-		port, _ := cmd.Flags().GetString("port")
-		if port == "" {
-			port = "5432"
-		}
-
 		// get database conn
-		postgresDB := db.GetPostgresDB(user, password, database, host, port)
+		DBParams := db.ReadPostgresDBParamsFromCMD(cmd)
+		postgresDB := db.GetPostgresDBConn(&DBParams)
 		defer postgresDB.Close()
 
-		var insertIntoDB *structs.TickerTypeResponse
-		insertIntoDB = db.MakeTickerTypesRequest(apiKey)
+		insertIntoDB := db.MakeTickerTypesRequest(apiKey)
 
 		err := db.PushTickerTypesIntoDB(insertIntoDB, postgresDB)
 		if err != nil {
