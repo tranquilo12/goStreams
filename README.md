@@ -1,5 +1,62 @@
 # GoStreams... or Lightning
 
+## Project Structure
+```bash
+.
+|-- cmd
+|   |-- aggs.go
+|   |-- createTables.go
+|   |-- root.go
+|   |-- tickerTypes.go
+|   `-- tickerVxes.go
+|-- docker
+|   |-- config
+|   |   |-- grafana
+|   |   |-- pgbouncer
+|   |   |-- postgres
+|   |   |-- provisioning
+|   |   |-- redis
+|   |   `-- config.env
+|   |-- postgres
+|   |   `-- data
+|   |-- docker-compose.yml
+|   |-- prom.env
+|   `-- prometheus.yaml
+|-- publisher
+|   `-- publisher.go
+|-- utils
+|   |-- config
+|   |   |-- config.go
+|   |   `-- equities_list.csv
+|   |-- db
+|   |   |-- create_tables.go
+|   |   |-- flatteners.go
+|   |   |-- generate_urls.go
+|   |   |-- inserts.go
+|   |   |-- postgres.go
+|   |   `-- requests.go
+|   |-- mocks
+|   |   `-- client.go
+|   |-- responses
+|   |   |-- responses.json
+|   |   `-- tickers_response.json
+|   `-- structs
+|       `-- structs.go
+|-- LICENSE
+|-- README.md
+|-- config.ini
+|-- go.mod
+|-- go.sum
+|-- main.go
+|-- make_ssh_tunnel.sh
+|-- old_main.go
+|-- old_main.txt
+|-- pgbouncer.ini
+`-- pgbouncer.pid
+
+17 directories, 33 files
+```
+
 ## Docker Setup and Usage
 To remain OS agnostic, postgres, pgbouncer and Redis are all docker containers. 
 
@@ -56,10 +113,3 @@ To remain OS agnostic, postgres, pgbouncer and Redis are all docker containers.
   
 ### Useful commands
 - (In Windows) `pg_ctl -D "P:\pg_db\data\" restart/start/stop;` - Start and stop postgres instance.
-
-## Documentation 1. 
-
-### utils/db
-
-Arguably the most important subdirectory. 
-- postgres.go: 
