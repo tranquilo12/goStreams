@@ -16,6 +16,14 @@ type DbParams struct {
 	Dbname   string
 }
 
+// AggCliParams Struct for parsing cli params
+type AggCliParams struct {
+	Timespan   string
+	From       string
+	To         string
+	Multiplier int
+}
+
 // RedisParams Struct for Redis db parameters.
 type RedisParams struct {
 	Host          string

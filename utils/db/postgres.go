@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/go-pg/pg/v10"
 	"github.com/spf13/cobra"
+	"lightning/utils/config"
 	"lightning/utils/structs"
 )
 
@@ -41,6 +42,39 @@ func ReadPostgresDBParamsFromCMD(cmd *cobra.Command) structs.DBParams {
 		Host:     host,
 		Port:     port,
 	}
+	return res
+}
+
+func GetAggParams(cmd *cobra.Command) config.AggCliParams {
+
+	timespan, _ := cmd.Flags().GetString("timespan")
+	if timespan == "" {
+		timespan = "min"
+	}
+
+	from_, _ := cmd.Flags().GetString("from")
+	if from_ == "" {
+		from_ = "2021-01-01"
+	}
+
+	to_, _ := cmd.Flags().GetString("to")
+	if to_ == "" {
+		to_ = "2021-03-01"
+	}
+
+	// make multiplier 1 always
+	multiplier, _ := cmd.Flags().GetInt("mult")
+	if multiplier == 2 {
+		multiplier = 1
+	}
+
+	res := config.AggCliParams{
+		Timespan:   timespan,
+		From:       from_,
+		To:         to_,
+		Multiplier: multiplier,
+	}
+
 	return res
 }
 

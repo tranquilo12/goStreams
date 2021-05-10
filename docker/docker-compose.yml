@@ -26,6 +26,7 @@ services:
 ##### with the docker instance...
   db:
     image: postgres
+    container_name: lightning_postgres
     restart: unless-stopped
     volumes:
       - ./postgres/data/db:/var/lib/postgresql/data
@@ -39,7 +40,7 @@ services:
 
   pgbouncer:
     image: edoburu/pgbouncer:latest
-    container_name: pgbouncer
+    container_name: lightning_pgbouncer
     restart: always
     volumes:
       - ./config/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
@@ -48,6 +49,19 @@ services:
     ports:
       - "6432:6432"
 
+  redis:
+    image: redislabs/rejson:latest
+    container_name: lightning_redis
+    volumes:
+      - ./config/redis/data:/data # persistence
+      - ./config/redis/conf:/usr/local/etc/redis # for config files
+    networks:
+      - data_sharing
+    ports:
+      - "7000:6379"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -83,18 +97,6 @@ services:
     depends_on:
       - redis
 
-  redis:
-    image: redislabs/rejson:latest
-    container_name: redis
-    volumes:
-      - ./config/redis/data:/data # persistence
-      - ./config/redis/conf:/usr/local/etc/redis # for config files
-    networks:
-      - data_sharing
-    ports:
-      - "7000:6379"
-    environment:
-      - REDIS_URL=redis://redis:6379
 
 #  publisher:
 #    # Makes the compose- build our Image based on the files in publisher folder

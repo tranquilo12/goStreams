@@ -18,7 +18,11 @@ limitations under the License.
 
 import (
 	"fmt"
+	"github.com/gomodule/redigo/redis"
+	"github.com/nitishm/go-rejson"
 	"github.com/spf13/cobra"
+	"lightning/publisher"
+	"lightning/utils/config"
 	"lightning/utils/db"
 )
 
@@ -35,42 +39,43 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("aggs called")
 
-		timespan, _ := cmd.Flags().GetString("timespan")
-		if timespan == "" {
-			timespan = "min"
-		}
-
-		from_, _ := cmd.Flags().GetString("from")
-		if from_ == "" {
-			from_ = "2021-01-01"
-		}
-
-		to_, _ := cmd.Flags().GetString("to")
-		if to_ == "" {
-			to_ = "2021-03-01"
-		}
-
-		// make multiplier 1 always
-		multiplier, _ := cmd.Flags().GetInt("mult")
-		if multiplier == 2 {
-			multiplier = 1
-		}
-
 		// get database conn
 		DBParams := db.ReadPostgresDBParamsFromCMD(cmd)
 		postgresDB := db.GetPostgresDBConn(&DBParams)
 		defer postgresDB.Close()
 
-		var tickers = []string{"AAPL", "GME"}
+		// Get agg parameters from cli
+		aggParams := db.GetAggParams(cmd)
 
-		urls := db.MakeAllStocksAggsQueries(tickers, timespan, from_, to_, apiKey)
-		unexpandedChan := db.MakeAllAggRequests(urls, timespan, multiplier)
-
-		// insert all the data quickly!
-		err := db.PushGiantPayloadIntoDB1(unexpandedChan, postgresDB)
+		// Possibly get all the redis parameters from the .ini file.
+		var redisParams config.RedisParams
+		err := config.SetRedisCred(&redisParams)
 		if err != nil {
 			panic(err)
 		}
+
+		// Get a pool of redis connections
+		var redisPool *redis.Pool
+		redisPool = db.GetRedisPool()
+
+		// Get a New Re-Json Handler who's client will be set later within AggPublisher.
+		rh := rejson.NewReJSONHandler()
+
+		var tickers = []string{"AAPL", "GME"}
+		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey)
+		err = publisher.AggPublisher(redisPool, rh, urls, false)
+		if err != nil {
+			fmt.Println("Something wrong with AggPublisher...")
+			panic(err)
+		}
+
+		//unexpandedChan := db.MakeAllAggRequests(urls, timespan, multiplier)
+
+		// insert all the data quickly!
+		//err := db.PushGiantPayloadIntoDB1(unexpandedChan, postgresDB)
+		//if err != nil {
+		//	panic(err)
+		//}
 	},
 }
 
