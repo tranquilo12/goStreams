@@ -34,46 +34,11 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("aggsSub called")
-
-		// get database conn
-		//DBParams := db.ReadPostgresDBParamsFromCMD(cmd)
-		//postgresDB := db.GetPostgresDBConn(&DBParams)
-		//defer postgresDB.Close()
-		//
-		//// Get agg parameters from cli
-		//aggParams := db.GetAggParams(cmd)
-
-		// Possibly get all the redis parameters from the .ini file.
-		//var redisParams config.RedisParams
-		//err := config.SetRedisCred(&redisParams)
-		//if err != nil {
-		//	panic(err)
-		//}
-
-		// Get a pool of redis connections
-		//var redisPool *redis.Pool
-		//redisPool = db.GetRedisPool()
-
-		// Get a New Re-Json Handler who's client will be set later within AggPublisher.
-		//rh := rejson.NewReJSONHandler()
-
-		//var tickers = []string{"AAPL", "GME"}
-		//urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey)
-		//err = publisher.AggPublisher(redisPool, rh, urls, true)
 		err := subscriber.AggSubscriber()
-		//err = publisher.AggPublisher(urls)
 		if err != nil {
 			fmt.Println("Something wrong with AggPublisher...")
 			panic(err)
 		}
-
-		//unexpandedChan := db.MakeAllAggRequests(urls, timespan, multiplier)
-
-		// insert all the data quickly!
-		//err := db.PushGiantPayloadIntoDB1(unexpandedChan, postgresDB)
-		//if err != nil {
-		//	panic(err)
-		//}
 	},
 }
 

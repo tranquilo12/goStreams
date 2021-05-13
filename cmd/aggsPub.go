@@ -52,13 +52,6 @@ to quickly create a Cobra application.`,
 			panic(err)
 		}
 
-		// Get a pool of redis connections
-		//var redisPool *redis.Pool
-		//redisPool = db.GetRedisPool()
-
-		// Get a New Re-Json Handler who's client will be set later within AggPublisher.
-		//rh := rejson.NewReJSONHandler()
-
 		var tickers = []string{"AAPL", "GME"}
 		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey)
 		//err = publisher.AggPublisher(redisPool, rh, urls, true)
@@ -67,14 +60,6 @@ to quickly create a Cobra application.`,
 			fmt.Println("Something wrong with AggPublisher...")
 			panic(err)
 		}
-
-		//unexpandedChan := db.MakeAllAggRequests(urls, timespan, multiplier)
-
-		// insert all the data quickly!
-		//err := db.PushGiantPayloadIntoDB1(unexpandedChan, postgresDB)
-		//if err != nil {
-		//	panic(err)
-		//}
 	},
 }
 

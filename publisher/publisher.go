@@ -102,8 +102,6 @@ func AggPublisher(urls []*url.URL) error {
 		now := rateLimiter.Take()
 		target := new(structs.AggregatesBarsResponse)
 
-		//conn := redisPool.Get()
-
 		client := db.GetRedisClient(7000)
 		queueConnection, err := rmq.OpenConnectionWithRedisClient("AGG", client, errChan)
 		if err != nil {
@@ -132,18 +130,6 @@ func AggPublisher(urls []*url.URL) error {
 				}
 
 				err = qTask.PublishBytes(taskBytes)
-
-				//rh.SetRedigoClient(client)
-				//err := MarshalAggAndPushKeyToRedis(rh, target, u)
-				//if err != nil {
-				//	fmt.Println("Error MarshallingAgg: ", err)
-				//	panic(err)
-				//}
-				//
-				//// situation where things have to be published to channel
-				//if publishToChannel {
-				//	err = MarshalAggAndPublishToAgg(*conn, target)
-				//}
 			}
 		}(u, taskQueue)
 
