@@ -28,6 +28,8 @@ services:
     image: postgres
     container_name: lightning_postgres
     restart: unless-stopped
+    networks:
+      - data_sharing
     volumes:
       - ./postgres/data/db:/var/lib/postgresql/data
     environment:
@@ -42,10 +44,14 @@ services:
     image: edoburu/pgbouncer:latest
     container_name: lightning_pgbouncer
     restart: always
+    networks:
+      - data_sharing
     volumes:
       - ./config/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
       - ./config/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt
       - ./config/pgbouncer/log:/var/log/pgbouncer/
+    depends_on:
+      - db
     ports:
       - "6432:6432"
 
@@ -61,7 +67,7 @@ services:
       - "7000:6379"
     environment:
       - REDIS_URL=redis://redis:6379
-      
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -143,6 +149,8 @@ services:
 networks:
   data_sharing:
     driver: bridge
+  pushe-set:
+    null
 
 volumes:
   grafana-storage:

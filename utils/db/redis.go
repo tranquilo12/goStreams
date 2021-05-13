@@ -3,9 +3,6 @@ package db
 import (
 	"fmt"
 	"github.com/go-redis/redis/v7"
-	//"github.com/gomodule/redigo/redis"
-	//"log"
-	//"os"
 )
 
 func GetRedisClient(port int) *redis.Client {

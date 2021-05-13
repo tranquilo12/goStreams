@@ -43,7 +43,7 @@ to quickly create a Cobra application.`,
 		defer postgresDB.Close()
 
 		// Get agg parameters from cli
-		aggParams := db.GetAggParams(cmd)
+		aggParams := db.ReadAggregateParamsFromCMD(cmd)
 
 		// Possibly get all the redis parameters from the .ini file.
 		var redisParams config.RedisParams
@@ -54,7 +54,6 @@ to quickly create a Cobra application.`,
 
 		var tickers = []string{"AAPL", "GME"}
 		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey)
-		//err = publisher.AggPublisher(redisPool, rh, urls, true)
 		err = publisher.AggPublisher(urls)
 		if err != nil {
 			fmt.Println("Something wrong with AggPublisher...")
@@ -65,7 +64,6 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(aggsPubCmd)
-
 	// Here you will define your flags and configuration settings.
 	aggsPubCmd.Flags().StringP("user", "u", "", "Postgres username")
 	aggsPubCmd.Flags().StringP("password", "P", "", "Postgres password")
@@ -76,12 +74,4 @@ func init() {
 	aggsPubCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")
 	aggsPubCmd.Flags().StringP("to", "t", "", "To which date? (format = %Y-%m-%d)")
 	aggsPubCmd.Flags().IntP("mult", "m", 2, "Multiplier to use with Timespan")
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// aggsPubCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// aggsPubCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

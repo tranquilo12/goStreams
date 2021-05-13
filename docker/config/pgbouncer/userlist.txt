@@ -1,2 +1,2 @@
-"postgres" "rogerthat"
+"postgres" "Complicated@Password@Here"
 "grafana" "rogerthat"

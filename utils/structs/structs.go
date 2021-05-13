@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/adjust/rmq/v3"
+	"github.com/go-pg/pg/v10"
+	"strconv"
 	"time"
 )
 
@@ -808,11 +810,66 @@ type (
 	}
 )
 
-func (aggs *AggregatesBarsResponse) Consume(delivery rmq.Delivery) {
-	var aggregate AggregatesBarsResponse
+type NewConsumerStruct struct {
+	AggBarsResponse AggregatesBarsResponse
+	Timespan        string
+	Multiplier      int
+	DBConn          *pg.Conn
+}
 
-	//if err := json.Unmarshal([]byte(delivery.Payload()), &aggregate); err != nil {
-	if err := json.Unmarshal([]byte(delivery.Payload()), &aggregate); err != nil {
+// msToTime Function that takes in the string within the json, and returns the time.Unix element.
+func msToTime(ms string) (time.Time, error) {
+	msInt, err := strconv.ParseInt(ms, 10, 64)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return time.Unix(0, msInt*int64(time.Millisecond)), nil
+}
+
+// AggBarFlattenPayloadBeforeInsert Function that flattens result from '/v2/aggs/ticker/{stocksTicker}/range/{multiplier}/{timespan}/{from}/{to}'
+func AggBarFlattenPayloadBeforeInsert(target AggregatesBarsResponse, timespan string, multiplier int) []AggregatesBars {
+	var output []AggregatesBars
+	results := target.Results
+
+	for i := range results {
+		// convert the string time into time.Unix time
+		var r = results[i]
+		t, err := msToTime(strconv.FormatInt(int64(r.T), 10))
+		if err != nil {
+			fmt.Println("Some Error parsing date: ", err)
+		}
+
+		// flatten here
+		newArr := AggregatesBars{
+			InsertDate:   time.Now(),
+			Ticker:       target.Ticker,
+			Status:       target.Status,
+			Querycount:   target.Querycount,
+			Resultscount: target.Resultscount,
+			Adjusted:     target.Adjusted,
+			V:            r.V,
+			Vw:           r.Vw,
+			O:            r.O,
+			C:            r.C,
+			H:            r.H,
+			L:            r.L,
+			T:            t,
+			N:            r.N,
+			RequestID:    target.RequestID,
+			Multiplier:   multiplier,
+			Timespan:     timespan,
+		}
+		output = append(output, newArr)
+	}
+	return output
+
+}
+
+func (aggsConnCombo *NewConsumerStruct) Consume(delivery rmq.Delivery) {
+	conn := aggsConnCombo.DBConn
+	aggBarsResponse := aggsConnCombo.AggBarsResponse
+
+	if err := json.Unmarshal([]byte(delivery.Payload()), &aggBarsResponse); err != nil {
 		// handle json error
 		fmt.Println("Something Json Error")
 		if err := delivery.Reject(); err != nil {
@@ -822,8 +879,11 @@ func (aggs *AggregatesBarsResponse) Consume(delivery rmq.Delivery) {
 		return
 	}
 
-	res := fmt.Sprintf("Result: %s", aggregate)
-	fmt.Println(res)
+	aggs := AggBarFlattenPayloadBeforeInsert(aggBarsResponse, aggsConnCombo.Timespan, aggsConnCombo.Multiplier)
+	_, err := conn.Model(&aggs).OnConflict("(t, vw, multiplier, timespan, ticker, o, h, l, c) DO NOTHING").Insert()
+	if err != nil {
+		panic(err)
+	}
 
 	if err := delivery.Ack(); err != nil {
 		fmt.Println("Something Ack Error")

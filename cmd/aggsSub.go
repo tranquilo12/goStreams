@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"lightning/subscriber"
+	"lightning/utils/db"
 )
 
 // aggsPubCmd represents the aggs command
@@ -34,7 +35,9 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("aggsSub called")
-		err := subscriber.AggSubscriber()
+		pgParams := db.ReadPostgresDBParamsFromCMD(cmd)
+		aggParams := db.ReadAggregateParamsFromCMD(cmd)
+		err := subscriber.AggSubscriber(&pgParams, aggParams.Timespan, aggParams.Multiplier)
 		if err != nil {
 			fmt.Println("Something wrong with AggPublisher...")
 			panic(err)
@@ -55,12 +58,4 @@ func init() {
 	aggsSubCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")
 	aggsSubCmd.Flags().StringP("to", "t", "", "To which date? (format = %Y-%m-%d)")
 	aggsSubCmd.Flags().IntP("mult", "m", 2, "Multiplier to use with Timespan")
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// aggsPubCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// aggsPubCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

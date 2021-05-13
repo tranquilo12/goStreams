@@ -45,7 +45,7 @@ func ReadPostgresDBParamsFromCMD(cmd *cobra.Command) structs.DBParams {
 	return res
 }
 
-func GetAggParams(cmd *cobra.Command) config.AggCliParams {
+func ReadAggregateParamsFromCMD(cmd *cobra.Command) config.AggCliParams {
 
 	timespan, _ := cmd.Flags().GetString("timespan")
 	if timespan == "" {

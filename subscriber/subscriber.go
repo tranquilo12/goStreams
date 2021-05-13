@@ -3,6 +3,7 @@ package subscriber
 import (
 	"fmt"
 	"github.com/adjust/rmq/v3"
+	"github.com/go-pg/pg/v10"
 	"lightning/utils/db"
 	"lightning/utils/structs"
 	"os"
@@ -11,14 +12,25 @@ import (
 	"time"
 )
 
-func NewConsumers() *structs.AggregatesBarsResponse {
-	return &structs.AggregatesBarsResponse{}
+func NewConsumers(db *pg.DB, timespan string, multiplier int) *structs.NewConsumerStruct {
+	res := structs.AggregatesBarsResponse{}
+	conn := db.Conn()
+	return &structs.NewConsumerStruct{
+		AggBarsResponse: res,
+		Timespan:        timespan,
+		Multiplier:      multiplier,
+		DBConn:          conn,
+	}
 }
 
-func AggSubscriber() error {
+func AggSubscriber(DBParams *structs.DBParams, timespan string, multiplier int) error {
 	var err error
 	var errChan chan error
 
+	// get the PG connection here
+	pgDB := db.GetPostgresDBConn(DBParams)
+
+	// also get the redis connection
 	client := db.GetRedisClient(7000)
 	queueConnection, err := rmq.OpenConnectionWithRedisClient("AGG", client, errChan)
 	if err != nil {
@@ -37,7 +49,7 @@ func AggSubscriber() error {
 
 	for i := 0; i < 10; i++ {
 		name := fmt.Sprintf("consumer %d", i)
-		if _, err := taskQueue.AddConsumer(name, NewConsumers()); err != nil {
+		if _, err := taskQueue.AddConsumer(name, NewConsumers(pgDB, timespan, multiplier)); err != nil {
 			panic(err)
 		}
 	}
