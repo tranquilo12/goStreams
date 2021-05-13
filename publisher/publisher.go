@@ -3,7 +3,9 @@ package publisher
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/adjust/rmq/v3"
 	"go.uber.org/ratelimit"
+	"lightning/utils/db"
 	"net/http"
 	"sync"
 
@@ -25,6 +27,8 @@ const (
 )
 
 // CreateAggKey A Function that creates the index for the redis database.
+// keys look like: $2021_11_05_AAPL_1_minute_from_2021_01_01_to_2021_04_01
+// keys start with a $ to be index-able.
 func CreateAggKey(u *url.URL) string {
 	// for the idx date, will replace all the '-' with '_' as it plays better with redis.
 	idxDate := strings.ReplaceAll("$"+time.Now().Format("2006-02-01"), "-", "_")
@@ -35,10 +39,10 @@ func CreateAggKey(u *url.URL) string {
 	// Get ticker from the 'url'
 	ticker := splitPath[4]
 
-	// Get agg range... not sure what this is #TODO Get example of this type of string
+	// Get agg range... combines the aggregate timespan and multiplier... e.g 1_minute
 	aggRange := splitPath[6] + "_" + splitPath[7]
 
-	// Get a fromTo string, #TODO Get example of this type of string
+	// Get a fromTo string, e.g from_2021_01_01_to_2021_04_01
 	fromTo := strings.ReplaceAll(strings.Join([]string{"from", splitPath[8], "to", splitPath[9]}, "_"), "-", "_")
 
 	// Make the full key that can be accessed by the "Subscriber" and then pushed into the database.
@@ -77,9 +81,11 @@ func MarshalAggAndPublishToAgg(conn redis.Conn, data *structs.AggregatesBarsResp
 // AggPublisher Finally, the function that takes all the above functions in this file and tries to make sense out it.
 // With all the urls pushed to this function, we rate-limit all requests, Marshal Json response either to a Redis structure
 // and push it to redis with a key, or to a string and push it to a channel.
-func AggPublisher(redisPool *redis.Pool, rh *rejson.Handler, urls []*url.URL, publishToChannel bool) error {
+//func AggPublisher(redisPool *redis.Pool, rh *rejson.Handler, urls []*url.URL, publishToChannel bool) error {
+func AggPublisher(urls []*url.URL) error {
 	// err and response variables to make things easy
 	var err error
+	var errChan chan error
 	var resp *http.Response
 
 	// use WaitGroup to make things more smooth with goroutines
@@ -96,9 +102,20 @@ func AggPublisher(redisPool *redis.Pool, rh *rejson.Handler, urls []*url.URL, pu
 		now := rateLimiter.Take()
 		target := new(structs.AggregatesBarsResponse)
 
-		conn := redisPool.Get()
+		//conn := redisPool.Get()
 
-		go func(u *url.URL, conn *redis.Conn) {
+		client := db.GetRedisClient(7000)
+		queueConnection, err := rmq.OpenConnectionWithRedisClient("AGG", client, errChan)
+		if err != nil {
+			fmt.Println("Something wrong with this queueConnection...")
+		}
+
+		taskQueue, err := queueConnection.OpenQueue("AGG")
+		if err != nil {
+			fmt.Printf("Please, something wrong with the taskQueue...")
+		}
+
+		go func(u *url.URL, qTask rmq.Queue) {
 			defer wg.Done()
 			resp, err = http.Get(u.String())
 
@@ -108,19 +125,27 @@ func AggPublisher(redisPool *redis.Pool, rh *rejson.Handler, urls []*url.URL, pu
 			} else {
 				err = json.NewDecoder(resp.Body).Decode(&target)
 
-				rh.SetRedigoClient(*conn)
-				err := MarshalAggAndPushKeyToRedis(rh, target, u)
+				taskBytes, err := json.Marshal(target)
 				if err != nil {
-					fmt.Println("Error MarshallingAgg: ", err)
-					panic(err)
+					res := fmt.Sprintf("Target Err: %s", err)
+					fmt.Printf(res)
 				}
 
-				// situation where things have to be published to channel
-				if publishToChannel {
-					err = MarshalAggAndPublishToAgg(*conn, target)
-				}
+				err = qTask.PublishBytes(taskBytes)
+
+				//rh.SetRedigoClient(client)
+				//err := MarshalAggAndPushKeyToRedis(rh, target, u)
+				//if err != nil {
+				//	fmt.Println("Error MarshallingAgg: ", err)
+				//	panic(err)
+				//}
+				//
+				//// situation where things have to be published to channel
+				//if publishToChannel {
+				//	err = MarshalAggAndPublishToAgg(*conn, target)
+				//}
 			}
-		}(u, &conn)
+		}(u, taskQueue)
 
 		now.Sub(prev)
 		prev = now

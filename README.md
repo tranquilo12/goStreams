@@ -113,3 +113,7 @@ To remain OS agnostic, postgres, pgbouncer and Redis are all docker containers.
   
 ### Useful commands
 - (In Windows) `pg_ctl -D "P:\pg_db\data\" restart/start/stop;` - Start and stop postgres instance.
+
+### Library Choices 
+- Redigo exposed an interesting method of using redis with golang.
+- Redis-go was the only library supporting rmq (redis message queue), so we'll have to switch to that.

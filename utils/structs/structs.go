@@ -1,6 +1,11 @@
 package structs
 
-import "time"
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/adjust/rmq/v3"
+	"time"
+)
 
 // DBParams struct for storing the postgres db's details
 type DBParams struct {
@@ -802,6 +807,28 @@ type (
 		Timespan     string    `json:"timespan"`
 	}
 )
+
+func (aggs *AggregatesBarsResponse) Consume(delivery rmq.Delivery) {
+	var aggregate AggregatesBarsResponse
+
+	//if err := json.Unmarshal([]byte(delivery.Payload()), &aggregate); err != nil {
+	if err := json.Unmarshal([]byte(delivery.Payload()), &aggregate); err != nil {
+		// handle json error
+		fmt.Println("Something Json Error")
+		if err := delivery.Reject(); err != nil {
+			// handle reject error
+			fmt.Println("Something Reject Error")
+		}
+		return
+	}
+
+	res := fmt.Sprintf("Result: %s", aggregate)
+	fmt.Println(res)
+
+	if err := delivery.Ack(); err != nil {
+		fmt.Println("Something Ack Error")
+	}
+}
 
 // Grouped Daily Bars
 type (
