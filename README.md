@@ -4,11 +4,12 @@
 ```bash
 .
 |-- cmd
-|   |-- aggs.go
+|   |-- aggsPub.go
+|   |-- aggsSub.go
 |   |-- createTables.go
 |   |-- root.go
 |   |-- tickerTypes.go
-|   |-- tickerVxes.go
+|   `-- tickerVxes.go
 |-- docker
 |   |-- config
 |   |   |-- grafana
@@ -16,32 +17,35 @@
 |   |   |-- postgres
 |   |   |-- provisioning
 |   |   |-- redis
-|   |   |-- config.env
+|   |   `-- config.env
 |   |-- postgres
-|   |   |-- data
+|   |   `-- data
 |   |-- docker-compose.yml
 |   |-- prom.env
-|   |-- prometheus.yaml
+|   `-- prometheus.yaml
 |-- publisher
-|   |-- publisher.go
+|   `-- publisher.go
+|-- subscriber
+|   `-- subscriber.go
 |-- utils
 |   |-- config
 |   |   |-- config.go
-|   |   |-- equities_list.csv
+|   |   `-- equities_list.csv
 |   |-- db
 |   |   |-- create_tables.go
 |   |   |-- flatteners.go
 |   |   |-- generate_urls.go
 |   |   |-- inserts.go
 |   |   |-- postgres.go
-|   |   |-- requests.go
+|   |   |-- redis.go
+|   |   `-- requests.go
 |   |-- mocks
-|   |   |-- client.go
+|   |   `-- client.go
 |   |-- responses
 |   |   |-- responses.json
-|   |   |-- tickers_response.json
-|   |-- structs
-|       -- structs.go
+|   |   `-- tickers_response.json
+|   `-- structs
+|       `-- structs.go
 |-- LICENSE
 |-- README.md
 |-- config.ini
@@ -52,9 +56,9 @@
 |-- old_main.go
 |-- old_main.txt
 |-- pgbouncer.ini
-|-- pgbouncer.pid
+`-- pgbouncer.pid
 
-17 directories, 33 files
+18 directories, 36 files 
 ```
 
 ## Docker Setup and Usage
