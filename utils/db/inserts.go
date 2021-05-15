@@ -103,7 +103,7 @@ func PushGiantPayloadIntoDB1(insertIntoDB <-chan []structs.AggregatesBars, db *p
 }
 
 func PushTickerTypesIntoDB(insertIntoDB *structs.TickerTypeResponse, db *pg.DB) error {
-	flattenedInsertIntoDB := TickerTypesFlattenPayloadBeforeInsert(insertIntoDB)
+	flattenedInsertIntoDB := structs.TickerTypesFlattenPayloadBeforeInsert(insertIntoDB)
 	_, err := db.Model(&flattenedInsertIntoDB).Insert()
 	if err != nil {
 		panic(err)
@@ -113,12 +113,8 @@ func PushTickerTypesIntoDB(insertIntoDB *structs.TickerTypeResponse, db *pg.DB) 
 }
 
 func PushTickerVxIntoDB(insertIntoDB <-chan []structs.TickerVx, db *pg.DB) error {
-
 	// use WaitGroup to make things more smooth with channels
 	var wg sync.WaitGroup
-
-	// create a buffer of the waitGroup, of the same length as urls
-	//wg.Add(len(insertIntoDB))
 
 	bar := progressbar.Default(500, "Uploading TickerVx to db...")
 
@@ -132,10 +128,7 @@ func PushTickerVxIntoDB(insertIntoDB <-chan []structs.TickerVx, db *pg.DB) error
 
 				_, err := db.Model(&val).
 					OnConflict("(ticker, market, last_updated_utc) DO NOTHING").
-					//OnConflict("(ticker, market, last_updated_utc) DO UPDATE").
-					//Set("last_updated_utc = EXCLUDED.last_updated_utc").
 					Insert()
-
 				if err != nil {
 					panic(err)
 				}
@@ -155,9 +148,6 @@ func PushTickerIntoDB(insertIntoDB <-chan []structs.Tickers, db *pg.DB) error {
 
 	// use WaitGroup to make things more smooth with channels
 	var wg sync.WaitGroup
-
-	// create a buffer of the waitGroup, of the same length as urls
-	//wg.Add(len(insertIntoDB))
 
 	bar := progressbar.Default(int64(len(insertIntoDB)), "Uploading Tickers to db...")
 

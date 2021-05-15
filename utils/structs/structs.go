@@ -810,11 +810,128 @@ type (
 	}
 )
 
+// NewConsumerStruct Used by Consume
 type NewConsumerStruct struct {
 	AggBarsResponse AggregatesBarsResponse
 	Timespan        string
 	Multiplier      int
 	DBConn          *pg.Conn
+}
+
+// TickersVxFlattenPayloadBeforeInsert Function that flattens result from '/v3/reference/tickers'
+func TickersVxFlattenPayloadBeforeInsert(target TickersVxResponse) []TickerVx {
+	var output []TickerVx
+	var results = target.Results
+
+	for i := range results {
+		var res = results[i]
+		r := TickerVx{
+			InsertDatetime:  time.Now(),
+			Ticker:          res.Ticker,
+			Name:            res.Name,
+			Market:          res.Market,
+			Locale:          res.Locale,
+			PrimaryExchange: res.PrimaryExchange,
+			Type:            res.Type,
+			Active:          res.Active,
+			CurrencyName:    res.CurrencyName,
+			Cik:             res.Cik,
+			CompositeFigi:   res.CompositeFigi,
+			ShareClassFigi:  res.ShareClassFigi,
+			LastUpdatedUtc:  res.LastUpdatedUtc,
+		}
+		output = append(output, r)
+	}
+
+	return output
+}
+
+// TickersFlattenPayloadBeforeInsert Function that flattens result from '/v2/reference/tickers' (depreciated)
+func TickersFlattenPayloadBeforeInsert(target TickersResponse) []Tickers {
+	var output []Tickers
+	tickersInner := target.Tickers // creates TickersInner
+
+	for i := range tickersInner {
+		t := tickersInner[i]
+
+		r := Tickers{
+			InsertDate:  time.Now(),
+			Page:        target.Page,
+			Perpage:     target.Perpage,
+			Count:       target.Count,
+			Status:      target.Status,
+			Ticker:      t.Ticker,
+			Name:        t.Name,
+			Market:      t.Market,
+			Locale:      t.Locale,
+			Currency:    t.Currency,
+			Active:      t.Active,
+			Primaryexch: t.Primaryexch,
+		}
+
+		if t.Type != nil {
+			r.Type = t.Type
+		}
+
+		if t.Codes != nil {
+			r.Cik = t.Codes.Cik
+			r.Figiuid = t.Codes.Figiuid
+			r.Scfigi = t.Codes.Scfigi
+			r.Cfigi = t.Codes.Cfigi
+			r.Figi = t.Codes.Figi
+		}
+
+		r.Updated = t.Updated
+		r.URL = t.URL
+
+		if t.Attrs != nil {
+			r.Currencyname = t.Attrs.Currencyname
+			r.Currency = t.Attrs.Currency
+			r.Basename = t.Attrs.Basename
+			r.Base = t.Attrs.Base
+		}
+		output = append(output, r)
+	}
+	return output
+}
+
+// TickerTypesFlattenPayloadBeforeInsert Function that flattens result from '/v2/reference/types'
+func TickerTypesFlattenPayloadBeforeInsert(target *TickerTypeResponse) TickerType {
+	var Tt TickerType
+	Tt.Cs = target.Results.Types.Cs
+	Tt.Adr = target.Results.Types.Adr
+	Tt.Nvdr = target.Results.Types.Nvdr
+	Tt.Gdr = target.Results.Types.Gdr
+	Tt.Sdr = target.Results.Types.Sdr
+	Tt.Cef = target.Results.Types.Cef
+	Tt.Etp = target.Results.Types.Etp
+	Tt.Reit = target.Results.Types.Reit
+	Tt.Mlp = target.Results.Types.Mlp
+	Tt.Wrt = target.Results.Types.Wrt
+	Tt.Pub = target.Results.Types.Pub
+	Tt.Nyrs = target.Results.Types.Nyrs
+	Tt.Unit = target.Results.Types.Unit
+	Tt.Right = target.Results.Types.Right
+	Tt.Track = target.Results.Types.Track
+	Tt.Ltdp = target.Results.Types.Ltdp
+	Tt.Rylt = target.Results.Types.Rylt
+	Tt.Mf = target.Results.Types.Mf
+	Tt.Pfd = target.Results.Types.Pfd
+	Tt.Fdr = target.Results.Types.Fdr
+	Tt.Ost = target.Results.Types.Ost
+	Tt.Fund = target.Results.Types.Fund
+	Tt.Sp = target.Results.Types.Sp
+	Tt.Si = target.Results.Types.Si
+	Tt.Index = target.Results.IndexTypes.Index
+	Tt.Etf = target.Results.IndexTypes.Etf
+	Tt.Etn = target.Results.IndexTypes.Etf
+	Tt.Etmf = target.Results.IndexTypes.Etmf
+	Tt.Settlement = target.Results.IndexTypes.Settlement
+	Tt.Spot = target.Results.IndexTypes.Spot
+	Tt.Subprod = target.Results.IndexTypes.Subprod
+	Tt.Wc = target.Results.IndexTypes.Wc
+	Tt.Alphaindex = target.Results.IndexTypes.Alphaindex
+	return Tt
 }
 
 // msToTime Function that takes in the string within the json, and returns the time.Unix element.
@@ -1125,3 +1242,56 @@ type (
 		Updated          int64     `json:"updated"`
 	}
 )
+
+//for _, u := range urls {
+//	now := rateLimiter.Take()
+//	firstResponse := new(structs.TickersVxResponse)
+//
+//	// For each of their urls, i.e 500 of each of these things
+//	//bar2 := uiprogress.AddBar(500).AppendCompleted().PrependCompleted()
+//	go func(u *url.URL) {
+//		defer wg.Done()
+//		resp, err := http.Get(u.String())
+//
+//		if err != nil {
+//			fmt.Println("Some Error: ", err)
+//			panic(err)
+//		} else {
+//			err = json.NewDecoder(resp.Body).Decode(&firstResponse)
+//			flattenedTarget := structs.TickersVxFlattenPayloadBeforeInsert(*firstResponse)
+//			c <- flattenedTarget
+//			err := bar.Add(1)
+//			if err != nil {
+//				panic(err)
+//			}
+//
+//			// First nextPagePath is a string, then it will be changed to URL type later
+//			nextPagePath := &firstResponse.NextUrl
+//			for *nextPagePath != "" {
+//				nextFlattenedTarget := new(structs.TickersVxResponse)
+//				// change the type to URL here
+//				nextPageURL := MakeTickersVxNextQueries(nextPagePath)
+//				nextResponse, err := http.Get(nextPageURL.String())
+//				if err != nil {
+//					fmt.Println("Some Error: ", err)
+//					panic(err)
+//				} else {
+//					err = json.NewDecoder(nextResponse.Body).Decode(&nextFlattenedTarget)
+//					// nextPagePath will be re-written here...
+//					nextPagePath = &nextFlattenedTarget.NextUrl
+//					// flatten the payload here as well
+//					nextFlattenedTarget := structs.TickersVxFlattenPayloadBeforeInsert(*nextFlattenedTarget)
+//					c <- nextFlattenedTarget
+//					nextResponse.Body.Close()
+//				}
+//				err = bar.Add(1)
+//				if err != nil {
+//					panic(err)
+//				}
+//			}
+//		}
+//		resp.Body.Close()
+//	}(u)
+//	now.Sub(prev)
+//	prev = now
+//}

@@ -18,9 +18,6 @@ limitations under the License.
 
 import (
 	"fmt"
-	"lightning/utils/db"
-	"time"
-
 	"github.com/spf13/cobra"
 )
 
@@ -41,43 +38,43 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("tickerVxes called")
 
-		timespan, _ := cmd.Flags().GetString("timespan")
-		if timespan == "" {
-			timespan = "min"
-		}
-
-		from_, _ := cmd.Flags().GetString("from")
-		if from_ == "" {
-			from_ = "2021-01-01"
-		}
-
-		to_, _ := cmd.Flags().GetString("to")
-		if to_ == "" {
-			to_ = "2021-03-01"
-		}
-
-		// make multiplier 1 always
-		multiplier, _ := cmd.Flags().GetInt("mult")
-		if multiplier == 2 {
-			multiplier = 1
-		}
-
-		// get database conn
-		DBParams := db.ReadPostgresDBParamsFromCMD(cmd)
-		postgresDB := db.GetPostgresDBConn(&DBParams)
-		defer postgresDB.Close()
-
-		estLoc, _ := time.LoadLocation("America/New_York")
-		to, _ := time.ParseInLocation(TimeLayout, to_, estLoc)
-		from, _ := time.ParseInLocation(TimeLayout, from_, estLoc)
-
-		urls := db.MakeAllTickersVxSourceQueries(apiKey, from, to)
-		unexpandedChan := db.MakeAllTickersVxRequests(urls)
-
-		err := db.PushTickerVxIntoDB(unexpandedChan, postgresDB)
-		if err != nil {
-			panic(err)
-		}
+		//timespan, _ := cmd.Flags().GetString("timespan")
+		//if timespan == "" {
+		//	timespan = "min"
+		//}
+		//
+		//from_, _ := cmd.Flags().GetString("from")
+		//if from_ == "" {
+		//	from_ = "2021-01-01"
+		//}
+		//
+		//to_, _ := cmd.Flags().GetString("to")
+		//if to_ == "" {
+		//	to_ = "2021-03-01"
+		//}
+		//
+		//// make multiplier 1 always
+		//multiplier, _ := cmd.Flags().GetInt("mult")
+		//if multiplier == 2 {
+		//	multiplier = 1
+		//}
+		//
+		//// get database conn
+		//DBParams := db.ReadPostgresDBParamsFromCMD(cmd)
+		//postgresDB := db.GetPostgresDBConn(&DBParams)
+		//defer postgresDB.Close()
+		//
+		//estLoc, _ := time.LoadLocation("America/New_York")
+		//to, _ := time.ParseInLocation(TimeLayout, to_, estLoc)
+		//from, _ := time.ParseInLocation(TimeLayout, from_, estLoc)
+		//
+		//urls := db.MakeAllTickersVxSourceQueries(apiKey, from, to)
+		//unexpandedChan := db.MakeAllTickersVxRequests1(urls)
+		//
+		//err := db.PushTickerVxIntoDB(unexpandedChan, postgresDB)
+		//if err != nil {
+		//	panic(err)
+		//}
 	},
 }
 

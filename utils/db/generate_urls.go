@@ -5,15 +5,13 @@ import (
 	"net/url"
 	"path"
 	"strconv"
-	"strings"
-	"time"
 )
 
 const (
 	//Scheme               = "https" // universal for all schemes here
 	aggsHost        = "api.polygon.io/v2/aggs"
 	tickerTypesHost = "api.polygon.io/v2/reference/types"
-	tickersVxHost   = "api.polygon.io/vX/reference/tickers"
+	tickersVxHost   = "api.polygon.io/v3/reference/tickers"
 	tickersHost     = "api.polygon.io/v2/reference/tickers"
 	//dailyOpenCloseHost   = "api.polygon.io/v1/open-close"
 	//groupedDailyBarsHost = "api.polygon.io/v2/aggs/grouped/locale/us/market/stocks"
@@ -136,7 +134,7 @@ func MakeTickerTypesUrl(apiKey string) *url.URL {
 }
 
 // MakeTickerVxQuery A function that takes the API string and time, and generates a url.
-func MakeTickerVxQuery(apiKey string, date time.Time) *url.URL {
+func MakeTickerVxQuery(apiKey string) *url.URL {
 	p, err := url.Parse("https://" + tickersVxHost)
 	if err != nil {
 		fmt.Println(err)
@@ -145,44 +143,11 @@ func MakeTickerVxQuery(apiKey string, date time.Time) *url.URL {
 
 	// make the url values
 	q := url.Values{}
-	q.Add("date", date.Format("2006-01-02"))
 	q.Add("active", "true")
-	q.Add("limit", "500")
+	q.Add("limit", "1000")
 	q.Add("apiKey", apiKey)
 	p.RawQuery = q.Encode()
 
-	return p
-}
-
-// MakeAllTickersVxSourceQueries A function that takes a range of dates and makes a series of "Source" urls,
-// that can then be passed on to the 'MakeTickersVxNextQueries' to get the next queries string(s).
-func MakeAllTickersVxSourceQueries(apiKey string, startDate time.Time, endDate time.Time) []*url.URL {
-	var urls []*url.URL
-	for d := startDate; d.After(endDate) == false; d = d.AddDate(0, 0, 1) {
-		u := MakeTickerVxQuery(apiKey, d)
-		urls = append(urls, u)
-	}
-	return urls
-}
-
-// MakeTickersVxNextQueries A function that take the "next" page url from the first 'MakeTickersVxQuery' result
-// and extracts the nextPagePathString, to make the new url.
-func MakeTickersVxNextQueries(nextPagePath *string) *url.URL {
-	nextPagePathArr := strings.Split(*nextPagePath, "/")
-	nextPagePathString := strings.Join(nextPagePathArr[3:], "/")
-
-	// trim the tickers from the end
-	tickersVxHost := strings.Split(tickersVxHost, "/")
-	tickersVxHost2 := strings.Join(tickersVxHost[:3], "/")
-
-	p, err := url.Parse("https://" + tickersVxHost2 + "/" + nextPagePathString)
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
-	}
-
-	values, _ := url.ParseQuery(p.RawQuery)
-	values.Set("limit", "500")
 	return p
 }
 

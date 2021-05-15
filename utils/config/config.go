@@ -3,18 +3,10 @@ package config
 import (
 	"encoding/csv"
 	"gopkg.in/ini.v1"
+	"lightning/utils/structs"
 	"log"
 	"os"
 )
-
-// DbParams Struct for the Postgres db parameters.
-type DbParams struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	Dbname   string
-}
 
 // AggCliParams Struct for parsing cli params
 type AggCliParams struct {
@@ -35,7 +27,7 @@ type RedisParams struct {
 
 // SetDBParams Function that reads the config.ini file within the directory, setting the Postgres db parameters.
 // param user has options 'grafana' and 'postgres'.
-func SetDBParams(params *DbParams, user string) error {
+func SetDBParams(params *structs.DBParams, user string) error {
 	pwd, err := os.Getwd()
 	config, err := ini.Load(pwd + "/config.ini")
 	if err != nil {
@@ -43,7 +35,8 @@ func SetDBParams(params *DbParams, user string) error {
 	}
 
 	params.Host = config.Section("DB").Key("host").String()
-	params.Port = config.Section("SSH").Key("ssh_local_bind_port").String()
+	//params.Port = config.Section("SSH").Key("ssh_local_bind_port").String()
+	params.Port = "6432"
 	params.Dbname = config.Section("DB").Key("name").String()
 
 	if user == "postgres" {
