@@ -40,28 +40,27 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("refreshTickers called")
+		var dbParams structs.DBParams
+		err := config.SetDBParams(&dbParams, "postgres")
+		if err != nil {
+			panic(err)
+		}
+
+		// Get a db conn that will be used by the function 'PushTickerIntoDB'
+		dbConn := db.GetPostgresDBConn(&dbParams)
+
+		apiKey := config.SetPolygonCred("me")
+		url := db.MakeTickerVxQuery(apiKey)
+		Chan1 := db.MakeAllTickersVxRequests(url)
+		err = db.PushTickerVxIntoDB(Chan1, dbConn)
+		if err != nil {
+			panic(err)
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(refreshTickersCmd)
-
-	var dbParams structs.DBParams
-	err := config.SetDBParams(&dbParams, "postgres")
-	if err != nil {
-		panic(err)
-	}
-
-	// Get a db conn that will be used by the function 'PushTickerIntoDB'
-	dbConn := db.GetPostgresDBConn(&dbParams)
-
-	apiKey := config.SetPolygonCred("me")
-	url := db.MakeTickerVxQuery(apiKey)
-	Chan1 := db.MakeAllTickersVxRequests(url)
-	err = db.PushTickerVxIntoDB(Chan1, dbConn)
-	if err != nil {
-		panic(err)
-	}
 
 	// Here you will define your flags and configuration settings.
 

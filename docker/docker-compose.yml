@@ -1,12 +1,13 @@
 version: '3.2'
 services:
 
-##### IF there's no local instance of the postgres running/ if you dont want to mix the local instance
-##### with the docker instance...
+  ##### IF there's no local instance of the postgres running/ if you dont want to mix the local instance
+  ##### with the docker instance...
   db:
     image: postgres
     container_name: lightning_postgres
     restart: unless-stopped
+    user: postgres
     networks:
       - data_sharing
     volumes:
@@ -52,6 +53,8 @@ services:
     container_name: prometheus
     ports:
       - "9090:9090"
+    networks:
+      - data_sharing
     command:
       - --config.file=/etc/prometheus/prometheus.yaml
     volumes:
@@ -62,16 +65,20 @@ services:
 
   postgresql-exporter:
     image: wrouesnel/postgres_exporter
+    networks:
+      - data_sharing
     ports:
       - "9187:9187"
-    environment:
-      - DATA_SOURCE_URI=host.docker.internal:5433/polygonio?sslmode=disable
-      - DATA_SOURCE_USER=postgres_exporter
+    environment: #TODO make user here grafanareader
+      - DATA_SOURCE_URI=localhost:5432/polygonio?sslmode=disable
+      - DATA_SOURCE_USER=postgres
       - DATA_SOURCE_PASS=Complicated@Password@Here
 
   cadvisor:
     image: gcr.io/google-containers/cadvisor:latest
     container_name: cadvisor
+    networks:
+      - data_sharing
     ports:
       - "8080:8080"
     volumes:
@@ -86,6 +93,8 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     restart: always
+    networks:
+      - data_sharing
     volumes:
       - grafana-storage:/var/lib/grafana grafana/grafana
       - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini
@@ -107,13 +116,7 @@ services:
 networks:
   data_sharing:
     driver: bridge
-  pushe-set:
-    null
 
 volumes:
   grafana-storage:
     external: true
-  zookeeper_data:
-    driver: local
-  kafka_data:
-    driver: local
