@@ -65,13 +65,14 @@ services:
 
   postgresql-exporter:
     image: wrouesnel/postgres_exporter
+    container_name: postgresql-exporter
     networks:
       - data_sharing
     ports:
       - "9187:9187"
-    environment: #TODO make user here grafanareader
-      - DATA_SOURCE_URI=localhost:5432/polygonio?sslmode=disable
-      - DATA_SOURCE_USER=postgres
+    environment:
+      - DATA_SOURCE_URI=host.docker.internal:6432/polygonio?sslmode=disable
+      - DATA_SOURCE_USER=grafanareader
       - DATA_SOURCE_PASS=Complicated@Password@Here
 
   cadvisor:
