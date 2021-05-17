@@ -997,13 +997,14 @@ func (aggsConnCombo *NewConsumerStruct) Consume(delivery rmq.Delivery) {
 	}
 
 	aggs := AggBarFlattenPayloadBeforeInsert(aggBarsResponse, aggsConnCombo.Timespan, aggsConnCombo.Multiplier)
-	_, err := conn.Model(&aggs).OnConflict("(t, vw, multiplier, timespan, ticker, o, h, l, c) DO NOTHING").Insert()
-	if err != nil {
-		panic(err)
-	}
-
-	if err := delivery.Ack(); err != nil {
-		fmt.Println("Something Ack Error")
+	if len(aggs) > 0 {
+		_, err := conn.Model(&aggs).OnConflict("(t, vw, multiplier, timespan, ticker, o, h, l, c) DO NOTHING").Insert()
+		if err != nil {
+			panic(err)
+		}
+		if err := delivery.Ack(); err != nil {
+			fmt.Println("Something Ack Error")
+		}
 	}
 }
 

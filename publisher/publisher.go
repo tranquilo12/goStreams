@@ -98,15 +98,15 @@ func AggPublisher(urls []*url.URL) error {
 	prev := time.Now()
 	rateLimiter := ratelimit.New(50)
 
+	client := db.GetRedisClient(7000)
+	queueConnection, err := rmq.OpenConnectionWithRedisClient("AGG", client, errChan)
+	if err != nil {
+		fmt.Println("Something wrong with this queueConnection...")
+	}
+
 	for _, u := range urls {
 		now := rateLimiter.Take()
 		target := new(structs.AggregatesBarsResponse)
-
-		client := db.GetRedisClient(7000)
-		queueConnection, err := rmq.OpenConnectionWithRedisClient("AGG", client, errChan)
-		if err != nil {
-			fmt.Println("Something wrong with this queueConnection...")
-		}
 
 		taskQueue, err := queueConnection.OpenQueue("AGG")
 		if err != nil {
