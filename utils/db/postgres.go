@@ -1,48 +1,100 @@
 package db
 
 import (
-	"context"
 	"fmt"
-	"github.com/jackc/pgx"
-	"github.com/jackc/pgx/pgxpool"
+	"github.com/go-pg/pg/v10"
+	"github.com/spf13/cobra"
+	"lightning/utils/config"
 	"lightning/utils/structs"
-	"time"
 )
 
-const (
-	polygonStocksAggCandlesCols         = "ticker, timespan, multiplier, volume, vwap, open, close, high, low, timestamp"
-	polygonStocksAggCandlesPlaceHolders = "$1, $2, $3, $4, $5, $6, $7, $8, $9, $10"
-	polygonStocksAggCandlesIdx          = "ticker, timespan, multiplier, vwap, timestamp"
-)
-
-var polygonStocksAggCandlesInsertTemplate = fmt.Sprintf(
-	"INSERT INTO polygon_stocks_agg_candles(%s) VALUES (%s) ON CONFLICT (%s) DO NOTHING",
-	polygonStocksAggCandlesCols,
-	polygonStocksAggCandlesPlaceHolders,
-	polygonStocksAggCandlesIdx,
-)
-
-func PushIntoDB(target structs.StocksAggResponseParams, connPool *pgxpool.Pool, timespan string, multiplier int, layout string) {
-	batch := &pgx.Batch{}
-	numInserts := len(target.Results)
-
-	for i := range target.Results {
-		var r structs.AggV2
-		r = target.Results[i]
-		t := time.Unix(0, int64(r.T))
-		batch.Queue(polygonStocksAggCandlesInsertTemplate, target.Ticker, timespan, multiplier, r.V, r.Vw, r.O, r.C, r.H, r.L, t.Format(layout))
+// ReadPostgresDBParamsFromCMD A function that reads in parameters related to the postgres DB.
+func ReadPostgresDBParamsFromCMD(cmd *cobra.Command) structs.DBParams {
+	user, _ := cmd.Flags().GetString("user")
+	if user == "" {
+		user = "postgres"
 	}
 
-	br := connPool.SendBatch(context.Background(), batch)
-	for i := 0; i < numInserts; i++ {
-		_, err := br.Exec()
-		if err != nil {
-			fmt.Println("Unable to execute statement in batched queue: ", err)
-		}
+	password, _ := cmd.Flags().GetString("password")
+	if password == "" {
+		panic("Cmon, pass a password!")
 	}
 
-	err := br.Close()
+	dbname, _ := cmd.Flags().GetString("database")
+	if dbname == "" {
+		dbname = "postgres"
+	}
+
+	host, _ := cmd.Flags().GetString("host")
+	if host == "" {
+		host = "127.0.0.1"
+	}
+
+	port, _ := cmd.Flags().GetString("port")
+	if port == "" {
+		port = "5432"
+	}
+
+	res := structs.DBParams{
+		User:     user,
+		Password: password,
+		Dbname:   dbname,
+		Host:     host,
+		Port:     port,
+	}
+	return res
+}
+
+func ReadAggregateParamsFromCMD(cmd *cobra.Command) config.AggCliParams {
+
+	timespan, _ := cmd.Flags().GetString("timespan")
+	if timespan == "" {
+		timespan = "min"
+	}
+
+	from_, _ := cmd.Flags().GetString("from")
+	if from_ == "" {
+		from_ = "2021-01-01"
+	}
+
+	to_, _ := cmd.Flags().GetString("to")
+	if to_ == "" {
+		to_ = "2021-03-01"
+	}
+
+	// make multiplier 1 always
+	multiplier, _ := cmd.Flags().GetInt("mult")
+	if multiplier == 2 {
+		multiplier = 1
+	}
+
+	res := config.AggCliParams{
+		Timespan:   timespan,
+		From:       from_,
+		To:         to_,
+		Multiplier: multiplier,
+	}
+
+	return res
+}
+
+// GetPostgresDBConn Makes sure the connection object to the postgres instance is returned.
+func GetPostgresDBConn(DBParams *structs.DBParams) *pg.DB {
+	addr := fmt.Sprintf("%s:%s", DBParams.Host, DBParams.Port)
+	var postgresDB = pg.Connect(&pg.Options{
+		Addr:     addr,
+		User:     DBParams.User,
+		Password: DBParams.Password,
+		Database: DBParams.Dbname,
+		PoolSize: 100,
+	})
+	return postgresDB
+}
+
+// ExecCreateAllTablesModels Makes sure CreateAllTablesModels() is called and all table models are made.
+func ExecCreateAllTablesModels(user string, password string, database string, host string, port string) {
+	err := CreateAllTablesModel(user, password, database, host, port)
 	if err != nil {
-		fmt.Println("Unable to close batch: ", err)
+		panic(err)
 	}
 }

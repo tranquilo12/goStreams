@@ -1,11 +1,60 @@
 version: '3.2'
 services:
 
+  ##### IF there's no local instance of the postgres running/ if you dont want to mix the local instance
+  ##### with the docker instance...
+  db:
+    image: postgres
+    container_name: lightning_postgres
+    restart: unless-stopped
+    user: postgres
+    networks:
+      - data_sharing
+    volumes:
+      - ./postgres/data/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=polygonio
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=Complicated@Password@Here
+      - PGHOST=localhost
+    ports:
+      - "5432:5432"
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: lightning_pgbouncer
+    restart: always
+    networks:
+      - data_sharing
+    volumes:
+      - ./config/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./config/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt
+      - ./config/pgbouncer/log:/var/log/pgbouncer/
+    depends_on:
+      - db
+    ports:
+      - "6432:6432"
+
+  redis:
+    image: redislabs/rejson:latest
+    container_name: lightning_redis
+    volumes:
+      - ./config/redis/data:/data # persistence
+      - ./config/redis/conf:/usr/local/etc/redis # for config files
+    networks:
+      - data_sharing
+    ports:
+      - "7000:6379"
+    environment:
+      - REDIS_URL=redis://redis:6379
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
     ports:
       - "9090:9090"
+    networks:
+      - data_sharing
     command:
       - --config.file=/etc/prometheus/prometheus.yaml
     volumes:
@@ -16,16 +65,21 @@ services:
 
   postgresql-exporter:
     image: wrouesnel/postgres_exporter
+    container_name: postgresql-exporter
+    networks:
+      - data_sharing
     ports:
       - "9187:9187"
     environment:
-      - DATA_SOURCE_URI=host.docker.internal:5433/polygonio?sslmode=disable
-      - DATA_SOURCE_USER=postgres_exporter
+      - DATA_SOURCE_URI=host.docker.internal:6432/polygonio?sslmode=disable
+      - DATA_SOURCE_USER=grafanareader
       - DATA_SOURCE_PASS=Complicated@Password@Here
 
   cadvisor:
     image: gcr.io/google-containers/cadvisor:latest
     container_name: cadvisor
+    networks:
+      - data_sharing
     ports:
       - "8080:8080"
     volumes:
@@ -36,24 +90,34 @@ services:
     depends_on:
       - redis
 
-  redis:
-    image: redis:latest
-    container_name: redis
-    ports:
-      - "6379:6379"
-
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
+    restart: always
+    networks:
+      - data_sharing
+    volumes:
+      - grafana-storage:/var/lib/grafana grafana/grafana
+      - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./config/provisioning:/etc/grafana/provisioning
     ports:
       - "3000:3000"
     depends_on:
       - prometheus
     environment:
-    - PATH=/usr/share/grafana/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    - GF_PATHS_CONFIG=/etc/grafana/grafana.ini
-    - GF_PATHS_DATA=/var/lib/grafana
-    - GF_PATHS_HOME=/usr/share/grafana
-    - GF_PATHS_LOGS=/var/log/grafana
-    - GF_PATHS_PLUGINS=/var/lib/grafana/plugins
-    - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - PATH=/usr/share/grafana/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - GF_PATHS_CONFIG=/etc/grafana/grafana.ini
+      - GF_PATHS_DATA=/var/lib/grafana
+      - GF_PATHS_HOME=/usr/share/grafana
+      - GF_PATHS_LOGS=/var/log/grafana
+      - GF_PATHS_PLUGINS=/var/lib/grafana/plugins
+      - GF_PATHS_DASHBOARDS=/etc/grafana/provisioning/dashboards
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+
+networks:
+  data_sharing:
+    driver: bridge
+
+volumes:
+  grafana-storage:
+    external: true

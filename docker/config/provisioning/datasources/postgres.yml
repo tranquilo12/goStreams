@@ -1,0 +1,30 @@
+#apiVersion: 1
+#
+#deleteDatasources:
+#  - name: TimeScaleDB
+#    orgId: 1
+#
+#datasources:
+#- name: polygonio
+#  type: postgres
+##  access: proxy
+#  host: localhost:6432
+#  password: Complicated@Password@Here
+#  user: grafanareader
+#  database: polygonio
+#  basicAuth: false
+#  withCredentials:
+#  isDefault: true
+#  jsonData:
+#     tlsAuth: false
+#     tlsAuthWithCACert: false
+#     sslmode: disable
+#     timescaledb: true
+#     postgresVersion: 1300
+#  secureJsonData:
+#    tlsCACert: ""
+#    tlsClientCert: ""
+#    tlsClientKey: ""
+#  version: 1
+#  editable: true
+#

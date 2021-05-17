@@ -3,18 +3,20 @@ package config
 import (
 	"encoding/csv"
 	"gopkg.in/ini.v1"
+	"lightning/utils/structs"
 	"log"
 	"os"
 )
 
-type DbParams struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	Dbname   string
+// AggCliParams Struct for parsing cli params
+type AggCliParams struct {
+	Timespan   string
+	From       string
+	To         string
+	Multiplier int
 }
 
+// RedisParams Struct for Redis db parameters.
 type RedisParams struct {
 	Host          string
 	Port          string
@@ -23,7 +25,9 @@ type RedisParams struct {
 	SocketTimeout string
 }
 
-func SetDBParams(params *DbParams, user string) error {
+// SetDBParams Function that reads the config.ini file within the directory, setting the Postgres db parameters.
+// param user has options 'grafana' and 'postgres'.
+func SetDBParams(params *structs.DBParams, user string) error {
 	pwd, err := os.Getwd()
 	config, err := ini.Load(pwd + "/config.ini")
 	if err != nil {
@@ -31,7 +35,8 @@ func SetDBParams(params *DbParams, user string) error {
 	}
 
 	params.Host = config.Section("DB").Key("host").String()
-	params.Port = config.Section("SSH").Key("ssh_local_bind_port").String()
+	//params.Port = config.Section("SSH").Key("ssh_local_bind_port").String()
+	params.Port = "6432"
 	params.Dbname = config.Section("DB").Key("name").String()
 
 	if user == "postgres" {
@@ -47,6 +52,8 @@ func SetDBParams(params *DbParams, user string) error {
 	return err
 }
 
+// SetPolygonCred Function that reads the config.ini file within the directory, and returns the API Key.
+// param user has options 'me' and 'other'.
 func SetPolygonCred(user string) string {
 	pwd, err := os.Getwd()
 	config, err := ini.Load(pwd + "/config.ini")
@@ -66,6 +73,7 @@ func SetPolygonCred(user string) string {
 	return appId
 }
 
+// SetRedisCred Function that reads the config.ini file within the directory, setting the Redis db parameters.
 func SetRedisCred(params *RedisParams) error {
 	config, err := ini.Load("config.ini")
 	if err != nil {
@@ -81,6 +89,7 @@ func SetRedisCred(params *RedisParams) error {
 	return err
 }
 
+// ReadEquitiesList Function that reads the file /utils/config/equities_list.csv, to return the list of equities.
 func ReadEquitiesList() []string {
 	var res []string
 
