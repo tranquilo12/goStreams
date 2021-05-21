@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/adjust/rmq/v3"
+	"github.com/gosuri/uiprogress"
+	"github.com/nitishm/go-rejson"
 	"go.uber.org/ratelimit"
 	"lightning/utils/db"
 	"net/http"
-	"sync"
-
-	"github.com/nitishm/go-rejson"
 	"strings"
+	"sync"
 
 	"github.com/gomodule/redigo/redis"
 	"lightning/utils/structs"
@@ -86,7 +86,7 @@ func AggPublisher(urls []*url.URL) error {
 	// err and response variables to make things easy
 	var err error
 	var errChan chan error
-	var resp *http.Response
+	//var resp *http.Response
 
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
@@ -96,7 +96,7 @@ func AggPublisher(urls []*url.URL) error {
 
 	// create a rate limiter to stop over-requesting
 	prev := time.Now()
-	rateLimiter := ratelimit.New(50)
+	rateLimiter := ratelimit.New(1)
 
 	client := db.GetRedisClient(7000)
 	queueConnection, err := rmq.OpenConnectionWithRedisClient("AGG", client, errChan)
@@ -104,40 +104,44 @@ func AggPublisher(urls []*url.URL) error {
 		fmt.Println("Something wrong with this queueConnection...")
 	}
 
+	taskQueue, err := queueConnection.OpenQueue("AGG")
+	if err != nil {
+		panic(err)
+	}
+
+	uiprogress.Start()
+	bar := uiprogress.AddBar(len(urls))
+	bar.AppendCompleted()
+	bar.PrependElapsed()
+
 	for _, u := range urls {
+		time.Sleep(1)
 		now := rateLimiter.Take()
 		target := new(structs.AggregatesBarsResponse)
 
-		taskQueue, err := queueConnection.OpenQueue("AGG")
-		if err != nil {
-			fmt.Printf("Please, something wrong with the taskQueue...")
-		}
-
-		go func(u *url.URL, qTask rmq.Queue) {
+		go func(u *url.URL) {
 			defer wg.Done()
-			resp, err = http.Get(u.String())
-
+			resp, err := http.Get(u.String())
 			if err != nil {
 				fmt.Println("Error retrieving URL: ", err)
 				panic(err)
 			} else {
 				err = json.NewDecoder(resp.Body).Decode(&target)
-
 				taskBytes, err := json.Marshal(target)
 				if err != nil {
 					res := fmt.Sprintf("Target Err: %s", err)
 					fmt.Printf(res)
 				}
-
-				err = qTask.PublishBytes(taskBytes)
+				err = taskQueue.PublishBytes(taskBytes)
+				for bar.Incr() {
+					time.Sleep(1)
+				}
 			}
-		}(u, taskQueue)
+		}(u)
 
 		now.Sub(prev)
 		prev = now
-
 	}
 	wg.Wait()
-	resp.Body.Close()
 	return err
 }

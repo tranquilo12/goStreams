@@ -1,6 +1,7 @@
 package structs
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/adjust/rmq/v3"
@@ -8,6 +9,17 @@ import (
 	"strconv"
 	"time"
 )
+
+type DBLogger struct{}
+
+func (d DBLogger) BeforeQuery(c context.Context, q *pg.QueryEvent) (context.Context, error) {
+	return c, nil
+}
+
+func (d DBLogger) AfterQuery(c context.Context, q *pg.QueryEvent) error {
+	fmt.Println(q.FormattedQuery())
+	return nil
+}
 
 // DBParams struct for storing the postgres db's details
 type DBParams struct {
@@ -987,13 +999,11 @@ func (aggsConnCombo *NewConsumerStruct) Consume(delivery rmq.Delivery) {
 	aggBarsResponse := aggsConnCombo.AggBarsResponse
 
 	if err := json.Unmarshal([]byte(delivery.Payload()), &aggBarsResponse); err != nil {
-		// handle json error
 		fmt.Println("Something Json Error")
 		if err := delivery.Reject(); err != nil {
-			// handle reject error
 			fmt.Println("Something Reject Error")
 		}
-		return
+		//return
 	}
 
 	aggs := AggBarFlattenPayloadBeforeInsert(aggBarsResponse, aggsConnCombo.Timespan, aggsConnCombo.Multiplier)
@@ -1002,10 +1012,16 @@ func (aggsConnCombo *NewConsumerStruct) Consume(delivery rmq.Delivery) {
 		if err != nil {
 			panic(err)
 		}
+
 		if err := delivery.Ack(); err != nil {
 			fmt.Println("Something Ack Error")
 		}
 	}
+
+	//err := conn.Close()
+	//if err != nil {
+	//	panic(err)
+	//}
 }
 
 // Grouped Daily Bars

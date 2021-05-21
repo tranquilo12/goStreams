@@ -49,7 +49,7 @@ to quickly create a Cobra application.`,
 		// Get a db conn that will be used by the function 'PushTickerIntoDB'
 		dbConn := db.GetPostgresDBConn(&dbParams)
 
-		apiKey := config.SetPolygonCred("me")
+		apiKey := config.SetPolygonCred("other")
 		url := db.MakeTickerVxQuery(apiKey)
 		Chan1 := db.MakeAllTickersVxRequests(url)
 		err = db.PushTickerVxIntoDB(Chan1, dbConn)

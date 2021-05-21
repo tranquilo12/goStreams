@@ -35,8 +35,7 @@ func SetDBParams(params *structs.DBParams, user string) error {
 	}
 
 	params.Host = config.Section("DB").Key("host").String()
-	//params.Port = config.Section("SSH").Key("ssh_local_bind_port").String()
-	params.Port = "6432"
+	params.Port = config.Section("DB").Key("port").String()
 	params.Dbname = config.Section("DB").Key("name").String()
 
 	if user == "postgres" {

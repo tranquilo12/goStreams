@@ -203,17 +203,25 @@ func MakeAllTickersRequests(urls []*url.URL, pgDB *pg.DB) error {
 // GetAllTickers Just get a list of all the tickers that are present in "ticker_vxes"
 // TODO Potentially, fucks up the startup CreateTables command that may be required for everything!.
 func GetAllTickers(pgDB *pg.DB) []string {
-	tickerVx := new([]structs.TickerVx)
+	fmt.Println("Getting all tickers...")
+	TickerVx := new([]structs.TickerVx)
 	var tickers []string
 
-	err := pgDB.Model(tickerVx).Distinct().Select()
+	_, err := pgDB.Query(TickerVx,
+		`SELECT DISTINCT ticker
+			from (SELECT tv.ticker as ticker
+				  FROM ticker_vxes tv
+					   LEFT JOIN aggregates_bars ab on tv.ticker = ab.ticker
+				  WHERE tv.market = 'stocks') as tat;`,
+	)
 	if err != nil {
 		panic(err)
 	}
 
-	for _, t := range *tickerVx {
+	for _, t := range *TickerVx {
 		tickers = append(tickers, t.Ticker)
 	}
 
+	fmt.Println("Done...")
 	return tickers
 }

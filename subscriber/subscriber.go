@@ -6,8 +6,10 @@ import (
 	"github.com/go-pg/pg/v10"
 	"lightning/utils/db"
 	"lightning/utils/structs"
+	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -42,17 +44,40 @@ func AggSubscriber(DBParams *structs.DBParams, timespan string, multiplier int) 
 		fmt.Printf("Please, something wrong with the taskQueue...")
 	}
 
-	err = taskQueue.StartConsuming(10, time.Second)
+	err = taskQueue.StartConsuming(1000, time.Second)
 	if err != nil {
 		fmt.Printf("Please, something wrong with the StartConsuming...")
 	}
 
-	for i := 0; i < 10; i++ {
-		name := fmt.Sprintf("consumer %d", i)
-		if _, err := taskQueue.AddConsumer(name, NewConsumers(pgDB, timespan, multiplier)); err != nil {
-			panic(err)
-		}
+	// use WaitGroup to make things more smooth with goroutines
+	var wg sync.WaitGroup
+
+	// create a buffer of the waitGroup, of the same length as urls
+	//wg.Add(1000000)
+
+	cleaner := rmq.NewCleaner(queueConnection)
+
+	i := 0
+	for range time.Tick(time.Second) {
+		i += 1
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			name := fmt.Sprintf("consumer %d", i)
+			if _, err := taskQueue.AddConsumer(name, NewConsumers(pgDB, timespan, multiplier)); err != nil {
+				panic(err)
+			}
+
+			_, err := cleaner.Clean()
+			if err != nil {
+				log.Printf("Didn't clean: %s", err)
+			}
+
+		}()
 	}
+
+	// just wait for all of them to be done
+	wg.Wait()
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT)

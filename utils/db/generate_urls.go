@@ -109,11 +109,13 @@ func MakeAggQueryStr(stocksTicker string, multiplier string, timespan string, fr
 // list of urls that will be queried.
 func MakeAllStocksAggsQueries(tickers []string, timespan string, from_ string, to_ string, apiKey string) []*url.URL {
 	// no need for channels in this yet, just a quick function that makes all the queries and sends it back
+	fmt.Println("Making all urls...")
 	var urls []*url.URL
 	for _, ticker := range tickers {
 		u := MakeAggQueryStr(ticker, "1", timespan, from_, to_, apiKey)
 		urls = append(urls, u)
 	}
+	fmt.Println("Done...")
 	return urls
 }
 
