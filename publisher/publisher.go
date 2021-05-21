@@ -18,14 +18,6 @@ import (
 	"time"
 )
 
-const (
-	apiKey     = "9AheK9pypnYOf_DU6TGpydCK6IMEVkIw"
-	timespan   = "minute"
-	from_      = "2021-01-01"
-	to_        = "2021-03-20"
-	multiplier = 1
-)
-
 // CreateAggKey A Function that creates the index for the redis database.
 // keys look like: $2021_11_05_AAPL_1_minute_from_2021_01_01_to_2021_04_01
 // keys start with a $ to be index-able.

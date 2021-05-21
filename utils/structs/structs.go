@@ -830,6 +830,14 @@ type NewConsumerStruct struct {
 	DBConn          *pg.Conn
 }
 
+// NewBatchConsumerStruct Used by Consume
+type NewBatchConsumerStruct struct {
+	AggBarsResponse []AggregatesBarsResponse
+	Timespan        string
+	Multiplier      int
+	DBConn          *pg.Conn
+}
+
 // TickersVxFlattenPayloadBeforeInsert Function that flattens result from '/v3/reference/tickers'
 func TickersVxFlattenPayloadBeforeInsert(target TickersVxResponse) []TickerVx {
 	var output []TickerVx
@@ -994,34 +1002,68 @@ func AggBarFlattenPayloadBeforeInsert(target AggregatesBarsResponse, timespan st
 
 }
 
-func (aggsConnCombo *NewConsumerStruct) Consume(delivery rmq.Delivery) {
+//func (aggsConnCombo *NewConsumerStruct) Consume(delivery rmq.Delivery) {
+//	conn := aggsConnCombo.DBConn
+//	aggBarsResponse := aggsConnCombo.AggBarsResponse
+//
+//	if err := json.Unmarshal([]byte(delivery.Payload()), &aggBarsResponse); err != nil {
+//		fmt.Println("Something Json Error")
+//		if err := delivery.Reject(); err != nil {
+//			fmt.Println("Something Reject Error")
+//		}
+//		//return
+//	}
+//
+//	aggs := AggBarFlattenPayloadBeforeInsert(aggBarsResponse, aggsConnCombo.Timespan, aggsConnCombo.Multiplier)
+//	if len(aggs) > 0 {
+//		_, err := conn.Model(&aggs).OnConflict("(t, vw, multiplier, timespan, ticker, o, h, l, c) DO NOTHING").Insert()
+//		if err != nil {
+//			panic(err)
+//		}
+//
+//		if err := delivery.Ack(); err != nil {
+//			fmt.Println("Something Ack Error")
+//		}
+//	}
+//
+//	//err := conn.Close()
+//	//if err != nil {
+//	//	panic(err)
+//	//}
+//}
+
+func (aggsConnCombo *NewConsumerStruct) Consume(batch rmq.Deliveries) {
 	conn := aggsConnCombo.DBConn
 	aggBarsResponse := aggsConnCombo.AggBarsResponse
+	payloads := batch.Payloads()
 
-	if err := json.Unmarshal([]byte(delivery.Payload()), &aggBarsResponse); err != nil {
-		fmt.Println("Something Json Error")
-		if err := delivery.Reject(); err != nil {
-			fmt.Println("Something Reject Error")
+	for _, payload := range payloads {
+
+		if err := json.Unmarshal([]byte(payload), &aggBarsResponse); err != nil {
+			fmt.Println("Something Json Error")
+			if err := batch.Reject(); err != nil {
+				fmt.Println("Something Reject Error")
+			}
 		}
-		//return
+
+		aggs := AggBarFlattenPayloadBeforeInsert(aggBarsResponse, aggsConnCombo.Timespan, aggsConnCombo.Multiplier)
+		if len(aggs) > 0 {
+			_, err := conn.Model(&aggs).OnConflict("(t, vw, multiplier, timespan, ticker, o, h, l, c) DO NOTHING").Insert()
+			if err != nil {
+				panic(err)
+			}
+
+			if err := batch.Ack(); err != nil {
+				fmt.Println("Something Ack Error")
+			}
+		}
+
+		//err := conn.Close()
+		//if err != nil {
+		//	panic(err)
+		//}
+
 	}
-
-	aggs := AggBarFlattenPayloadBeforeInsert(aggBarsResponse, aggsConnCombo.Timespan, aggsConnCombo.Multiplier)
-	if len(aggs) > 0 {
-		_, err := conn.Model(&aggs).OnConflict("(t, vw, multiplier, timespan, ticker, o, h, l, c) DO NOTHING").Insert()
-		if err != nil {
-			panic(err)
-		}
-
-		if err := delivery.Ack(); err != nil {
-			fmt.Println("Something Ack Error")
-		}
-	}
-
-	//err := conn.Close()
-	//if err != nil {
-	//	panic(err)
-	//}
 }
 
 // Grouped Daily Bars

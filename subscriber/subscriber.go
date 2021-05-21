@@ -6,13 +6,23 @@ import (
 	"github.com/go-pg/pg/v10"
 	"lightning/utils/db"
 	"lightning/utils/structs"
-	"log"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
 )
+
+//func NewBatchConsumers(db *pg.DB, timespan string, multiplier int) *structs.NewConsumerStruct {
+//	res := structs.AggregatesBarsResponse{}
+//	conn := db.Conn()
+//	return &structs.NewConsumerStruct{
+//		AggBarsResponse: res,
+//		Timespan:        timespan,
+//		Multiplier:      multiplier,
+//		DBConn:          conn,
+//	}
+//}
 
 func NewConsumers(db *pg.DB, timespan string, multiplier int) *structs.NewConsumerStruct {
 	res := structs.AggregatesBarsResponse{}
@@ -64,13 +74,19 @@ func AggSubscriber(DBParams *structs.DBParams, timespan string, multiplier int) 
 		go func() {
 			defer wg.Done()
 			name := fmt.Sprintf("consumer %d", i)
-			if _, err := taskQueue.AddConsumer(name, NewConsumers(pgDB, timespan, multiplier)); err != nil {
+
+			name, err := taskQueue.AddBatchConsumer(name, 100, time.Second, NewConsumers(pgDB, timespan, multiplier))
+			if err != nil {
 				panic(err)
 			}
 
-			_, err := cleaner.Clean()
+			//if _, err := taskQueue.AddConsumer(name, NewConsumers(pgDB, timespan, multiplier)); err != nil {
+			//	panic(err)
+			//}
+
+			_, err = cleaner.Clean()
 			if err != nil {
-				log.Printf("Didn't clean: %s", err)
+				panic(err)
 			}
 
 		}()
