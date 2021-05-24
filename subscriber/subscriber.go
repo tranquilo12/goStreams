@@ -13,17 +13,6 @@ import (
 	"time"
 )
 
-//func NewBatchConsumers(db *pg.DB, timespan string, multiplier int) *structs.NewConsumerStruct {
-//	res := structs.AggregatesBarsResponse{}
-//	conn := db.Conn()
-//	return &structs.NewConsumerStruct{
-//		AggBarsResponse: res,
-//		Timespan:        timespan,
-//		Multiplier:      multiplier,
-//		DBConn:          conn,
-//	}
-//}
-
 func NewConsumers(db *pg.DB, timespan string, multiplier int) *structs.NewConsumerStruct {
 	res := structs.AggregatesBarsResponse{}
 	conn := db.Conn()
@@ -62,34 +51,30 @@ func AggSubscriber(DBParams *structs.DBParams, timespan string, multiplier int) 
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
 
-	// create a buffer of the waitGroup, of the same length as urls
-	//wg.Add(1000000)
-
 	cleaner := rmq.NewCleaner(queueConnection)
 
 	i := 0
 	for range time.Tick(time.Second) {
 		i += 1
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			name := fmt.Sprintf("consumer %d", i)
+		if i < 10 {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				name := fmt.Sprintf("consumer %d", i)
 
-			name, err := taskQueue.AddBatchConsumer(name, 100, time.Second, NewConsumers(pgDB, timespan, multiplier))
-			if err != nil {
-				panic(err)
-			}
+				name, err := taskQueue.AddBatchConsumer(name, 100, time.Second, NewConsumers(pgDB, timespan, multiplier))
+				if err != nil {
+					panic(err)
+				}
 
-			//if _, err := taskQueue.AddConsumer(name, NewConsumers(pgDB, timespan, multiplier)); err != nil {
-			//	panic(err)
-			//}
-
-			_, err = cleaner.Clean()
-			if err != nil {
-				panic(err)
-			}
-
-		}()
+				_, err = cleaner.Clean()
+				if err != nil {
+					panic(err)
+				}
+			}()
+		} else {
+			break
+		}
 	}
 
 	// just wait for all of them to be done

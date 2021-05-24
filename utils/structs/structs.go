@@ -1002,36 +1002,6 @@ func AggBarFlattenPayloadBeforeInsert(target AggregatesBarsResponse, timespan st
 
 }
 
-//func (aggsConnCombo *NewConsumerStruct) Consume(delivery rmq.Delivery) {
-//	conn := aggsConnCombo.DBConn
-//	aggBarsResponse := aggsConnCombo.AggBarsResponse
-//
-//	if err := json.Unmarshal([]byte(delivery.Payload()), &aggBarsResponse); err != nil {
-//		fmt.Println("Something Json Error")
-//		if err := delivery.Reject(); err != nil {
-//			fmt.Println("Something Reject Error")
-//		}
-//		//return
-//	}
-//
-//	aggs := AggBarFlattenPayloadBeforeInsert(aggBarsResponse, aggsConnCombo.Timespan, aggsConnCombo.Multiplier)
-//	if len(aggs) > 0 {
-//		_, err := conn.Model(&aggs).OnConflict("(t, vw, multiplier, timespan, ticker, o, h, l, c) DO NOTHING").Insert()
-//		if err != nil {
-//			panic(err)
-//		}
-//
-//		if err := delivery.Ack(); err != nil {
-//			fmt.Println("Something Ack Error")
-//		}
-//	}
-//
-//	//err := conn.Close()
-//	//if err != nil {
-//	//	panic(err)
-//	//}
-//}
-
 func (aggsConnCombo *NewConsumerStruct) Consume(batch rmq.Deliveries) {
 	conn := aggsConnCombo.DBConn
 	aggBarsResponse := aggsConnCombo.AggBarsResponse
@@ -1054,7 +1024,8 @@ func (aggsConnCombo *NewConsumerStruct) Consume(batch rmq.Deliveries) {
 			}
 
 			if err := batch.Ack(); err != nil {
-				fmt.Println("Something Ack Error")
+				e := fmt.Sprintf("Something Ack Error:: %d\n", err)
+				fmt.Printf(e)
 			}
 		}
 
