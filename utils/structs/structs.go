@@ -1023,17 +1023,12 @@ func (aggsConnCombo *NewConsumerStruct) Consume(batch rmq.Deliveries) {
 				panic(err)
 			}
 
-			if err := batch.Ack(); err != nil {
-				e := fmt.Sprintf("Something Ack Error:: %d\n", err)
-				fmt.Printf(e)
-			}
 		}
 
-		//err := conn.Close()
-		//if err != nil {
-		//	panic(err)
-		//}
-
+		if errors := batch.Ack(); len(errors) > 0 {
+			e := fmt.Sprintf("Something Ack Error:: %s\n", errors)
+			fmt.Printf(e)
+		}
 	}
 }
 

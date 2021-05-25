@@ -61,8 +61,7 @@ func AggSubscriber(DBParams *structs.DBParams, timespan string, multiplier int) 
 			go func() {
 				defer wg.Done()
 				name := fmt.Sprintf("consumer %d", i)
-
-				name, err := taskQueue.AddBatchConsumer(name, 100, time.Second, NewConsumers(pgDB, timespan, multiplier))
+				name, err := taskQueue.AddBatchConsumer(name, 1000, time.Second, NewConsumers(pgDB, timespan, multiplier))
 				if err != nil {
 					panic(err)
 				}

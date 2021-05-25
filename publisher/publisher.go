@@ -88,7 +88,7 @@ func AggPublisher(urls []*url.URL) error {
 
 	// create a rate limiter to stop over-requesting
 	prev := time.Now()
-	rateLimiter := ratelimit.New(1)
+	rateLimiter := ratelimit.New(30)
 
 	client := db.GetRedisClient(7000)
 	queueConnection, err := rmq.OpenConnectionWithRedisClient("AGG", client, errChan)
