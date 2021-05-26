@@ -55,7 +55,8 @@ to quickly create a Cobra application.`,
 		//var tickers = []string{"AAPL", "GME"}
 		var tickers = db.GetAllTickers(postgresDB)
 		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey)
-		err = publisher.AggPublisher(urls)
+		err = publisher.AggPublisherRMQ(urls)
+		//err = publisher.AggPublisher(urls)
 		if err != nil {
 			fmt.Println("Something wrong with AggPublisher...")
 			panic(err)

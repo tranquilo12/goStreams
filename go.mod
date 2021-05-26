@@ -19,6 +19,7 @@ require (
 	github.com/schollz/progressbar/v3 v3.8.0
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/viper v1.7.1
+	github.com/streadway/amqp v1.0.0 // indirect
 	go.uber.org/ratelimit v0.2.0
 	gopkg.in/ini.v1 v1.62.0
 )

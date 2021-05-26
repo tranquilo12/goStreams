@@ -1,11 +1,14 @@
 package subscriber
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/adjust/rmq/v3"
 	"github.com/go-pg/pg/v10"
+	"github.com/streadway/amqp"
 	"lightning/utils/db"
 	"lightning/utils/structs"
+	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -92,4 +95,66 @@ func AggSubscriber(DBParams *structs.DBParams, timespan string, multiplier int) 
 	<-queueConnection.StopAllConsuming()
 
 	return err
+}
+
+func AggSubscriberRMQ(DBParams *structs.DBParams, timespan string, multiplier int) error {
+
+	AmqpServerUrl := "amqp://guest:guest@localhost:5672"
+	connectRabbitMQ, err := amqp.Dial(AmqpServerUrl)
+	if err != nil {
+		//panic(err)
+		return err
+	}
+	defer connectRabbitMQ.Close()
+
+	channelRabbitMQ, err := connectRabbitMQ.Channel()
+	if err != nil {
+		//panic(err)
+		return err
+	}
+	defer channelRabbitMQ.Close()
+
+	messages, err := channelRabbitMQ.Consume(
+		"AGG",
+		"",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		//panic(err)
+		return err
+	}
+
+	// Make a channel to receive messages into infinite loop.
+	forever := make(chan bool)
+
+	// use WaitGroup to make things more smooth with goroutines
+	var wg sync.WaitGroup
+
+	// create a buffer of the waitGroup, of the same length as urls
+	wg.Add(20000)
+
+	go func() {
+		defer wg.Done()
+		for message := range messages {
+			// For example, show received message in a console.
+			res := structs.AggregatesBarsResponse{}
+			json.Unmarshal(message.Body, &res)
+
+			fmt.Printf(" > Received ticker: %s\n", res.Ticker)
+
+			if err := message.Ack(false); err != nil {
+				log.Printf("Error acknowledging message : %s", err)
+			} else {
+				log.Printf("Acknowledged message")
+			}
+		}
+	}()
+	wg.Wait()
+
+	<-forever
+	return nil
 }

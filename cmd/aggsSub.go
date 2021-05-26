@@ -37,7 +37,8 @@ to quickly create a Cobra application.`,
 		fmt.Println("aggsSub called")
 		pgParams := db.ReadPostgresDBParamsFromCMD(cmd)
 		aggParams := db.ReadAggregateParamsFromCMD(cmd)
-		err := subscriber.AggSubscriber(&pgParams, aggParams.Timespan, aggParams.Multiplier)
+		//err := subscriber.AggSubscriber(&pgParams, aggParams.Timespan, aggParams.Multiplier)
+		err := subscriber.AggSubscriberRMQ(&pgParams, aggParams.Timespan, aggParams.Multiplier)
 		if err != nil {
 			fmt.Println("Something wrong with AggPublisher...")
 			panic(err)
