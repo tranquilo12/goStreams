@@ -53,7 +53,7 @@ to quickly create a Cobra application.`,
 		}
 
 		//var tickers = []string{"AAPL", "GME"}
-		var tickers = db.GetAllTickers(postgresDB)
+		var tickers = db.GetAllTickers(postgresDB, aggParams.Timespan)
 		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey)
 		err = publisher.AggPublisherRMQ(urls)
 		//err = publisher.AggPublisher(urls)

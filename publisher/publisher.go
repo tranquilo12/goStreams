@@ -162,10 +162,21 @@ func AggPublisherRMQ(urls []*url.URL) error {
 		nil,
 	)
 	if err != nil {
-		return err
+		panic(err)
 	}
 
-	err = channelRabbitMQ.Qos(1, 0, false)
+	//err = channelRabbitMQ.QueueBind(
+	//	q.Name,
+	//	"",
+	//	"FANNEDOUT",
+	//	false,
+	//	nil,
+	//)
+	//if err != nil {
+	//	return err
+	//}
+
+	err = channelRabbitMQ.Qos(10, 0, false)
 	if err != nil {
 		return err
 	}

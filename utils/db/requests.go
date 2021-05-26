@@ -201,18 +201,21 @@ func MakeAllTickersRequests(urls []*url.URL, pgDB *pg.DB) error {
 }
 
 // GetAllTickers Just get a list of all the tickers that are present in "ticker_vxes"
-func GetAllTickers(pgDB *pg.DB) []string {
+func GetAllTickers(pgDB *pg.DB, timespan string) []string {
 	fmt.Println("Getting all tickers...")
 	TickerVx := new([]structs.TickerVx)
 	var tickers []string
 
-	_, err := pgDB.Query(TickerVx,
+	queryString := fmt.Sprintf(
 		`SELECT DISTINCT ticker
 			from (SELECT tv.ticker as ticker
 				  FROM ticker_vxes tv
 					   LEFT JOIN aggregates_bars ab on tv.ticker = ab.ticker
-				  WHERE tv.market = 'stocks') as tat;`,
+				  WHERE tv.market = 'stocks' AND ab.ticker IS NULL AND ab.timespan = '%s') as tat;`,
+		timespan,
 	)
+
+	_, err := pgDB.Query(TickerVx, queryString)
 	if err != nil {
 		panic(err)
 	}
