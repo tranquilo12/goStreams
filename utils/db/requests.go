@@ -220,6 +220,13 @@ func GetAllTickers(pgDB *pg.DB, timespan string) []string {
 		panic(err)
 	}
 
+	if len(*TickerVx) < 1 {
+		_, err := pgDB.Query(TickerVx, "SELECT DISTINCT (ticker) FROM ticker_vxes;")
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	for _, t := range *TickerVx {
 		tickers = append(tickers, t.Ticker)
 	}

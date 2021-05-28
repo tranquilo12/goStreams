@@ -14,12 +14,10 @@ require (
 	github.com/nitishm/go-rejson v2.0.0+incompatible
 	github.com/onsi/ginkgo v1.15.0 // indirect
 	github.com/onsi/gomega v1.10.5 // indirect
-	github.com/pffreitas/rmqprom v0.0.5
-	github.com/prometheus/client_golang v1.6.0
 	github.com/schollz/progressbar/v3 v3.8.0
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/viper v1.7.1
-	github.com/streadway/amqp v1.0.0 // indirect
+	github.com/streadway/amqp v1.0.0
 	go.uber.org/ratelimit v0.2.0
 	gopkg.in/ini.v1 v1.62.0
 )

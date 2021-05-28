@@ -20,20 +20,20 @@ services:
 #    ports:
 #      - "5432:5432"
 
-#  pgbouncer:
-#    image: edoburu/pgbouncer:latest
-#    container_name: lightning_pgbouncer
-#    restart: always
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: lightning_pgbouncer
+    restart: always
 #    networks:
 #      - data_sharing
-#    volumes:
-#      - ./config/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
-#      - ./config/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt
-#      - ./config/pgbouncer/log:/var/log/pgbouncer/
+    volumes:
+      - ./config/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./config/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt
+      - ./config/pgbouncer/log:/var/log/pgbouncer/
 #    depends_on:
 #      - db
-#    ports:
-#      - "6432:6432"
+    ports:
+      - "6432:6432"
 
   redis:
     image: redislabs/rejson:latest

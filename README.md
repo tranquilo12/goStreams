@@ -121,3 +121,67 @@ To remain OS agnostic, postgres, pgbouncer and Redis are all docker containers.
 ### Library Choices 
 - Redigo exposed an interesting method of using redis with golang.
 - Redis-go was the only library supporting rmq (redis message queue), so we'll have to switch to that.
+
+### Changes to postgresql.conf and pg_hba.conf
+- postgresql.conf
+  - usual location: /etc/postgresql/{version no}/main/postgresql.conf
+  - changes: 
+    - changed `data_directory` variable to `/mnt/p` to reflect the 2TB ext4 SDD.
+    - changed `listen_addresses' to `*`
+  
+- pg_hba.conf
+  - usual location: /etc/postgresql/{version no}/main/pg_hba.conf
+  - changes: 
+    - For local Unix domain socket: local, all, all, md5
+    - For IPv4 local connections: host, all, all, 127.0.0.1/32, md5 
+    
+### Commands to bind windows drive to wsl2
+- Make sure the drive is ext4 formatted. 
+- Most of the info can be found [here](https://docs.microsoft.com/en-us/windows/wsl/wsl2-mount-disk).
+  - Also check out [this](https://github.com/microsoft/WSL/issues/6319).
+- From powershell:
+  - Determine which drive is to be mounted: `wmic diskdrive list brief`
+  - Then mount: `wsl --mount \\.\PHYSICALDRIVE{} --bare`
+  
+- From WSL:
+  - Determine from `lsblk` the mount location. (will be something like /dev/ssd1 ) 
+  - Make a new directory in /mnt/wsl/ and mount the /dev/ssd1 to something else. 
+    - `mkdir -p /mnt/wsl/PHYSICALDRIVE{} && mount /dev/sdd{} /mnt/wsl/PHYSICALDRIVE{}`
+  - Now make sure it's usable by postgres
+    - the new drive most prob has `root` ownership, so need to convert it to `postgres` level ownership
+      - First get to root level: `su`
+      - Then change ownership: `chown postgres /mnt/wsl/PHYSICALDRIVE{}`
+      - Then login as postgres: `su postgres`
+      - Make a new dir in `/mnt/wsl/PHYSICALDRIVE{}/data`, if it doesn't exist.
+      - Make sure ` /etc/postgresql/13/main/postgresql.conf` mentions data path as `/mnt/wsl/PHYSICALDRIVE{}/data`
+      - Shutdown postgres 13: `/usr/lib/postgresql/13/bin/pg_ctl stop`
+      - InitDB: `/usr/lib/postgresql/13/bin/initdb -D /mnt/wsl/PHYSICALDRIVE{}/data`
+      - Start postgres 13: `/usr/lib/postgresql/13/bin/pg_ctl start`
+  - Need to change the default postgres password: 
+    - change the pg_hba.conf (as in section above), from `md5` to `trust` for those local and IPv4 sections
+    - restart postgresql: `/usr/lib/postgresql/13/bin/pg_ctl restart`
+    - Get to root level: `su`
+    - Then execute `sudo -u postgres psql -w -h 127.0.0.1 -p 5432` to login without password prompt
+    - Then reset password using command `\password`
+    - change the pg_hba.conf (as in section above), from `trust` to `md5` back again for those local and IPv4 sections
+    - restart postgresql for changes to take effect. 
+  
+### Typical commands
+Create Tables in a raw database:
+- Ensure there's a database called 'polygonio"
+- go install lightning; go createTables
+  
+Publisher:
+  - go install lightning; lightning aggsPub --user postgres --password {} --database polygonio --host 127.0.0.1 --port 6432 --timespan minute --multi 1 --from 2020-01-01 --to 2021-05-01;
+Subscriber:
+  - go install lightning; lightning aggsSub --user postgres --password {} --database polygonio --host 127.0.0.1 --port 6432 --timespan minute --multi 1 --from 2020-01-01 --to 2021-05-01;
+
+### Look at RabbitMQ statistics: 
+- Go to ` http://localhost:15672`
+
+### Installing TimescaleDB 
+- Follow [this](https://docs.timescale.com/timescaledb/latest/how-to-guides/install-timescaledb/self-hosted/ubuntu/installation-apt-ubuntu/##apt-installation-ubuntu).
+
+### If running pgbouncer on same instance
+-  `sudo cp docker/config/pgbouncer/pgbouncer.ini /etc/pgbouncer/pgbouncer.ini`
+-  `sudo cp docker/config/pgbouncer/userlist.txt /etc/pgbouncer/userlist.txt;`

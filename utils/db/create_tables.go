@@ -100,7 +100,7 @@ func CreateAllTablesModel(user string, password string, database string, host st
 	}
 
 	// Create a unique index on one of the tables.
-	query1 := "create unique index if not exists aggregates_bars_t_vw_multiplier_timespan_ticker_uind on aggregates_bars (t, vw, multiplier, timespan, ticker, o, h, l, c);"
+	query1 := "create unique index if not exists aggregates_bars_t_multiplier_timespan_ticker_uind on aggregates_bars (t, multiplier, timespan, ticker);"
 	_, err = db.Exec(query1)
 	if err != nil {
 		panic(err)
