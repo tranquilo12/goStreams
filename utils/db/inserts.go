@@ -144,6 +144,38 @@ func PushTickerVxIntoDB(insertIntoDB <-chan []structs.TickerVx, db *pg.DB) error
 	return nil
 }
 
+func PushTickerNews2IntoDB(insertIntoDB <-chan []structs.TickerNews2, db *pg.DB) error {
+	// use WaitGroup to make things more smooth with channels
+	var wg sync.WaitGroup
+
+	bar := progressbar.Default(500, "Uploading TickerNews2 to db...")
+
+	// for each insertIntoDB that follows...spin off another go routine
+	for val, ok := <-insertIntoDB; ok; val, ok = <-insertIntoDB {
+		if ok && val != nil {
+			wg.Add(1)
+
+			go func(val []structs.TickerNews2) {
+				defer wg.Done()
+
+				_, err := db.Model(&val).
+					OnConflict("(id) DO NOTHING").
+					Insert()
+				if err != nil {
+					panic(err)
+				}
+
+				var barerr = bar.Add(1)
+				if barerr != nil {
+					fmt.Println("\nSomething wrong with bar: ", barerr)
+				}
+			}(val)
+		}
+	}
+	wg.Wait()
+	return nil
+}
+
 func PushTickerIntoDB(insertIntoDB <-chan []structs.Tickers, db *pg.DB) error {
 
 	// use WaitGroup to make things more smooth with channels

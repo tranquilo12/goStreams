@@ -16,6 +16,13 @@ type AggCliParams struct {
 	Multiplier int
 }
 
+// NewsCliParams Struct for parsing cli params
+type NewsCliParams struct {
+	Ticker string
+	From   string
+	To     string
+}
+
 // RedisParams Struct for Redis db parameters.
 type RedisParams struct {
 	Host          string

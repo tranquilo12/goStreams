@@ -23,13 +23,9 @@ import (
 	"lightning/utils/db"
 )
 
-const (
-	layout = "2006-01-02"
-)
-
-// refreshTickersCmd represents the refreshTickers command
-var refreshTickersCmd = &cobra.Command{
-	Use:   "refreshTickers",
+// tickerNewsCmd represents the refreshTickers command
+var tickerNewsCmd = &cobra.Command{
+	Use:   "refreshTickerNews2",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -45,10 +41,13 @@ to quickly create a Cobra application.`,
 		postgresDB := db.GetPostgresDBConn(&DBParams)
 		defer postgresDB.Close()
 
+		// read the ticker, from and to dates
+		newsParams := db.ReadTickerNewsParamsFromCMD(cmd)
+
 		apiKey := config.SetPolygonCred("other")
-		url := db.MakeTickerVxQuery(apiKey)
-		Chan1 := db.MakeAllTickersVxRequests(url)
-		err := db.PushTickerVxIntoDB(Chan1, postgresDB)
+		url := db.MakeTickerNews2Query(apiKey, newsParams.Ticker, newsParams.From)
+		Chan1 := db.MakeAllTickerNews2Requests(url)
+		err := db.PushTickerNews2IntoDB(Chan1, postgresDB)
 		if err != nil {
 			panic(err)
 		}
@@ -56,13 +55,16 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	rootCmd.AddCommand(refreshTickersCmd)
+	rootCmd.AddCommand(tickerNewsCmd)
 
-	refreshTickersCmd.Flags().StringP("user", "u", "", "Postgres username")
-	refreshTickersCmd.Flags().StringP("password", "P", "", "Postgres password")
-	refreshTickersCmd.Flags().StringP("database", "d", "", "Postgres database name")
-	refreshTickersCmd.Flags().StringP("host", "H", "127.0.0.1", "Postgres host (default localhost)")
-	refreshTickersCmd.Flags().StringP("port", "p", "5432", "Postgres port (default 5432)")
+	tickerNewsCmd.Flags().StringP("user", "u", "", "Postgres username")
+	tickerNewsCmd.Flags().StringP("password", "P", "", "Postgres password")
+	tickerNewsCmd.Flags().StringP("database", "d", "", "Postgres database name")
+	tickerNewsCmd.Flags().StringP("host", "H", "127.0.0.1", "Postgres host (default localhost)")
+	tickerNewsCmd.Flags().StringP("port", "p", "5432", "Postgres port (default 5432)")
+	tickerNewsCmd.Flags().StringP("ticker", "T", "", "Which ticker? (eg. AAPL)")
+	tickerNewsCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")
+	tickerNewsCmd.Flags().StringP("to", "t", "", "To which date? (format = %Y-%m-%d)")
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command

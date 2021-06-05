@@ -13,6 +13,7 @@ const (
 	tickerTypesHost = "api.polygon.io/v2/reference/types"
 	tickersVxHost   = "api.polygon.io/v3/reference/tickers"
 	tickersHost     = "api.polygon.io/v2/reference/tickers"
+	tickerNews2Host = "api.polygon.io/v2/reference/news"
 	//dailyOpenCloseHost   = "api.polygon.io/v1/open-close"
 	//groupedDailyBarsHost = "api.polygon.io/v2/aggs/grouped/locale/us/market/stocks"
 
@@ -179,4 +180,22 @@ func MakeAllTickersQuery(apiKey string, numPages int) []*url.URL {
 		urls = append(urls, u)
 	}
 	return urls
+}
+
+// MakeTickerNews2Query A function that takes in the apikey + page number to make urls.
+func MakeTickerNews2Query(apiKey string, ticker string, from_ string) *url.URL {
+	p, err := url.Parse("https://" + tickerNews2Host)
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+
+	// make the url values
+	q := url.Values{}
+	q.Add("ticker", ticker)
+	q.Add("limit", "1000")
+	q.Add("apiKey", apiKey)
+	q.Add("published_utc.gte", from_)
+	p.RawQuery = q.Encode()
+	return p
 }

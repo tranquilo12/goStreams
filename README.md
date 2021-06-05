@@ -144,8 +144,8 @@ To remain OS agnostic, postgres, pgbouncer and Redis are all docker containers.
   - Then mount: `wsl --mount \\.\PHYSICALDRIVE{} --bare`
   
 - From WSL:
-  - Determine from `lsblk` the mount location. (will be something like /dev/ssd1 ) 
-  - Make a new directory in /mnt/wsl/ and mount the /dev/ssd1 to something else. 
+  - Determine from `lsblk` the mount location. (will be something like `/dev/ss{}` ) - use `blkid --label 'PGDatabase'` 
+  - Make a new directory in `/mnt/wsl/` and mount the `/dev/ss{}` to something else. 
     - `mkdir -p /mnt/wsl/PHYSICALDRIVE{} && mount /dev/sdd{} /mnt/wsl/PHYSICALDRIVE{}`
   - Now make sure it's usable by postgres
     - the new drive most prob has `root` ownership, so need to convert it to `postgres` level ownership
@@ -171,10 +171,10 @@ Create Tables in a raw database:
 - Ensure there's a database called 'polygonio"
 - go install lightning; go createTables
   
-Publisher:
-  - go install lightning; lightning aggsPub --user postgres --password {} --database polygonio --host 127.0.0.1 --port 6432 --timespan minute --multi 1 --from 2020-01-01 --to 2021-05-01;
-Subscriber:
-  - go install lightning; lightning aggsSub --user postgres --password {} --database polygonio --host 127.0.0.1 --port 6432 --timespan minute --multi 1 --from 2020-01-01 --to 2021-05-01;
+- Publisher:
+    - go install lightning; lightning aggsPub --user postgres --password {} --database polygonio --host 127.0.0.1 --port 6432 --timespan minute --mult 1 --from 2020-01-01 --to 2021-05-01;
+- Subscriber:
+    - go install lightning; lightning aggsSub --user postgres --password {} --database polygonio --host 127.0.0.1 --port 6432 --timespan minute --mult 1 --from 2020-01-01 --to 2021-05-01;
 
 ### Look at RabbitMQ statistics: 
 - Go to ` http://localhost:15672`
@@ -185,3 +185,11 @@ Subscriber:
 ### If running pgbouncer on same instance
 -  `sudo cp docker/config/pgbouncer/pgbouncer.ini /etc/pgbouncer/pgbouncer.ini`
 -  `sudo cp docker/config/pgbouncer/userlist.txt /etc/pgbouncer/userlist.txt;`
+
+### Create new docker volume attached to a current dir
+- `docker volume create -d local-persist -o mountpoint=/mnt/wsl/PHYSICALDRIVE0/docker_data/ --name=polygonio-timescaledb-storage`
+
+### Create Postgres dump from docker instance etc.
+- `docker exec -i docker_timescale_1 /bin/bash -c "PGPASSWORD={} pg_dump --dbname=polygonio --host=host.docker.internal --port=5432 --username=postgres --schema='public' --table=public."aggregates_bars" --data-only" > C:\Users\SHIRAM\Documents\Numerai\aggregates_bars-2015-01-01-2021-06-05-dump.sql`
+- Example for converting from sql to txt: `awk 'NR >= 57890000 && NR <= 57890010' /path/to/file > new_file.txt`
+- or an easier way of doing things: `sudo docker exec -u postgres ${CONTAINER} psql -d ${DB} -c "COPY ${TABLE} TO STDOUT WITH CSV HEADER " > ${FILE}`

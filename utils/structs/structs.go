@@ -999,7 +999,36 @@ func AggBarFlattenPayloadBeforeInsert(target AggregatesBarsResponse, timespan st
 		output = append(output, newArr)
 	}
 	return output
+}
 
+func TickerNews2FlattenPayloadBeforeInsert(target TickerNews2Response) []TickerNews2 {
+	var output []TickerNews2
+	results := target.Results
+	for i := range results {
+		var r = results[i]
+		newArr := TickerNews2{
+			ID:                   r.ID,
+			PublisherName:        r.Publisher.Name,
+			PublisherHomepageURL: r.Publisher.HomepageURL,
+			PublisherLogoURL:     r.Publisher.LogoURL,
+			PublisherFaviconURL:  r.Publisher.FaviconURL,
+			Title:                r.Title,
+			Author:               r.Author,
+			PublishedUtc:         r.PublishedUtc,
+			ArticleURL:           r.ArticleURL,
+			Tickers:              r.Tickers,
+			AmpURL:               r.AmpURL,
+			ImageURL:             r.ImageURL,
+			Description:          r.Description,
+			Keywords:             r.Keywords,
+			Status:               target.Status,
+			RequestID:            target.RequestID,
+			Count:                target.Count,
+			NextURL:              target.NextURL,
+		}
+		output = append(output, newArr)
+	}
+	return output
 }
 
 func (aggsConnCombo *NewConsumerStruct) Consume(batch rmq.Deliveries) {
@@ -1267,6 +1296,57 @@ type (
 		Updated          int64     `json:"updated"`
 	}
 )
+
+type (
+	TickerNews2Publisher struct {
+		Name        string `json:"name"`
+		HomepageURL string `json:"homepage_url"`
+		LogoURL     string `json:"logo_url"`
+		FaviconURL  string `json:"favicon_url"`
+	}
+	TickerNews2Results struct {
+		ID           string               `json:"id"`
+		Publisher    TickerNews2Publisher `json:"publisher"`
+		Title        string               `json:"title"`
+		Author       string               `json:"author"`
+		PublishedUtc time.Time            `json:"published_utc"`
+		ArticleURL   string               `json:"article_url"`
+		Tickers      []string             `json:"tickers"`
+		AmpURL       string               `json:"amp_url"`
+		ImageURL     string               `json:"image_url"`
+		Description  string               `json:"description"`
+		Keywords     []string             `json:"keywords"`
+	}
+	// TickerNews2Response table
+	TickerNews2Response struct {
+		Results   []TickerNews2Results `json:"results"`
+		Status    string               `json:"status"`
+		RequestID string               `json:"request_id"`
+		Count     int                  `json:"count"`
+		NextURL   string               `json:"next_url"`
+	}
+)
+
+type TickerNews2 struct {
+	ID                   string    `json:"id"`
+	PublisherName        string    `json:"publisher_name"`
+	PublisherHomepageURL string    `json:"publisher_homepage_url"`
+	PublisherLogoURL     string    `json:"publisher_logo_url"`
+	PublisherFaviconURL  string    `json:"publisher_favicon_url"`
+	Title                string    `json:"title"`
+	Author               string    `json:"author"`
+	PublishedUtc         time.Time `json:"published_utc"`
+	ArticleURL           string    `json:"article_url"`
+	Tickers              []string  `json:"tickers"`
+	AmpURL               string    `json:"amp_url"`
+	ImageURL             string    `json:"image_url"`
+	Description          string    `json:"description"`
+	Keywords             []string  `json:"keywords"`
+	Status               string    `json:"status"`
+	RequestID            string    `json:"request_id"`
+	Count                int       `json:"count"`
+	NextURL              string    `json:"next_url"`
+}
 
 //for _, u := range urls {
 //	now := rateLimiter.Take()

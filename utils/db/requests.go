@@ -234,3 +234,76 @@ func GetAllTickers(pgDB *pg.DB, timespan string) []string {
 	fmt.Println("Done...")
 	return tickers
 }
+
+func MakeAllTickerNews2Requests(u *url.URL) chan []structs.TickerNews2 {
+	var News2Response *structs.TickerNews2Response
+	var response *http.Response
+	var p *url.URL
+	var err error
+	apiKey := u.Query()["apiKey"]
+	var newCursor string
+
+	// create a channel to make sure all requests are not being thrown away, of the flattened type.
+	c := make(chan []structs.TickerNews2, 100000)
+
+	response, err = http.Get(u.String())
+	if err != nil {
+		panic(err)
+	}
+	defer response.Body.Close()
+
+	j := 0
+	i := 0
+	for {
+		if response.StatusCode == 200 {
+			err = json.NewDecoder(response.Body).Decode(&News2Response)
+			if err != nil {
+				panic(err)
+			}
+
+			flattenVxResponse := structs.TickerNews2FlattenPayloadBeforeInsert(*News2Response)
+			c <- flattenVxResponse
+
+			if News2Response.NextURL != "" {
+
+				p, err = url.Parse(News2Response.NextURL)
+				if err != nil {
+					panic(err)
+				}
+				oldCursor := p.Query()["cursor"][0]
+
+				q := p.Query()
+				q.Add("apiKey", apiKey[0])
+				p.Host = "api.polygon.io:443"
+				p.RawQuery = q.Encode()
+
+				fmt.Println(p.String())
+				response, err = http.Get(p.String())
+				if err != nil {
+					panic(err)
+				}
+
+				if i > 0 {
+					p, err = url.Parse(News2Response.NextURL)
+					if err != nil {
+						panic(err)
+					}
+					newCursor = p.Query()["cursor"][0]
+					if newCursor == oldCursor {
+						j += 1
+						if j > 20 {
+							break
+						}
+					}
+				}
+				i += 1
+			} else {
+				break
+			}
+		} else {
+			break
+		}
+	}
+	close(c)
+	return c
+}

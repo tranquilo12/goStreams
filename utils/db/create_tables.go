@@ -16,6 +16,7 @@ func createSchema(db *pg.DB) error {
 		(*structs.TickerType)(nil),
 		(*structs.TickerDetails)(nil),
 		(*structs.TickerNews)(nil),
+		(*structs.TickerNews2)(nil),
 		(*structs.Markets)(nil),
 		(*structs.Locales)(nil),
 		(*structs.StockSplits)(nil),
@@ -108,6 +109,79 @@ func CreateAllTablesModel(user string, password string, database string, host st
 
 	query2 := "create unique index if not exists ticker_vxes_ticker_market_last_updated_utc_uind on ticker_vxes(ticker, market, last_updated_utc);"
 	_, err = db.Exec(query2)
+	if err != nil {
+		panic(err)
+	}
+
+	query3 := `CREATE TABLE IF NOT EXISTS wsb_comments
+			(
+				total_awards_received           int,
+				approved_at_utc                 int,
+				comment_type                    int,
+				awarders                        jsonb,
+				mod_reason_by                   text,
+				banned_by                       text,
+				ups                             int,
+				author_flair_type               text,
+				removal_reason                  text,
+				link_id                         text,
+				author_flair_template_id        text,
+				likes                           int,
+				user_reports                    jsonb,
+				saved                           bool,
+				id                              text,
+				banned_at_utc                   int,
+				mod_reason_title                text,
+				gilded                          int,
+				archived                        bool,
+				no_follow                       bool,
+				author                          text,
+				can_mod_post                    bool,
+				send_replies                    bool,
+				parent_id                       text,
+				score                           int,
+				author_fullname                 text,
+				report_reasons                  jsonb,
+				approved_by                     text,
+				all_awardings                   jsonb,
+				subreddit_id                    text,
+				body                            text,
+				edited                          int,
+				downs                           int,
+				author_flair_css_class          text,
+				is_submitter                    bool,
+				collapsed                       bool,
+				author_flair_richtext           jsonb,
+				author_patreon_flair            text,
+				body_html                       text,
+				gildings                        jsonb,
+				collapsed_reason                text,
+				associated_award                text,
+				stickied                        bool,
+				author_premium                  bool,
+				subreddit_type                  text,
+				can_gild                        bool,
+				top_awarded_type                text,
+				author_flair_text_color         text,
+				score_hidden                    bool,
+				permalink                       text,
+				num_reports                     int,
+				locked                          bool,
+				name                            text,
+				created                         int,
+				author_flair_text               text,
+				treatment_tags                  jsonb,
+				created_utc                     int,
+				subreddit_name_prefixed         text,
+				controversiality                int,
+				depth                           int,
+				author_flair_background_color   text,
+				collapsed_because_crowd_control bool,
+				mod_reports                     jsonb,
+				mod_note                        text,
+				distinguished                   text
+	);`
+	_, err = db.Exec(query3)
 	if err != nil {
 		panic(err)
 	}

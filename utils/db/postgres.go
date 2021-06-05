@@ -49,7 +49,7 @@ func ReadAggregateParamsFromCMD(cmd *cobra.Command) config.AggCliParams {
 
 	timespan, _ := cmd.Flags().GetString("timespan")
 	if timespan == "" {
-		timespan = "min"
+		panic("Cmon provide some context, which --timespan??")
 	}
 
 	from_, _ := cmd.Flags().GetString("from")
@@ -73,6 +73,32 @@ func ReadAggregateParamsFromCMD(cmd *cobra.Command) config.AggCliParams {
 		From:       from_,
 		To:         to_,
 		Multiplier: multiplier,
+	}
+
+	return res
+}
+
+// ReadTickerNewsParamsFromCMD reads parameters like ticker, startDate, endDate
+func ReadTickerNewsParamsFromCMD(cmd *cobra.Command) config.NewsCliParams {
+	ticker, _ := cmd.Flags().GetString("ticker")
+	if ticker == "" {
+		panic("Cmon provide some context, which ticker??")
+	}
+
+	from_, _ := cmd.Flags().GetString("from")
+	if from_ == "" {
+		from_ = "2021-01-01"
+	}
+
+	to_, _ := cmd.Flags().GetString("to")
+	if to_ == "" {
+		to_ = "2021-03-01"
+	}
+
+	res := config.NewsCliParams{
+		Ticker: ticker,
+		From:   from_,
+		To:     to_,
 	}
 
 	return res
