@@ -22,6 +22,7 @@ import (
 	"lightning/publisher"
 	"lightning/utils/config"
 	"lightning/utils/db"
+	"lightning/utils/structs"
 )
 
 // aggsPubCmd represents the aggs command
@@ -36,9 +37,18 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("aggsPub called")
+		dbType, _ := cmd.Flags().GetString("dbtype")
+		if dbType == "" {
+			dbType = "ec2db"
+		}
 
 		// get database conn
-		DBParams := db.ReadPostgresDBParamsFromCMD(cmd)
+		DBParams := structs.DBParams{}
+		err := config.SetDBParams(&DBParams, dbType)
+		if err != nil {
+			panic(err)
+		}
+
 		postgresDB := db.GetPostgresDBConn(&DBParams)
 		defer postgresDB.Close()
 
@@ -47,7 +57,7 @@ to quickly create a Cobra application.`,
 
 		// Possibly get all the redis parameters from the .ini file.
 		var redisParams config.RedisParams
-		err := config.SetRedisCred(&redisParams)
+		err = config.SetRedisCred(&redisParams)
 		if err != nil {
 			panic(err)
 		}
@@ -56,7 +66,6 @@ to quickly create a Cobra application.`,
 		var tickers = db.GetAllTickers(postgresDB, aggParams.Timespan)
 		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey)
 		err = publisher.AggPublisherRMQ(urls)
-		//err = publisher.AggPublisher(urls)
 		if err != nil {
 			fmt.Println("Something wrong with AggPublisher...")
 			panic(err)
@@ -67,11 +76,12 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(aggsPubCmd)
 	// Here you will define your flags and configuration settings.
-	aggsPubCmd.Flags().StringP("user", "u", "", "Postgres username")
-	aggsPubCmd.Flags().StringP("password", "P", "", "Postgres password")
-	aggsPubCmd.Flags().StringP("database", "d", "", "Postgres database name")
-	aggsPubCmd.Flags().StringP("host", "H", "127.0.0.1", "Postgres host (default localhost)")
-	aggsPubCmd.Flags().StringP("port", "p", "5432", "Postgres port (default 5432)")
+	//aggsPubCmd.Flags().StringP("user", "u", "", "Postgres username")
+	//aggsPubCmd.Flags().StringP("password", "P", "", "Postgres password")
+	//aggsPubCmd.Flags().StringP("database", "d", "", "Postgres database name")
+	//aggsPubCmd.Flags().StringP("host", "H", "127.0.0.1", "Postgres host (default localhost)")
+	//aggsPubCmd.Flags().StringP("port", "p", "5432", "Postgres port (default 5432)")
+	aggsPubCmd.Flags().StringP("dbtype", "d", "ec2db", "One of two... ec2db or localdb")
 	aggsPubCmd.Flags().StringP("timespan", "T", "", "Timespan (minute, hour, day...)")
 	aggsPubCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")
 	aggsPubCmd.Flags().StringP("to", "t", "", "To which date? (format = %Y-%m-%d)")

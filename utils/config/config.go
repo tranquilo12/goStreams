@@ -6,6 +6,7 @@ import (
 	"lightning/utils/structs"
 	"log"
 	"os"
+	"strings"
 )
 
 // AggCliParams Struct for parsing cli params
@@ -34,26 +35,19 @@ type RedisParams struct {
 
 // SetDBParams Function that reads the config.ini file within the directory, setting the Postgres db parameters.
 // param user has options 'grafana' and 'postgres'.
-func SetDBParams(params *structs.DBParams, user string) error {
+func SetDBParams(params *structs.DBParams, section string) error {
 	pwd, err := os.Getwd()
 	config, err := ini.Load(pwd + "/config.ini")
 	if err != nil {
 		return err
 	}
 
-	params.Host = config.Section("DB").Key("host").String()
-	params.Port = config.Section("DB").Key("port").String()
-	params.Dbname = config.Section("DB").Key("name").String()
-
-	if user == "postgres" {
-		params.User = config.Section("DB").Key("user").String()
-		params.Password = config.Section("DB").Key("password").String()
-	}
-
-	if user == "grafana" {
-		params.User = config.Section("GRAFANA_POSTGRES").Key("user").String()
-		params.Password = config.Section("GRAFANA_POSTGRES").Key("password").String()
-	}
+	section = strings.ToUpper(section)
+	params.Host = config.Section(section).Key("host").String()
+	params.Port = config.Section(section).Key("port").String()
+	params.Dbname = config.Section(section).Key("name").String()
+	params.User = config.Section(section).Key("user").String()
+	params.Password = config.Section(section).Key("password").String()
 
 	return err
 }
