@@ -1,10 +1,8 @@
 package config
 
 import (
-	"encoding/csv"
 	"gopkg.in/ini.v1"
 	"lightning/utils/structs"
-	"log"
 	"os"
 	"strings"
 )
@@ -87,35 +85,4 @@ func SetRedisCred(params *RedisParams) error {
 	params.SocketTimeout = config.Section("REDIS").Key("socket_timeout").String()
 
 	return err
-}
-
-// ReadEquitiesList Function that reads the file /utils/config/equities_list.csv, to return the list of equities.
-func ReadEquitiesList() []string {
-	var res []string
-
-	pwd, err := os.Getwd()
-	f, err := os.Open(pwd + "/utils/config/equities_list.csv")
-	if err != nil {
-		log.Fatal("Unable to read input file "+"equities_list.csv", err)
-	}
-	defer func(f *os.File) {
-		err := f.Close()
-		if err != nil {
-
-		}
-	}(f)
-
-	csvReader := csv.NewReader(f)
-	records, err := csvReader.ReadAll()
-	if err != nil {
-		log.Fatal("Unable to parse file as CSV for "+"equities_list.csv", err)
-	}
-
-	for _, element := range records[1:] {
-		if len(element) == 2 {
-			res = append(res, element[1])
-		}
-	}
-
-	return res
 }

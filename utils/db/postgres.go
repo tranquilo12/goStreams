@@ -118,7 +118,6 @@ func GetPostgresDBConn(DBParams *structs.DBParams) *pg.DB {
 }
 
 // ExecCreateAllTablesModels Makes sure CreateAllTablesModels() is called and all table models are made.
-//func ExecCreateAllTablesModels(user string, password string, database string, host string, port string) {
 func ExecCreateAllTablesModels(DBParams *structs.DBParams) {
 	err := CreateAllTablesModel(DBParams.User, DBParams.Password, DBParams.Dbname, DBParams.Host, DBParams.Port)
 	if err != nil {
