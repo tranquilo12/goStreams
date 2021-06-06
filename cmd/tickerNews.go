@@ -18,6 +18,7 @@ limitations under the License.
 
 import (
 	"fmt"
+	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 	"lightning/utils/config"
 	"lightning/utils/db"
@@ -35,7 +36,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("refreshTickers called")
+		fmt.Println("refreshTickerNews2 called")
 
 		dbType, _ := cmd.Flags().GetString("dbtype")
 		if dbType == "" {
@@ -56,12 +57,23 @@ to quickly create a Cobra application.`,
 		newsParams := db.ReadTickerNewsParamsFromCMD(cmd)
 
 		apiKey := config.SetPolygonCred("other")
-		url := db.MakeTickerNews2Query(apiKey, newsParams.Ticker, newsParams.From)
-		Chan1 := db.MakeAllTickerNews2Requests(url)
-		err = db.PushTickerNews2IntoDB(Chan1, postgresDB)
-		if err != nil {
-			panic(err)
+
+		bar := progressbar.Default(int64(len(newsParams.Tickers)))
+		for _, ticker := range newsParams.Tickers {
+			url := db.MakeTickerNews2Query(apiKey, ticker, newsParams.From)
+			Chan1 := db.MakeAllTickerNews2Requests(url)
+
+			err = db.PushTickerNews2IntoDB(Chan1, postgresDB)
+			if err != nil {
+				panic(err)
+			}
+
+			err = bar.Add(1)
+			if err != nil {
+				panic(err)
+			}
 		}
+
 	},
 }
 
@@ -69,7 +81,7 @@ func init() {
 	rootCmd.AddCommand(tickerNewsCmd)
 	// Here you will define your flags and configuration settings.
 	tickerNewsCmd.Flags().StringP("dbtype", "d", "ec2db", "One of two... ec2db or localdb")
-	tickerNewsCmd.Flags().StringP("ticker", "T", "", "Which ticker? (eg. AAPL)")
+	tickerNewsCmd.Flags().StringSliceP("ticker", "T", []string{}, "Which ticker? (eg. AAPL)")
 	tickerNewsCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")
 	tickerNewsCmd.Flags().StringP("to", "t", "", "To which date? (format = %Y-%m-%d)")
 
