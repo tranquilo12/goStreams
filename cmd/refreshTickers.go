@@ -21,10 +21,7 @@ import (
 	"github.com/spf13/cobra"
 	"lightning/utils/config"
 	"lightning/utils/db"
-)
-
-const (
-	layout = "2006-01-02"
+	"lightning/utils/structs"
 )
 
 // refreshTickersCmd represents the refreshTickers command
@@ -40,15 +37,25 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("refreshTickers called")
 
+		dbType, _ := cmd.Flags().GetString("dbtype")
+		if dbType == "" {
+			dbType = "ec2db"
+		}
+
 		// get database conn
-		DBParams := db.ReadPostgresDBParamsFromCMD(cmd)
+		DBParams := structs.DBParams{}
+		err := config.SetDBParams(&DBParams, dbType)
+		if err != nil {
+			panic(err)
+		}
+
 		postgresDB := db.GetPostgresDBConn(&DBParams)
 		defer postgresDB.Close()
 
 		apiKey := config.SetPolygonCred("other")
 		url := db.MakeTickerVxQuery(apiKey)
 		Chan1 := db.MakeAllTickersVxRequests(url)
-		err := db.PushTickerVxIntoDB(Chan1, postgresDB)
+		err = db.PushTickerVxIntoDB(Chan1, postgresDB)
 		if err != nil {
 			panic(err)
 		}
@@ -58,11 +65,7 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(refreshTickersCmd)
 
-	refreshTickersCmd.Flags().StringP("user", "u", "", "Postgres username")
-	refreshTickersCmd.Flags().StringP("password", "P", "", "Postgres password")
-	refreshTickersCmd.Flags().StringP("database", "d", "", "Postgres database name")
-	refreshTickersCmd.Flags().StringP("host", "H", "127.0.0.1", "Postgres host (default localhost)")
-	refreshTickersCmd.Flags().StringP("port", "p", "5432", "Postgres port (default 5432)")
+	refreshTickersCmd.Flags().StringP("dbtype", "d", "ec2db", "One of two... ec2db or localdb")
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command

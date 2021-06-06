@@ -101,13 +101,13 @@ func CreateAllTablesModel(user string, password string, database string, host st
 	}
 
 	// Create a unique index on one of the tables.
-	query1 := "create unique index if not exists aggregates_bars_t_multiplier_timespan_ticker_uind on aggregates_bars (t, multiplier, timespan, ticker);"
+	query1 := "CREATE UNIQUE INDEX IF NOT EXISTS aggregates_bars_t_multiplier_timespan_ticker_uind on aggregates_bars (t, multiplier, timespan, ticker);"
 	_, err = db.Exec(query1)
 	if err != nil {
 		panic(err)
 	}
 
-	query2 := "create unique index if not exists ticker_vxes_ticker_market_last_updated_utc_uind on ticker_vxes(ticker, market, last_updated_utc);"
+	query2 := "CREATE UNIQUE INDEX IF NOT EXISTS ticker_vxes_ticker_market_last_updated_utc_uind on ticker_vxes(ticker, market, last_updated_utc);"
 	_, err = db.Exec(query2)
 	if err != nil {
 		panic(err)
@@ -186,5 +186,10 @@ func CreateAllTablesModel(user string, password string, database string, host st
 		panic(err)
 	}
 
+	query4 := `CREATE UNIQUE INDEX IF NOT EXISTS wsb_comments_id_uind on wsb_comments(id);`
+	_, err = db.Exec(query4)
+	if err != nil {
+		panic(err)
+	}
 	return nil
 }

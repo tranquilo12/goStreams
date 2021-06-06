@@ -62,13 +62,7 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(aggsSubCmd)
-
 	// Here you will define your flags and configuration settings.
-	//aggsSubCmd.Flags().StringP("user", "u", "", "Postgres username")
-	//aggsSubCmd.Flags().StringP("password", "P", "", "Postgres password")
-	//aggsSubCmd.Flags().StringP("database", "d", "", "Postgres database name")
-	//aggsSubCmd.Flags().StringP("host", "H", "127.0.0.1", "Postgres host (default localhost)")
-	//aggsSubCmd.Flags().StringP("port", "p", "5432", "Postgres port (default 5432)")
 	aggsSubCmd.Flags().StringP("dbtype", "d", "ec2db", "One of two... ec2db or localdb")
 	aggsSubCmd.Flags().StringP("timespan", "T", "", "Timespan (minute, hour, day...)")
 	aggsSubCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")

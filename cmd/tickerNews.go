@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 	"lightning/utils/config"
 	"lightning/utils/db"
+	"lightning/utils/structs"
 )
 
 // tickerNewsCmd represents the refreshTickers command
@@ -36,8 +37,18 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("refreshTickers called")
 
+		dbType, _ := cmd.Flags().GetString("dbtype")
+		if dbType == "" {
+			dbType = "ec2db"
+		}
+
 		// get database conn
-		DBParams := db.ReadPostgresDBParamsFromCMD(cmd)
+		DBParams := structs.DBParams{}
+		err := config.SetDBParams(&DBParams, dbType)
+		if err != nil {
+			panic(err)
+		}
+
 		postgresDB := db.GetPostgresDBConn(&DBParams)
 		defer postgresDB.Close()
 
@@ -47,7 +58,7 @@ to quickly create a Cobra application.`,
 		apiKey := config.SetPolygonCred("other")
 		url := db.MakeTickerNews2Query(apiKey, newsParams.Ticker, newsParams.From)
 		Chan1 := db.MakeAllTickerNews2Requests(url)
-		err := db.PushTickerNews2IntoDB(Chan1, postgresDB)
+		err = db.PushTickerNews2IntoDB(Chan1, postgresDB)
 		if err != nil {
 			panic(err)
 		}
@@ -56,16 +67,11 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(tickerNewsCmd)
-
-	tickerNewsCmd.Flags().StringP("user", "u", "", "Postgres username")
-	tickerNewsCmd.Flags().StringP("password", "P", "", "Postgres password")
-	tickerNewsCmd.Flags().StringP("database", "d", "", "Postgres database name")
-	tickerNewsCmd.Flags().StringP("host", "H", "127.0.0.1", "Postgres host (default localhost)")
-	tickerNewsCmd.Flags().StringP("port", "p", "5432", "Postgres port (default 5432)")
+	// Here you will define your flags and configuration settings.
+	tickerNewsCmd.Flags().StringP("dbtype", "d", "ec2db", "One of two... ec2db or localdb")
 	tickerNewsCmd.Flags().StringP("ticker", "T", "", "Which ticker? (eg. AAPL)")
 	tickerNewsCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")
 	tickerNewsCmd.Flags().StringP("to", "t", "", "To which date? (format = %Y-%m-%d)")
-	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:

@@ -18,7 +18,9 @@ limitations under the License.
 
 import (
 	"fmt"
+	"lightning/utils/config"
 	"lightning/utils/db"
+	"lightning/utils/structs"
 
 	"github.com/spf13/cobra"
 )
@@ -30,44 +32,26 @@ var createTablesCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("createTables called")
 
-		user, _ := cmd.Flags().GetString("user")
-		if user == "" {
-			user = "postgres"
+		dbType, _ := cmd.Flags().GetString("dbtype")
+		if dbType == "" {
+			dbType = "ec2db"
 		}
 
-		password, _ := cmd.Flags().GetString("password")
-		if password == "" {
-			panic("Cmon, pass a password!")
+		// get database conn
+		DBParams := structs.DBParams{}
+		err := config.SetDBParams(&DBParams, dbType)
+		if err != nil {
+			panic(err)
 		}
 
-		database, _ := cmd.Flags().GetString("database")
-		if database == "" {
-			database = "postgres"
-		}
-
-		host, _ := cmd.Flags().GetString("host")
-		if host == "" {
-			host = "127.0.0.1"
-		}
-
-		port, _ := cmd.Flags().GetString("port")
-		if port == "" {
-			port = "5432"
-		}
-
-		db.ExecCreateAllTablesModels(user, password, database, host, port)
+		db.ExecCreateAllTablesModels(&DBParams)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(createTablesCmd)
-
 	// Here you will define your flags and configuration settings.
-	createTablesCmd.Flags().StringP("user", "u", "", "Postgres username")
-	createTablesCmd.Flags().StringP("password", "P", "", "Postgres password")
-	createTablesCmd.Flags().StringP("database", "d", "", "Postgres database name")
-	createTablesCmd.Flags().StringP("host", "H", "127.0.0.1", "Postgres host (default localhost)")
-	createTablesCmd.Flags().StringP("port", "p", "5432", "Postgres port (default 5432)")
+	createTablesCmd.Flags().StringP("dbtype", "d", "", "One of two... ec2db or localdb")
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
