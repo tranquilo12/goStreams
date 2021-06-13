@@ -1,6 +1,7 @@
 package db
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/go-pg/pg/v10"
 	"github.com/go-redis/redis/v7"
@@ -164,6 +165,24 @@ func PushTickerVxIntoRedis(insertIntoRedis <-chan []structs.TickerVx, rClient *r
 		panic(err)
 	}
 
+	return nil
+}
+
+func PushAggIntoRedis(insertIntoRedis <-chan structs.RedisAggBarsResults, rClient *redis.Client) error {
+	// for each insertIntoDB that follows...spin off another go routine
+	for val, ok := <-insertIntoRedis; ok; val, ok = <-insertIntoRedis {
+		if ok {
+			resBytes, err := json.Marshal(val.InsertThis)
+			if err != nil {
+				panic(err)
+			}
+
+			err = rClient.Set(val.Key, resBytes, 0).Err()
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
 	return nil
 }
 

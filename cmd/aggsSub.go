@@ -20,9 +20,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"lightning/subscriber"
-	"lightning/utils/config"
 	"lightning/utils/db"
-	"lightning/utils/structs"
 )
 
 // aggsPubCmd represents the aggs command
@@ -42,19 +40,15 @@ to quickly create a Cobra application.`,
 			dbType = "ec2db"
 		}
 
-		// get database conn
-		DBParams := structs.DBParams{}
-		err := config.SetDBParams(&DBParams, dbType)
-		if err != nil {
-			panic(err)
-		}
-
 		// Get agg parameters from cli
 		aggParams := db.ReadAggregateParamsFromCMD(cmd)
 
-		err = subscriber.AggSubscriberRMQ(&DBParams, aggParams.Timespan, aggParams.Multiplier)
+		redisClient := db.GetRedisClient(7000)
+		var tickers = db.GetAllTickersFromRedis(redisClient)
+		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey)
+		insertIntoRedisChan := subscriber.AggDownloader(urls)
+		err := db.PushAggIntoRedis(insertIntoRedisChan, redisClient)
 		if err != nil {
-			fmt.Println("Something wrong with AggPublisher...")
 			panic(err)
 		}
 	},

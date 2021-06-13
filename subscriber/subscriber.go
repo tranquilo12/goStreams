@@ -1,27 +1,109 @@
 package subscriber
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/schollz/progressbar/v3"
 	"github.com/streadway/amqp"
+	"go.uber.org/ratelimit"
+	"lightning/publisher"
 	"lightning/utils/db"
 	"lightning/utils/structs"
+	"net/url"
 	"sync"
+	"time"
 )
+
+func DownloadFromS3(bucket string, key string) *manager.WriteAtBuffer {
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("default"), config.WithRegion("eu-central-1"))
+	if err != nil {
+		panic(err)
+	}
+
+	// Define a strategy that will buffer 1Mib into memory
+	downloader := manager.NewDownloader(s3.NewFromConfig(cfg), func(u *manager.Downloader) {
+		u.BufferProvider = manager.NewPooledBufferedWriterReadFromProvider(1 * 1024 * 1024)
+	})
+
+	buff := &manager.WriteAtBuffer{}
+	_, err = downloader.Download(context.TODO(), buff,
+		&s3.GetObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(key),
+		})
+	if err != nil {
+		panic(err)
+	}
+	return buff
+}
+
+func AggDownloader(urls []*url.URL) chan structs.RedisAggBarsResults {
+
+	insertIntoRedisChan := make(chan structs.RedisAggBarsResults, 100000)
+
+	// use WaitGroup to make things more smooth with goroutines
+	var wg sync.WaitGroup
+
+	// create a buffer of the waitGroup, of the same length as urls
+	wg.Add(len(urls))
+
+	prev := time.Now()
+	rateLimiter := ratelimit.New(500)
+
+	bar := progressbar.Default(int64(len(urls)))
+	for _, u := range urls {
+		now := rateLimiter.Take()
+
+		go func(url *url.URL) {
+			defer wg.Done()
+			messageKey := publisher.CreateAggKey(url.String())
+			fromS3 := DownloadFromS3("polygonio-all", messageKey)
+
+			// For example, show received message in a console.
+			res := structs.AggregatesBarsResponse{}
+
+			err := json.Unmarshal(fromS3.Bytes(), &res)
+			if err != nil {
+				panic(err)
+			}
+
+			oneKey := structs.RedisAggBarsResults{
+				InsertThis: res.Results, Key: messageKey,
+			}
+
+			err = bar.Add(1)
+			if err != nil {
+				return
+			}
+
+			time.Sleep(5 * time.Millisecond)
+			insertIntoRedisChan <- oneKey
+		}(u)
+
+		now.Sub(prev)
+		prev = now
+	}
+	wg.Wait()
+	close(insertIntoRedisChan)
+	return insertIntoRedisChan
+}
 
 func AggSubscriberRMQ(DBParams *structs.DBParams, timespan string, multiplier int) error {
 
 	AmqpServerUrl := "amqp://guest:guest@localhost:5672"
 	connectRabbitMQ, err := amqp.Dial(AmqpServerUrl)
 	if err != nil {
-		//panic(err)
 		return err
 	}
 	defer connectRabbitMQ.Close()
 
 	channelRabbitMQ, err := connectRabbitMQ.Channel()
 	if err != nil {
-		//panic(err)
 		return err
 	}
 	defer channelRabbitMQ.Close()
@@ -74,13 +156,6 @@ func AggSubscriberRMQ(DBParams *structs.DBParams, timespan string, multiplier in
 					fmt.Printf(" > Inserted ticker: %s\n", res.Ticker)
 				}
 			}
-
-			//if err := message.Ack(false); err != nil {
-			//	log.Printf("Error acknowledging message : %s", err)
-			//} else {
-			//	log.Printf("Acknowledged message")
-			//}
-
 			err = conn.Close()
 			if err != nil {
 				panic(err)

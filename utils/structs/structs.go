@@ -1347,3 +1347,8 @@ type TickerNews2 struct {
 	Count                int       `json:"count"`
 	NextURL              string    `json:"next_url"`
 }
+
+type RedisAggBarsResults struct {
+	InsertThis []AggregatesBarsResults
+	Key        string
+}

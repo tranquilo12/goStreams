@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/schollz/progressbar/v3"
 	"github.com/streadway/amqp"
 	"go.uber.org/ratelimit"
 	"net/http"
@@ -15,7 +16,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/gosuri/uiprogress"
 	"lightning/utils/structs"
 	"net/url"
 	"time"
@@ -26,10 +26,18 @@ func CreateAggKey(url string) string {
 	ticker := splitUrl[6]
 	multiplier := splitUrl[8]
 	timespan := splitUrl[9]
+
 	from_ := splitUrl[10]
-	//to_ := splitUrl[9]
+	fromYear := strings.Split(from_, "-")[0]
+	fromMon := strings.Split(from_, "-")[1]
+	fromDay := strings.Split(from_, "-")[2]
+
 	today := time.Now().Format("2006-01-02")
-	newKey := fmt.Sprintf("aggs/inserted-on-%s/%s-%s/data-for-date-%s/%s", today, timespan, multiplier, from_, ticker)
+	todayYear := strings.Split(today, "-")[0]
+	todayMon := strings.Split(today, "-")[1]
+	todayDay := strings.Split(today, "-")[2]
+
+	newKey := fmt.Sprintf("aggs/%s/%s/%s/%s/%s/%s/%s/%s/%s/data.json", todayYear, todayMon, todayDay, timespan, multiplier, fromYear, fromMon, fromDay, ticker)
 	return newKey
 }
 
@@ -106,21 +114,14 @@ func AggPublisher(urls []*url.URL) error {
 
 	// create a rate limiter to stop over-requesting
 	prev := time.Now()
-	rateLimiter := ratelimit.New(30)
+	rateLimiter := ratelimit.New(100)
 
-	// create a new bar and prepend the task progress to the bar and fanout into 1k go routines
-	//waitTime := time.Millisecond * 100
-	count := len(urls)
-	bar := uiprogress.AddBar(count).AppendCompleted().PrependElapsed()
-	//bar.PrependFunc(func(b *uiprogress.Bar) string {
-	//	return fmt.Sprintf("Task (%d/%d)", b.Current(), count)
-	//})
-	for i, u := range urls {
+	bar := progressbar.Default(int64(len(urls)))
+	for _, u := range urls {
 		now := rateLimiter.Take()
 		target := new(structs.AggregatesBarsResponse)
 
-		go func(u *url.URL, i int) {
-			defer wg.Done()
+		go func(u *url.URL) {
 			resp, err := http.Get(u.String())
 			if err != nil {
 				fmt.Println("Error retrieving URL: ", err)
@@ -137,34 +138,25 @@ func AggPublisher(urls []*url.URL) error {
 				}
 
 				err = UploadToS3("polygonio-all", messageKey, taskBytes)
-				err = bar.Set(i)
 				if err != nil {
 					panic(err)
 				}
 
-				//// Create message, and publish
-				//message := amqp.Publishing{
-				//	ContentType: "application/json",
-				//	Body:        taskBytes,
-				//}
-				//if err := channelRabbitMQ.Publish(
-				//	"",
-				//	"AGG",
-				//	false,
-				//	false,
-				//	message,
-				//); err != nil {
-				//	panic(err)
-				//}
+				err = bar.Add(1)
+				if err != nil {
+					return
+				}
+
+				time.Sleep(5 * time.Millisecond)
 			}
-		}(u, i)
+			wg.Done()
+		}(u)
 
 		now.Sub(prev)
 		prev = now
 	}
 
 	wg.Wait()
-	uiprogress.Stop()
 
 	return nil
 }
