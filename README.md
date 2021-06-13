@@ -173,9 +173,9 @@ Create Tables in a raw database:
 - go install lightning; go createTables
   
 - Publisher:
-    - go install lightning; lightning aggsPub --user postgres --password {} --database polygonio --host 127.0.0.1 --port 6432 --timespan minute --mult 1 --from 2020-01-01 --to 2021-05-01;
+    - go install lightning; lightning aggsPub --dbtype={localdb/ec2db} --timespan minute --mult 1 --from 2020-01-01 --to 2021-05-01;
 - Subscriber:
-    - go install lightning; lightning aggsSub --user postgres --password {} --database polygonio --host 127.0.0.1 --port 6432 --timespan minute --mult 1 --from 2020-01-01 --to 2021-05-01;
+    - go install lightning; lightning aggsSub --dbtype={localdb/ec2db} --timespan minute --mult 1 --from 2020-01-01 --to 2021-05-01;
 
 ### Look at RabbitMQ statistics: 
 - Go to ` http://localhost:15672`

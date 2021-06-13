@@ -62,9 +62,12 @@ to quickly create a Cobra application.`,
 			panic(err)
 		}
 
-		var tickers = db.GetAllTickers(postgresDB, aggParams.Timespan)
+		redisClient := db.GetRedisClient(7000)
+
+		//var tickers = db.GetAllTickers(postgresDB, aggParams.Timespan)
+		var tickers = db.GetAllTickersFromRedis(redisClient)
 		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey)
-		err = publisher.AggPublisherRMQ(urls)
+		err = publisher.AggPublisher(urls)
 		if err != nil {
 			fmt.Println("Something wrong with AggPublisher...")
 			panic(err)

@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-pg/pg/v10"
+	"github.com/go-redis/redis/v7"
 	"github.com/schollz/progressbar/v3"
 	"go.uber.org/ratelimit"
 	"lightning/utils/structs"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -233,6 +235,17 @@ func GetAllTickers(pgDB *pg.DB, timespan string) []string {
 
 	fmt.Println("Done...")
 	return tickers
+}
+
+func GetAllTickersFromRedis(redisClient *redis.Client) []string {
+	result := redisClient.Get("allTickers")
+
+	strResult, err := result.Result()
+	if err != nil {
+		panic(err)
+	}
+	strArrResults := strings.Split(strResult, ",")
+	return strArrResults
 }
 
 func MakeAllTickerNews2Requests(u *url.URL) chan []structs.TickerNews2 {

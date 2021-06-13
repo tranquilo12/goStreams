@@ -3,8 +3,10 @@ package db
 import (
 	"fmt"
 	"github.com/go-pg/pg/v10"
+	"github.com/go-redis/redis/v7"
 	"github.com/schollz/progressbar/v3"
 	"lightning/utils/structs"
+	"strings"
 	"sync"
 )
 
@@ -141,6 +143,27 @@ func PushTickerVxIntoDB(insertIntoDB <-chan []structs.TickerVx, db *pg.DB) error
 		}
 	}
 	wg.Wait()
+	return nil
+}
+
+func PushTickerVxIntoRedis(insertIntoRedis <-chan []structs.TickerVx, rClient *redis.Client) error {
+	// use WaitGroup to make things more smooth with channels
+	var allTickers []string
+
+	// for each insertIntoDB that follows...spin off another go routine
+	for val, ok := <-insertIntoRedis; ok; val, ok = <-insertIntoRedis {
+		if ok && val != nil {
+			for _, v := range val {
+				allTickers = append(allTickers, v.Ticker)
+			}
+		}
+	}
+	allTickersStr := strings.Join(allTickers[:], ",")
+	err := rClient.Set("allTickers", allTickersStr, 0).Err()
+	if err != nil {
+		panic(err)
+	}
+
 	return nil
 }
 

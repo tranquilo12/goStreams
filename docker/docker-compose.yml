@@ -6,7 +6,7 @@ services:
   timescale:
     image: timescale/timescaledb:latest-pg13
     volumes:
-      - /mnt/wsl/PHYSICALDRIVE0/data/:/var/lib/postgresql/data:rw
+      - /mnt/e/pg_data:/var/lib/postgresql/data:rw
     environment:
       POSTGRES_DB: polygonio
       POSTGRES_USER: postgres
@@ -67,7 +67,3 @@ services:
 networks:
   data_sharing:
     driver: bridge
-
-volumes:
-  grafana-storage:
-    external: true

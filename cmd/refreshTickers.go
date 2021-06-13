@@ -52,10 +52,13 @@ to quickly create a Cobra application.`,
 		postgresDB := db.GetPostgresDBConn(&DBParams)
 		defer postgresDB.Close()
 
+		redisClient := db.GetRedisClient(7000)
+
 		apiKey := config.SetPolygonCred("other")
 		url := db.MakeTickerVxQuery(apiKey)
 		Chan1 := db.MakeAllTickersVxRequests(url)
-		err = db.PushTickerVxIntoDB(Chan1, postgresDB)
+		err = db.PushTickerVxIntoRedis(Chan1, redisClient)
+		//err = db.PushTickerVxIntoDB(Chan1, postgresDB)
 		if err != nil {
 			panic(err)
 		}
