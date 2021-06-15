@@ -22,6 +22,11 @@ import (
 	"time"
 )
 
+//type S3Result struct {
+//	Output *s3.PutObjectOutput
+//	Err    error
+//}
+
 func CreateAggKey(url string) string {
 	splitUrl := strings.Split(url, "/")
 	ticker := splitUrl[6]
@@ -43,24 +48,17 @@ func CreateAggKey(url string) string {
 }
 
 func createS3Client() *s3.Client {
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithSharedConfigProfile("default"), config.WithRegion("eu-central-1"))
+	cfg, err := config.LoadDefaultConfig(
+		context.TODO(),
+		//config.WithSharedConfigProfile("default"),
+		config.WithRegion("eu-central-1"),
+	)
 	if err != nil {
 		panic(err)
 	}
 
-	options := s3.Options{
-		Region: "eu-central-1",
-		//Credentials: aws.NewCredentialsCache(credentials.NewSharedCredentials("", "default")),
-		Credentials: cfg.Credentials,
-	}
-
-	client := s3.New(options, func(o *s3.Options) {
-		o.Region = "us-central-1"
-		//o.UseAccelerate = true
-	})
-
-	return client
+	s3Client := s3.NewFromConfig(cfg)
+	return s3Client
 }
 
 func UploadToS3(bucket string, key string, body []byte) error {
@@ -75,10 +73,12 @@ func UploadToS3(bucket string, key string, body []byte) error {
 	//})
 
 	s3Client := createS3Client()
+
 	_, err := s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-		Body:   bytes.NewReader(body),
+		Bucket:      aws.String(bucket),
+		Key:         aws.String(key),
+		Body:        bytes.NewReader(body),
+		ContentType: aws.String("application/json"),
 	})
 	if err != nil {
 		panic(err)
@@ -149,6 +149,8 @@ func AggPublisher(urls []*url.URL) error {
 	prev := time.Now()
 	rateLimiter := ratelimit.New(300)
 
+	s3Client := createS3Client()
+
 	bar := progressbar.Default(int64(len(urls)))
 	for _, u := range urls {
 		now := rateLimiter.Take()
@@ -176,7 +178,13 @@ func AggPublisher(urls []*url.URL) error {
 					fmt.Println("Error retrieving URL: ", err)
 				}
 
-				err = UploadToS3("polygonio-all", messageKey, taskBytes)
+				_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
+					Bucket:      aws.String("polygonio-all"),
+					Key:         aws.String(messageKey),
+					Body:        bytes.NewReader(taskBytes),
+					ContentType: aws.String("application/json"),
+				})
+
 				if err != nil {
 					panic(err)
 				}
