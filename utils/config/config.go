@@ -50,6 +50,18 @@ func SetDBParams(params *structs.DBParams, section string) error {
 	return err
 }
 
+func GetRedisParams(section string) string {
+	pwd, err := os.Getwd()
+	config, err := ini.Load(pwd + "/config.ini")
+	if err != nil {
+		panic(err)
+	}
+
+	section = strings.ToUpper(section)
+	endpoint := config.Section(section).Key("primaryEndpoint").String()
+	return endpoint
+}
+
 // SetPolygonCred Function that reads the config.ini file within the directory, and returns the API Key.
 // param user has options 'me' and 'other'.
 func SetPolygonCred(user string) string {

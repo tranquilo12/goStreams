@@ -51,7 +51,8 @@ to quickly create a Cobra application.`,
 		//postgresDB := db.GetPostgresDBConn(&DBParams)
 		//defer postgresDB.Close()
 
-		redisClient := db.GetRedisClient(7000)
+		redisEndpoint := config.GetRedisParams("ELASTICCACHE")
+		redisClient := db.GetRedisClient(7000, redisEndpoint)
 
 		apiKey := config.SetPolygonCred("other")
 		url := db.MakeTickerVxQuery(apiKey)
