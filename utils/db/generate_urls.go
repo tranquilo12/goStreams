@@ -142,19 +142,27 @@ func MakeAggQueryStr(stocksTicker string, multiplier string, timespan string, fr
 
 // MakeAllStocksAggsQueries A quick function that uses MakeAggQueryStr and iterates through combos and returns a
 // list of urls that will be queried.
-func MakeAllStocksAggsQueries(tickers []string, timespan string, from_ string, to_ string, apiKey string) []*url.URL {
+func MakeAllStocksAggsQueries(tickers []string, timespan string, from_ string, to_ string, apiKey string, withLinearDates int) []*url.URL {
 	// no need for channels in this yet, just a quick function that makes all the queries and sends it back
 	fmt.Println("Making all urls...")
 
-	datePairs := CreateLinearDatePairs(from_, to_)
-
 	var urls []*url.URL
-	for _, ticker := range tickers {
-		for _, dp := range datePairs {
-			u := MakeAggQueryStr(ticker, "1", timespan, dp.Start, dp.End, apiKey)
+	if withLinearDates == 1 {
+		datePairs := CreateLinearDatePairs(from_, to_)
+		for _, ticker := range tickers {
+			for _, dp := range datePairs {
+				u := MakeAggQueryStr(ticker, "1", timespan, dp.Start, dp.End, apiKey)
+				urls = append(urls, u)
+			}
+		}
+	} else {
+		for _, ticker := range tickers {
+			u := MakeAggQueryStr(ticker, "1", timespan, from_, to_, apiKey)
 			urls = append(urls, u)
 		}
+
 	}
+
 	fmt.Println("Done...")
 	return urls
 }

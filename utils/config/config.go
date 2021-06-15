@@ -9,11 +9,12 @@ import (
 
 // AggCliParams Struct for parsing cli params
 type AggCliParams struct {
-	Timespan   string
-	From       string
-	To         string
-	Multiplier int
-	Limit      int
+	Timespan        string
+	From            string
+	To              string
+	Multiplier      int
+	Limit           int
+	WithLinearDates int
 }
 
 // NewsCliParams Struct for parsing cli params

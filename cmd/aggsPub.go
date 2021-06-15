@@ -84,4 +84,5 @@ func init() {
 	aggsPubCmd.Flags().StringP("to", "t", "", "To which date? (format = %Y-%m-%d)")
 	aggsPubCmd.Flags().IntP("mult", "m", 2, "Multiplier to use with Timespan")
 	aggsPubCmd.Flags().IntP("limit", "l", 300, "Rate limit to pull from polygonio")
+	aggsPubCmd.Flags().IntP("withLinearDates", "w", 1, "Usually 1, if appending datasets day-to-day, but if for backup, use 0.")
 }
