@@ -127,8 +127,24 @@ func GetAggTickersFromS3(insertDate string, timespan string, multiplier int, fro
 
 	s3Client := CreateS3Client()
 
+	fromYear := strings.Split(from_, "-")[0]
+	fromMon := strings.Split(from_, "-")[1]
+	fromDay := strings.Split(from_, "-")[2]
+
+	toYear := strings.Split(to_, "-")[0]
+	toMon := strings.Split(to_, "-")[1]
+	toDay := strings.Split(to_, "-")[2]
+	toDay = strings.Split(toDay, "?")[0]
+
+	InsertDateYear := strings.Split(insertDate, "-")[0]
+	InsertDateMon := strings.Split(insertDate, "-")[1]
+	InsertDateDay := strings.Split(insertDate, "-")[2]
+
+	newKey := fmt.Sprintf("aggs/%s/%s/%s/%s/%d/%s/%s/%s/%s/%s/%s/", InsertDateYear, InsertDateMon, InsertDateDay, timespan, multiplier, fromYear, fromMon, fromDay, toYear, toMon, toDay)
+
 	input := &s3.ListObjectsV2Input{
 		Bucket: aws.String("polygonio-all"),
+		Prefix: aws.String(newKey),
 	}
 
 	resp, err := GetObjects(context.TODO(), s3Client, input)
@@ -139,7 +155,7 @@ func GetAggTickersFromS3(insertDate string, timespan string, multiplier int, fro
 
 	for _, item := range resp.Contents {
 		splt := strings.Split(*item.Key, "/")
-		tkr := splt[len(splt)-1]
+		tkr := splt[len(splt)-2]
 		results = append(results, tkr)
 	}
 	return &results
