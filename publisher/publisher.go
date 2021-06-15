@@ -57,7 +57,7 @@ func createS3Client() *s3.Client {
 
 	client := s3.New(options, func(o *s3.Options) {
 		o.Region = "us-central-1"
-		o.UseAccelerate = true
+		//o.UseAccelerate = true
 	})
 
 	return client
