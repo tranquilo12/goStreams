@@ -22,6 +22,7 @@ import (
 	"lightning/publisher"
 	"lightning/utils/config"
 	"lightning/utils/db"
+	"time"
 )
 
 // aggsPubCmd represents the aggs command
@@ -65,7 +66,10 @@ to quickly create a Cobra application.`,
 		redisClient := db.GetRedisClient(6379, redisEndpoint)
 
 		//var tickers = db.GetAllTickers(postgresDB, aggParams.Timespan)
-		var tickers = db.GetAllTickersFromRedis(redisClient)
+		today := time.Now()
+		redisTickers := db.GetAllTickersFromRedis(redisClient)
+		s3Tickers := publisher.GetAggTickersFromS3(today.Format("2006-02-01"), aggParams.Timespan, aggParams.Multiplier, aggParams.From, aggParams.To)
+		var tickers = db.GetDifferenceBtwTickersInRedisAndS3(redisTickers, s3Tickers)
 		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey, aggParams.WithLinearDates)
 		err = publisher.AggPublisher(urls, aggParams.Limit)
 		if err != nil {

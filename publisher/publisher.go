@@ -53,7 +53,7 @@ func CreateAggKey(url string) string {
 	return newKey
 }
 
-func createS3Client() *s3.Client {
+func CreateS3Client() *s3.Client {
 	cfg, err := config.LoadDefaultConfig(
 		context.TODO(),
 		//config.WithSharedConfigProfile("default"),
@@ -78,7 +78,7 @@ func UploadToS3(bucket string, key string, body []byte) error {
 	//	u.BufferProvider = manager.NewBufferedReadSeekerWriteToPool(1 * 1024 * 1024)
 	//})
 
-	s3Client := createS3Client()
+	s3Client := CreateS3Client()
 
 	_, err := s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket:      aws.String(bucket),
@@ -100,6 +100,47 @@ func UploadToS3(bucket string, key string, body []byte) error {
 	//}
 
 	return nil
+}
+
+// S3ListObjectsAPI defines the interface for the ListObjectsV2 function.
+// We use this interface to test the function using a mocked service.
+type S3ListObjectsAPI interface {
+	ListObjectsV2(ctx context.Context,
+		params *s3.ListObjectsV2Input,
+		optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
+}
+
+// GetObjects retrieves the objects in an Amazon Simple Storage Service (Amazon S3) bucket
+// Inputs:
+//     c is the context of the method call, which includes the AWS Region
+//     api is the interface that defines the method call
+//     input defines the input arguments to the service call.
+// Output:
+//     If success, a ListObjectsV2Output object containing the result of the service call and nil
+//     Otherwise, nil and an error from the call to ListObjectsV2
+func GetObjects(c context.Context, api S3ListObjectsAPI, input *s3.ListObjectsV2Input) (*s3.ListObjectsV2Output, error) {
+	return api.ListObjectsV2(c, input)
+}
+
+func GetAggTickersFromS3(insertDate string, timespan string, multiplier int, from_ string, to_ string) []string {
+	var results []string
+
+	s3Client := CreateS3Client()
+
+	input := &s3.ListObjectsV2Input{
+		Bucket: aws.String("polygonio-all"),
+	}
+
+	resp, err := GetObjects(context.TODO(), s3Client, input)
+	if err != nil {
+		fmt.Println("Got error retrieving list of objects:")
+		fmt.Println(err)
+	}
+
+	for _, item := range resp.Contents {
+		results = append(results, *item.Key)
+	}
+	return results
 }
 
 func AggPublisher(urls []*url.URL, limit int) error {
@@ -155,7 +196,7 @@ func AggPublisher(urls []*url.URL, limit int) error {
 	prev := time.Now()
 	rateLimiter := ratelimit.New(limit)
 
-	s3Client := createS3Client()
+	s3Client := CreateS3Client()
 
 	bar := progressbar.Default(int64(len(urls)))
 	for _, u := range urls {
