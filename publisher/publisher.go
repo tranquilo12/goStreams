@@ -137,8 +137,10 @@ func GetAggTickersFromS3(insertDate string, timespan string, multiplier int, fro
 		fmt.Println(err)
 	}
 
+	var tkr string
 	for _, item := range resp.Contents {
-		results = append(results, *item.Key)
+		tkr = strings.Split(*item.Key, "/")[len(*item.Key)-1]
+		results = append(results, tkr)
 	}
 	return results
 }

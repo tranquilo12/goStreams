@@ -70,12 +70,13 @@ to quickly create a Cobra application.`,
 		redisTickers := db.GetAllTickersFromRedis(redisClient)
 		s3Tickers := publisher.GetAggTickersFromS3(today.Format("2006-02-01"), aggParams.Timespan, aggParams.Multiplier, aggParams.From, aggParams.To)
 		var tickers = db.GetDifferenceBtwTickersInRedisAndS3(redisTickers, s3Tickers)
-		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey, aggParams.WithLinearDates)
-		err = publisher.AggPublisher(urls, aggParams.Limit)
-		if err != nil {
-			fmt.Println("Something wrong with AggPublisher...")
-			panic(err)
-		}
+		print(tickers)
+		//urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey, aggParams.WithLinearDates)
+		//err = publisher.AggPublisher(urls, aggParams.Limit)
+		//if err != nil {
+		//	fmt.Println("Something wrong with AggPublisher...")
+		//	panic(err)
+		//}
 	},
 }
 
