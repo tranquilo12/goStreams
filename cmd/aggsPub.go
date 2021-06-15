@@ -22,7 +22,6 @@ import (
 	"lightning/publisher"
 	"lightning/utils/config"
 	"lightning/utils/db"
-	"lightning/utils/structs"
 )
 
 // aggsPubCmd represents the aggs command
@@ -42,22 +41,22 @@ to quickly create a Cobra application.`,
 			dbType = "ec2db"
 		}
 
-		// get database conn
-		DBParams := structs.DBParams{}
-		err := config.SetDBParams(&DBParams, dbType)
-		if err != nil {
-			panic(err)
-		}
-
-		postgresDB := db.GetPostgresDBConn(&DBParams)
-		defer postgresDB.Close()
+		//// get database conn
+		//DBParams := structs.DBParams{}
+		//err := config.SetDBParams(&DBParams, dbType)
+		//if err != nil {
+		//	panic(err)
+		//}
+		//
+		//postgresDB := db.GetPostgresDBConn(&DBParams)
+		//defer postgresDB.Close()
 
 		// Get agg parameters from cli
 		aggParams := db.ReadAggregateParamsFromCMD(cmd)
 
 		// Possibly get all the redis parameters from the .ini file.
 		var redisParams config.RedisParams
-		err = config.SetRedisCred(&redisParams)
+		err := config.SetRedisCred(&redisParams)
 		if err != nil {
 			panic(err)
 		}
@@ -68,7 +67,7 @@ to quickly create a Cobra application.`,
 		//var tickers = db.GetAllTickers(postgresDB, aggParams.Timespan)
 		var tickers = db.GetAllTickersFromRedis(redisClient)
 		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey)
-		err = publisher.AggPublisher(urls)
+		err = publisher.AggPublisher(urls, aggParams.Limit)
 		if err != nil {
 			fmt.Println("Something wrong with AggPublisher...")
 			panic(err)
@@ -84,4 +83,5 @@ func init() {
 	aggsPubCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")
 	aggsPubCmd.Flags().StringP("to", "t", "", "To which date? (format = %Y-%m-%d)")
 	aggsPubCmd.Flags().IntP("mult", "m", 2, "Multiplier to use with Timespan")
+	aggsPubCmd.Flags().IntP("limit", "l", 300, "Rate limit to pull from polygonio")
 }

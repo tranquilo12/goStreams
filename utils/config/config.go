@@ -13,6 +13,7 @@ type AggCliParams struct {
 	From       string
 	To         string
 	Multiplier int
+	Limit      int
 }
 
 // NewsCliParams Struct for parsing cli params

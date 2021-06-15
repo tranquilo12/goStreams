@@ -96,7 +96,7 @@ func UploadToS3(bucket string, key string, body []byte) error {
 	return nil
 }
 
-func AggPublisher(urls []*url.URL) error {
+func AggPublisher(urls []*url.URL, limit int) error {
 
 	//AmqpServerUrl := "amqp://guest:guest@localhost:5672"
 	//connectRabbitMQ, err := amqp.Dial(AmqpServerUrl)
@@ -147,7 +147,7 @@ func AggPublisher(urls []*url.URL) error {
 
 	// create a rate limiter to stop over-requesting
 	prev := time.Now()
-	rateLimiter := ratelimit.New(300)
+	rateLimiter := ratelimit.New(limit)
 
 	s3Client := createS3Client()
 
