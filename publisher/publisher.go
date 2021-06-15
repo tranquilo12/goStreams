@@ -38,12 +38,17 @@ func CreateAggKey(url string) string {
 	fromMon := strings.Split(from_, "-")[1]
 	fromDay := strings.Split(from_, "-")[2]
 
+	to_ := splitUrl[11]
+	toYear := strings.Split(to_, "-")[0]
+	toMon := strings.Split(to_, "-")[1]
+	toDay := strings.Split(to_, "-")[2]
+
 	today := time.Now().Format("2006-01-02")
 	todayYear := strings.Split(today, "-")[0]
 	todayMon := strings.Split(today, "-")[1]
 	todayDay := strings.Split(today, "-")[2]
 
-	newKey := fmt.Sprintf("aggs/%s/%s/%s/%s/%s/%s/%s/%s/%s/data.json", todayYear, todayMon, todayDay, timespan, multiplier, fromYear, fromMon, fromDay, ticker)
+	newKey := fmt.Sprintf("aggs/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/data.json", todayYear, todayMon, todayDay, timespan, multiplier, fromYear, fromMon, fromDay, toYear, toMon, toDay, ticker)
 	return newKey
 }
 
