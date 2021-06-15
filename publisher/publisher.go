@@ -122,7 +122,7 @@ func GetObjects(c context.Context, api S3ListObjectsAPI, input *s3.ListObjectsV2
 	return api.ListObjectsV2(c, input)
 }
 
-func GetAggTickersFromS3(insertDate string, timespan string, multiplier int, from_ string, to_ string) []string {
+func GetAggTickersFromS3(insertDate string, timespan string, multiplier int, from_ string, to_ string) *[]string {
 	var results []string
 
 	s3Client := CreateS3Client()
@@ -142,7 +142,7 @@ func GetAggTickersFromS3(insertDate string, timespan string, multiplier int, fro
 		tkr := splt[len(splt)-1]
 		results = append(results, tkr)
 	}
-	return results
+	return &results
 }
 
 func AggPublisher(urls []*url.URL, limit int) error {

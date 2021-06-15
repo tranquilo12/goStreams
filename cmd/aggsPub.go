@@ -69,8 +69,9 @@ to quickly create a Cobra application.`,
 		today := time.Now()
 		redisTickers := db.GetAllTickersFromRedis(redisClient)
 		s3Tickers := publisher.GetAggTickersFromS3(today.Format("2006-02-01"), aggParams.Timespan, aggParams.Multiplier, aggParams.From, aggParams.To)
-		var tickers = db.GetDifferenceBtwTickersInRedisAndS3(redisTickers, s3Tickers)
-		print(tickers)
+		//var tickers = db.GetDifferenceBtwTickersInRedisAndS3(redisTickers, s3Tickers)
+		print(s3Tickers, redisTickers)
+
 		//urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey, aggParams.WithLinearDates)
 		//err = publisher.AggPublisher(urls, aggParams.Limit)
 		//if err != nil {
