@@ -2,9 +2,11 @@ package db
 
 import (
 	"fmt"
+	"lightning/utils/structs"
 	"net/url"
 	"path"
 	"strconv"
+	"time"
 )
 
 const (
@@ -17,8 +19,8 @@ const (
 	//dailyOpenCloseHost   = "api.polygon.io/v1/open-close"
 	//groupedDailyBarsHost = "api.polygon.io/v2/aggs/grouped/locale/us/market/stocks"
 
-	//layout     = "2006-01-02" // go uses this date as a format specifier
-	rateLimit = 50 // can be changed
+	layout    = "2006-01-02" // go uses this date as a format specifier
+	rateLimit = 50           // can be changed
 	//timespan   = "day"
 	//multiplier = 1
 	//from_      = "2020-11-22"
@@ -85,6 +87,38 @@ const (
 //	return urls
 //}
 
+// CreateLinearDatePairs creates a slice of arrays [[date, date+1], [date+1, date+2]...]
+func CreateLinearDatePairs(from string, to string) []structs.StartEndDateStruct {
+	startDate, _ := time.Parse("2006-01-02", from)
+	endDate, _ := time.Parse("2006-01-02", to)
+
+	var dateList []structs.StartEndDateStruct
+
+	prevDate := startDate
+	prevDatePlusOne := prevDate.Add(time.Hour * 24)
+
+	for {
+
+		if prevDatePlusOne.Before(endDate) {
+
+			dp := structs.StartEndDateStruct{
+				Start: prevDate.Format(layout),
+				End:   prevDatePlusOne.Format(layout),
+			}
+
+			dateList = append(dateList, dp)
+			//fmt.Printf("start: %s, end: %s...\n", prevDate.Format(layout), prevDatePlusOne.Format(layout))
+
+			// make sure prevDate is set again
+			prevDate = prevDatePlusOne
+			prevDatePlusOne = prevDatePlusOne.Add(time.Hour * 24)
+		} else {
+			break
+		}
+	}
+	return dateList
+}
+
 // MakeAggQueryStr A function that makes urls like: /v2/aggs/ticker/{stocksTicker}/range/{multiplier}/{timespan}/{from}/{to}
 func MakeAggQueryStr(stocksTicker string, multiplier string, timespan string, from_ string, to_ string, apiKey string) *url.URL {
 	p, err := url.Parse("https://" + aggsHost)
@@ -111,10 +145,15 @@ func MakeAggQueryStr(stocksTicker string, multiplier string, timespan string, fr
 func MakeAllStocksAggsQueries(tickers []string, timespan string, from_ string, to_ string, apiKey string) []*url.URL {
 	// no need for channels in this yet, just a quick function that makes all the queries and sends it back
 	fmt.Println("Making all urls...")
+
+	datePairs := CreateLinearDatePairs(from_, to_)
+
 	var urls []*url.URL
 	for _, ticker := range tickers {
-		u := MakeAggQueryStr(ticker, "1", timespan, from_, to_, apiKey)
-		urls = append(urls, u)
+		for _, dp := range datePairs {
+			u := MakeAggQueryStr(ticker, "1", timespan, dp.Start, dp.End, apiKey)
+			urls = append(urls, u)
+		}
 	}
 	fmt.Println("Done...")
 	return urls

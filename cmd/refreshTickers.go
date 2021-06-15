@@ -21,7 +21,6 @@ import (
 	"github.com/spf13/cobra"
 	"lightning/utils/config"
 	"lightning/utils/db"
-	"lightning/utils/structs"
 )
 
 // refreshTickersCmd represents the refreshTickers command
@@ -42,22 +41,22 @@ to quickly create a Cobra application.`,
 			dbType = "ec2db"
 		}
 
-		// get database conn
-		DBParams := structs.DBParams{}
-		err := config.SetDBParams(&DBParams, dbType)
-		if err != nil {
-			panic(err)
-		}
+		//// get database conn
+		//DBParams := structs.DBParams{}
+		//err := config.SetDBParams(&DBParams, dbType)
+		//if err != nil {
+		//	panic(err)
+		//}
 
-		postgresDB := db.GetPostgresDBConn(&DBParams)
-		defer postgresDB.Close()
+		//postgresDB := db.GetPostgresDBConn(&DBParams)
+		//defer postgresDB.Close()
 
 		redisClient := db.GetRedisClient(7000)
 
 		apiKey := config.SetPolygonCred("other")
 		url := db.MakeTickerVxQuery(apiKey)
 		Chan1 := db.MakeAllTickersVxRequests(url)
-		err = db.PushTickerVxIntoRedis(Chan1, redisClient)
+		err := db.PushTickerVxIntoRedis(Chan1, redisClient)
 		//err = db.PushTickerVxIntoDB(Chan1, postgresDB)
 		if err != nil {
 			panic(err)

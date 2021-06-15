@@ -8,7 +8,9 @@ import (
 	"github.com/schollz/progressbar/v3"
 	"github.com/streadway/amqp"
 	"go.uber.org/ratelimit"
+	"log"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 
@@ -114,7 +116,7 @@ func AggPublisher(urls []*url.URL) error {
 
 	// create a rate limiter to stop over-requesting
 	prev := time.Now()
-	rateLimiter := ratelimit.New(100)
+	rateLimiter := ratelimit.New(300)
 
 	bar := progressbar.Default(int64(len(urls)))
 	for _, u := range urls {
@@ -124,8 +126,14 @@ func AggPublisher(urls []*url.URL) error {
 		go func(u *url.URL) {
 			resp, err := http.Get(u.String())
 			if err != nil {
-				fmt.Println("Error retrieving URL: ", err)
-				panic(err)
+				fmt.Println("Error retrieving URL (writing to file ./urlErrors.log): ", err.Error())
+				f, err := os.OpenFile("urlErrors.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+				if err != nil {
+					log.Println(err)
+				}
+				defer f.Close()
+				logger := log.New(f, "URL-ERROR: ", log.LstdFlags)
+				logger.Println(err.Error())
 			} else {
 				// create the key
 				messageKey := CreateAggKey(u.String())
@@ -260,3 +268,56 @@ func TickerNewsPublisherRMQ(urls []*url.URL) error {
 
 	return nil
 }
+
+//func AggPublisherS3(urls []*url.URL) error {
+//
+//	// use WaitGroup to make things more smooth with goroutines
+//	var wg sync.WaitGroup
+//
+//	// create a buffer of the waitGroup, of the same length as urls
+//	wg.Add(len(urls))
+//
+//	// create a rate limiter to stop over-requesting
+//	prev := time.Now()
+//	rateLimiter := ratelimit.New(30)
+//
+//	// Create new session
+//	svc := db.CreateNewS3Session()
+//
+//	for _, u := range urls {
+//		now := rateLimiter.Take()
+//		//target := new(structs.AggregatesBarsResponse)
+//
+//		go func(u *url.URL) {
+//			defer wg.Done()
+//			resp, err := http.Get(u.String())
+//			if err != nil {
+//				fmt.Println("Error retrieving URL: ", err)
+//				panic(err)
+//			} else {
+//				err = db.UploadAggToS3(svc, u, resp)
+//				if err != nil {
+//					panic(err)
+//				}
+//
+//				// create the key
+//				//messageKey := CreateAggKey(u)
+//
+//				// Marshal target to bytes
+//				//err = json.NewDecoder(resp.Body).Decode(&target)
+//				//taskBytes, err := json.Marshal(target)
+//				//if err != nil {
+//				//	fmt.Println("Error retrieving URL: ", err)
+//				//}
+//
+//			}
+//		}(u)
+//
+//		now.Sub(prev)
+//		prev = now
+//	}
+//
+//	wg.Wait()
+//
+//	return nil
+//}
