@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"lightning/subscriber"
+	"lightning/utils/config"
 	"lightning/utils/db"
 )
 
@@ -43,7 +44,8 @@ to quickly create a Cobra application.`,
 		// Get agg parameters from cli
 		aggParams := db.ReadAggregateParamsFromCMD(cmd)
 
-		redisClient := db.GetRedisClient(7000)
+		redisEndpoint := config.GetRedisParams("ELASTICCACHE")
+		redisClient := db.GetRedisClient(7000, redisEndpoint)
 		var tickers = db.GetAllTickersFromRedis(redisClient)
 		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey)
 		insertIntoRedisChan := subscriber.AggDownloader(urls)
