@@ -158,6 +158,33 @@ func GetAggTickersFromS3(insertDate string, timespan string, multiplier int, fro
 		tkr := splt[len(splt)-2]
 		results = append(results, tkr)
 	}
+
+	nextContToken := resp.NextContinuationToken
+	for {
+		if nextContToken != nil {
+			input2 := &s3.ListObjectsV2Input{
+				Bucket:            aws.String("polygonio-all"),
+				Prefix:            aws.String(newKey),
+				ContinuationToken: nextContToken,
+			}
+
+			resp2, err := GetObjects(context.TODO(), s3Client, input2)
+			if err != nil {
+				panic(err)
+			}
+
+			for _, item := range resp2.Contents {
+				splt := strings.Split(*item.Key, "/")
+				tkr := splt[len(splt)-2]
+				results = append(results, tkr)
+			}
+
+			nextContToken = resp2.NextContinuationToken
+		} else {
+			break
+		}
+	}
+
 	return &results
 }
 

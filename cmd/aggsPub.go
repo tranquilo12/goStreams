@@ -55,7 +55,7 @@ to quickly create a Cobra application.`,
 		// Get agg parameters from cli
 		aggParams := db.ReadAggregateParamsFromCMD(cmd)
 
-		//// Possibly get all the redis parameters from the .ini file.
+		// Possibly get all the redis parameters from the .ini file.
 		var redisParams config.RedisParams
 		err := config.SetRedisCred(&redisParams)
 		if err != nil {
@@ -69,7 +69,7 @@ to quickly create a Cobra application.`,
 		redisTickers := db.GetAllTickersFromRedis(redisClient)
 		today := time.Now().Format("2006-01-02")
 		s3Tickers := publisher.GetAggTickersFromS3(today, aggParams.Timespan, aggParams.Multiplier, aggParams.From, aggParams.To)
-		var tickers = db.GetDifferenceBtwTickersInRedisAndS3(redisTickers, *s3Tickers)
+		tickers := db.GetDifferenceBtwTickersInRedisAndS3(*redisTickers, *s3Tickers)
 		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey, aggParams.WithLinearDates)
 		err = publisher.AggPublisher(urls, aggParams.Limit)
 		if err != nil {

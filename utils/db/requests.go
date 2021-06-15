@@ -237,7 +237,7 @@ func GetAllTickers(pgDB *pg.DB, timespan string) []string {
 	return tickers
 }
 
-func GetAllTickersFromRedis(redisClient *redis.Client) []string {
+func GetAllTickersFromRedis(redisClient *redis.Client) *[]string {
 	result := redisClient.Get("allTickers")
 
 	strResult, err := result.Result()
@@ -245,7 +245,7 @@ func GetAllTickersFromRedis(redisClient *redis.Client) []string {
 		panic(err)
 	}
 	strArrResults := strings.Split(strResult, ",")
-	return strArrResults
+	return &strArrResults
 }
 
 func GetDifferenceBtwTickersInRedisAndS3(slice1 []string, slice2 []string) []string {

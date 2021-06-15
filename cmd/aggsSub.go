@@ -46,8 +46,8 @@ to quickly create a Cobra application.`,
 
 		redisEndpoint := config.GetRedisParams("ELASTICCACHE")
 		redisClient := db.GetRedisClient(6379, redisEndpoint)
-		var tickers = db.GetAllTickersFromRedis(redisClient)
-		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey, aggParams.WithLinearDates)
+		tickers := db.GetAllTickersFromRedis(redisClient)
+		urls := db.MakeAllStocksAggsQueries(*tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey, aggParams.WithLinearDates)
 		insertIntoRedisChan := subscriber.AggDownloader(urls)
 		err := db.PushAggIntoRedis(insertIntoRedisChan, redisClient)
 		if err != nil {
