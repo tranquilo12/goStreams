@@ -16,7 +16,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"lightning/utils/structs"
 	"net/url"
@@ -43,18 +42,40 @@ func CreateAggKey(url string) string {
 	return newKey
 }
 
-func UploadToS3(bucket string, key string, body []byte) error {
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("default"), config.WithRegion("eu-central-1"))
+func createS3Client() *s3.Client {
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithSharedConfigProfile("default"), config.WithRegion("eu-central-1"))
 	if err != nil {
 		panic(err)
 	}
 
-	// Define a strategy that will buffer 1Mib into memory
-	uploader := manager.NewUploader(s3.NewFromConfig(cfg), func(u *manager.Uploader) {
-		u.BufferProvider = manager.NewBufferedReadSeekerWriteToPool(1 * 1024 * 1024)
+	options := s3.Options{
+		Region: "eu-central-1",
+		//Credentials: aws.NewCredentialsCache(credentials.NewSharedCredentials("", "default")),
+		Credentials: cfg.Credentials,
+	}
+
+	client := s3.New(options, func(o *s3.Options) {
+		o.Region = "us-central-1"
+		o.UseAccelerate = true
 	})
 
-	_, err = uploader.Upload(context.TODO(), &s3.PutObjectInput{
+	return client
+}
+
+func UploadToS3(bucket string, key string, body []byte) error {
+	//cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("default"), config.WithRegion("eu-central-1"))
+	//if err != nil {
+	//	panic(err)
+	//}
+	//
+	//// Define a strategy that will buffer 1Mib into memory
+	//uploader := manager.NewUploader(s3.NewFromConfig(cfg), func(u *manager.Uploader) {
+	//	u.BufferProvider = manager.NewBufferedReadSeekerWriteToPool(1 * 1024 * 1024)
+	//})
+
+	s3Client := createS3Client()
+	_, err := s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 		Body:   bytes.NewReader(body),
@@ -62,6 +83,16 @@ func UploadToS3(bucket string, key string, body []byte) error {
 	if err != nil {
 		panic(err)
 	}
+
+	//_, err = uploader.Upload(context.TODO(), &s3.PutObjectInput{
+	//	Bucket: aws.String(bucket),
+	//	Key:    aws.String(key),
+	//	Body:   bytes.NewReader(body),
+	//})
+	//if err != nil {
+	//	panic(err)
+	//}
+
 	return nil
 }
 
