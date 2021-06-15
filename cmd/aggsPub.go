@@ -63,7 +63,7 @@ to quickly create a Cobra application.`,
 		}
 
 		redisEndpoint := config.GetRedisParams("ELASTICCACHE")
-		redisClient := db.GetRedisClient(7000, redisEndpoint)
+		redisClient := db.GetRedisClient(6379, redisEndpoint)
 
 		//var tickers = db.GetAllTickers(postgresDB, aggParams.Timespan)
 		var tickers = db.GetAllTickersFromRedis(redisClient)
