@@ -6,14 +6,8 @@ import (
 )
 
 func GetRedisClient(port int, endpoint string) *redis.Client {
-	var addr string
 
-	if endpoint == "" {
-		addr = fmt.Sprintf("localhost: %d", port)
-	} else {
-		addr = fmt.Sprintf(endpoint)
-	}
-
+	addr := fmt.Sprintf("%s:%d", endpoint, port)
 	client := redis.NewClient(&redis.Options{
 		Network:            "tcp",
 		Addr:               addr,
