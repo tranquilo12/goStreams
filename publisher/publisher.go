@@ -42,6 +42,7 @@ func CreateAggKey(url string) string {
 	toYear := strings.Split(to_, "-")[0]
 	toMon := strings.Split(to_, "-")[1]
 	toDay := strings.Split(to_, "-")[2]
+	toDay = strings.Split(toDay, "?")[0]
 
 	today := time.Now().Format("2006-01-02")
 	todayYear := strings.Split(today, "-")[0]
