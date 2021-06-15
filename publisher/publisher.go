@@ -231,9 +231,8 @@ func AggPublisher(urls []*url.URL, limit int) error {
 					Body:        bytes.NewReader(taskBytes),
 					ContentType: aws.String("application/json"),
 				})
-
 				if err != nil {
-					panic(err)
+					println(err)
 				}
 
 				err = bar.Add(1)
