@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"path"
 	"strconv"
+	"time"
 )
 
 const (
@@ -17,8 +18,8 @@ const (
 	//dailyOpenCloseHost   = "api.polygon.io/v1/open-close"
 	//groupedDailyBarsHost = "api.polygon.io/v2/aggs/grouped/locale/us/market/stocks"
 
-	//layout     = "2006-01-02" // go uses this date as a format specifier
-	rateLimit = 50 // can be changed
+	layout    = "2006-01-02" // go uses this date as a format specifier
+	rateLimit = 50           // can be changed
 	//timespan   = "day"
 	//multiplier = 1
 	//from_      = "2020-11-22"
@@ -85,6 +86,40 @@ const (
 //	return urls
 //}
 
+type FromToDateStruct struct {
+	From string
+	To   string
+}
+
+//
+func MakeDatePairs(from_ string, to_ string) *[]FromToDateStruct {
+	f_, err := time.Parse(layout, from_)
+	if err != nil {
+		panic(err)
+	}
+
+	t_, err := time.Parse(layout, to_)
+	if err != nil {
+		panic(err)
+	}
+
+	var datePairs []FromToDateStruct
+	for {
+		if f_.Equal(t_) {
+			return &datePairs
+		}
+		if f_.Weekday() != time.Saturday && f_.Weekday() != time.Sunday {
+			ft := FromToDateStruct{
+				From: f_.Format(layout),
+				To:   t_.Format(layout),
+			}
+
+			datePairs = append(datePairs, ft)
+			f_ = f_.Add(time.Hour * 24)
+		}
+	}
+}
+
 // MakeAggQueryStr A function that makes urls like: /v2/aggs/ticker/{stocksTicker}/range/{multiplier}/{timespan}/{from}/{to}
 func MakeAggQueryStr(stocksTicker string, multiplier string, timespan string, from_ string, to_ string, apiKey string) *url.URL {
 	p, err := url.Parse("https://" + aggsHost)
@@ -112,9 +147,14 @@ func MakeAllStocksAggsQueries(tickers []string, timespan string, from_ string, t
 	// no need for channels in this yet, just a quick function that makes all the queries and sends it back
 	fmt.Println("Making all urls...")
 	var urls []*url.URL
+
+	datePairs := MakeDatePairs(from_, to_)
+
 	for _, ticker := range tickers {
-		u := MakeAggQueryStr(ticker, "1", timespan, from_, to_, apiKey)
-		urls = append(urls, u)
+		for _, val := range *datePairs {
+			u := MakeAggQueryStr(ticker, "1", timespan, val.From, val.To, apiKey)
+			urls = append(urls, u)
+		}
 	}
 	fmt.Println("Done...")
 	return urls
