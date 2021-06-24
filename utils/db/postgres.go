@@ -69,8 +69,8 @@ func ReadAggregateParamsFromCMD(cmd *cobra.Command) config.AggCliParams {
 	}
 
 	limit, _ := cmd.Flags().GetInt("limit")
-	if limit < 300 {
-		limit = 500
+	if limit < 0 {
+		limit = 100
 	}
 
 	withLinearDates, _ := cmd.Flags().GetInt("withLinearDates")

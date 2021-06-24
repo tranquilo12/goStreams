@@ -110,7 +110,7 @@ type S3ListObjectsAPI interface {
 		optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
 }
 
-// GetObjects retrieves the objects in an Amazon Simple Storage Service (Amazon S3) bucket
+// ListObjects retrieves the objects in an Amazon Simple Storage Service (Amazon S3) bucket
 // Inputs:
 //     c is the context of the method call, which includes the AWS Region
 //     api is the interface that defines the method call
@@ -118,7 +118,7 @@ type S3ListObjectsAPI interface {
 // Output:
 //     If success, a ListObjectsV2Output object containing the result of the service call and nil
 //     Otherwise, nil and an error from the call to ListObjectsV2
-func GetObjects(c context.Context, api S3ListObjectsAPI, input *s3.ListObjectsV2Input) (*s3.ListObjectsV2Output, error) {
+func ListObjects(c context.Context, api S3ListObjectsAPI, input *s3.ListObjectsV2Input) (*s3.ListObjectsV2Output, error) {
 	return api.ListObjectsV2(c, input)
 }
 
@@ -147,7 +147,7 @@ func GetAggTickersFromS3(insertDate string, timespan string, multiplier int, fro
 		Prefix: aws.String(newKey),
 	}
 
-	resp, err := GetObjects(context.TODO(), s3Client, input)
+	resp, err := ListObjects(context.TODO(), s3Client, input)
 	if err != nil {
 		fmt.Println("Got error retrieving list of objects:")
 		fmt.Println(err)
@@ -168,7 +168,7 @@ func GetAggTickersFromS3(insertDate string, timespan string, multiplier int, fro
 				ContinuationToken: nextContToken,
 			}
 
-			resp2, err := GetObjects(context.TODO(), s3Client, input2)
+			resp2, err := ListObjects(context.TODO(), s3Client, input2)
 			if err != nil {
 				panic(err)
 			}

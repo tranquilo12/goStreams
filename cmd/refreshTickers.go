@@ -51,7 +51,12 @@ to quickly create a Cobra application.`,
 		//postgresDB := db.GetPostgresDBConn(&DBParams)
 		//defer postgresDB.Close()
 
-		redisEndpoint := config.GetRedisParams("ELASTICCACHE")
+		var redisEndpoint string
+		if dbType == "ELASTICCACHE" {
+			redisEndpoint = config.GetRedisParams("ELASTICCACHE")
+		} else {
+			redisEndpoint = "localhost"
+		}
 		redisClient := db.GetRedisClient(6379, redisEndpoint)
 
 		apiKey := config.SetPolygonCred("other")
