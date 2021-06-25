@@ -17,11 +17,15 @@ limitations under the License.
 */
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/spf13/cobra"
 	"lightning/publisher"
+	"lightning/subscriber"
 	"lightning/utils/config"
 	"lightning/utils/db"
+	"lightning/utils/structs"
+	"strings"
 	"time"
 )
 
@@ -42,16 +46,6 @@ to quickly create a Cobra application.`,
 			dbType = "ec2db"
 		}
 
-		//// get database conn
-		//DBParams := structs.DBParams{}
-		//err := config.SetDBParams(&DBParams, dbType)
-		//if err != nil {
-		//	panic(err)
-		//}
-		//
-		//postgresDB := db.GetPostgresDBConn(&DBParams)
-		//defer postgresDB.Close()
-
 		// Get agg parameters from cli
 		aggParams := db.ReadAggregateParamsFromCMD(cmd)
 
@@ -69,18 +63,58 @@ to quickly create a Cobra application.`,
 			redisEndpoint = "localhost"
 		}
 
+		fmt.Printf("Getting redis client and tickers from redis...")
 		redisClient := db.GetRedisClient(6379, redisEndpoint)
-		//var tickers = db.GetAllTickers(postgresDB, aggParams.Timespan)
 		redisTickers := db.GetAllTickersFromRedis(redisClient)
 		today := time.Now().Format("2006-01-02")
+
+		fmt.Printf("Getting All agg tickers from s3...")
 		s3Tickers := publisher.GetAggTickersFromS3(today, aggParams.Timespan, aggParams.Multiplier, aggParams.From, aggParams.To)
+
+		fmt.Printf("Getting the difference between tickers in redis and s3...")
 		tickers := db.GetDifferenceBtwTickersInRedisAndS3(*redisTickers, *s3Tickers)
+
+		fmt.Printf("Making all stocks aggs queries...")
 		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey, aggParams.WithLinearDates)
+
+		fmt.Printf("Publishing all values to the db...")
 		err = publisher.AggPublisher(urls, aggParams.Limit)
 		if err != nil {
 			fmt.Println("Something wrong with AggPublisher...")
 			panic(err)
 		}
+
+		fmt.Printf("Pushing current status of all data in s3 to s3 as currentDataStatus.json...")
+		var s3tickers []string
+		m1 := make(map[string]structs.S3BucketProp)
+		m2 := make(map[string]map[string]structs.S3BucketProp)
+
+		fmt.Printf("Fetching all objects from %s with prefix %s ...\n", "polygonio-all", "aggs")
+		allObjs := subscriber.ListAllBucketObjsS3("polygonio-all", "aggs")
+
+		fmt.Printf("Parsing all objects from %s with prefix %s ...\n", "polygonio-all", "aggs")
+		for _, ele := range *allObjs {
+			splitEle := strings.Split(ele, "/")
+			insertDate := strings.Join(splitEle[1:4], "-")
+			startDate := strings.Join(splitEle[6:9], "-")
+			endDate := strings.Join(splitEle[9:12], "-")
+			timespan := splitEle[4]
+			//mult := splitEle[5]
+			//dataType := splitEle[13]
+			s3tickers = append(s3tickers, splitEle[12])
+			m1[insertDate] = structs.S3BucketProp{
+				StartDate: startDate, EndDate: endDate, Tickers: s3tickers,
+			}
+			m2[timespan] = m1
+		}
+
+		sendToS3, err := json.Marshal(m2)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Printf("Pushing all objects from %s with prefix %s to s3 as %s...\n", "polygonio-all", "aggs", "currentDataStatus.json")
+		err = publisher.UploadToS3("polygonio-all", "currentDataStatus.json", sendToS3)
 	},
 }
 

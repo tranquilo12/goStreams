@@ -7,6 +7,7 @@ import (
 	"github.com/go-redis/redis/v7"
 	"github.com/schollz/progressbar/v3"
 	"go.uber.org/ratelimit"
+	"lightning/utils/config"
 	"lightning/utils/structs"
 	"net/http"
 	"net/url"
@@ -123,7 +124,7 @@ func MakeAllTickersVxRequests(u *url.URL) chan []structs.TickerVx {
 				p.Host = "api.polygon.io:443"
 				p.RawQuery = q.Encode()
 
-				fmt.Println(p.String())
+				//fmt.Println(p.String())
 				response, err = http.Get(p.String())
 				if err != nil {
 					panic(err)
@@ -239,10 +240,18 @@ func GetAllTickers(pgDB *pg.DB, timespan string) []string {
 
 func GetAllTickersFromRedis(redisClient *redis.Client) *[]string {
 	result := redisClient.Get("allTickers")
-
 	strResult, err := result.Result()
 	if err != nil {
-		panic(err)
+		apiKey := config.SetPolygonCred("other")
+		u := MakeTickerVxQuery(apiKey)
+		Chan1 := MakeAllTickersVxRequests(u)
+		err := PushTickerVxIntoRedis(Chan1, redisClient)
+		if err != nil {
+			panic(err)
+		}
+
+		result := redisClient.Get("allTickers")
+		strResult, err = result.Result()
 	}
 	strArrResults := strings.Split(strResult, ",")
 	return &strArrResults

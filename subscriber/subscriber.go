@@ -14,6 +14,7 @@ import (
 	"lightning/publisher"
 	"lightning/utils/db"
 	"lightning/utils/structs"
+	"log"
 	"net/url"
 	"sync"
 	"time"
@@ -250,4 +251,43 @@ func TickerNewsSubscriberRMQ(DBParams *structs.DBParams) error {
 
 	<-forever
 	return nil
+}
+
+func ListAllBucketObjsS3(bucket string, prefix string) *[]string {
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("default"), config.WithRegion("eu-central-1"))
+	if err != nil {
+		panic(err)
+	}
+
+	client := s3.NewFromConfig(cfg)
+
+	// Set the parameters based on teh CLI flag inputs.
+	params := &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucket),
+	}
+	if len(prefix) != 0 {
+		params.Prefix = aws.String(prefix)
+	}
+
+	p := s3.NewListObjectsV2Paginator(client, params, func(o *s3.ListObjectsV2PaginatorOptions) {
+		if v := int32(20000); v != 0 {
+			o.Limit = v
+		}
+	})
+
+	var res []string
+	var i int
+	for p.HasMorePages() {
+		i++
+
+		page, err := p.NextPage(context.TODO())
+		if err != nil {
+			log.Fatalf("Failed to get page %v, %v", i, err)
+		}
+
+		for _, obj := range page.Contents {
+			res = append(res, *obj.Key)
+		}
+	}
+	return &res
 }
