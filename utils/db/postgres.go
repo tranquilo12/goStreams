@@ -68,11 +68,20 @@ func ReadAggregateParamsFromCMD(cmd *cobra.Command) config.AggCliParams {
 		multiplier = 1
 	}
 
+	limit, _ := cmd.Flags().GetInt("limit")
+	if limit < 0 {
+		limit = 100
+	}
+
+	withLinearDates, _ := cmd.Flags().GetInt("withLinearDates")
+
 	res := config.AggCliParams{
-		Timespan:   timespan,
-		From:       from_,
-		To:         to_,
-		Multiplier: multiplier,
+		Timespan:        timespan,
+		From:            from_,
+		To:              to_,
+		Multiplier:      multiplier,
+		Limit:           limit,
+		WithLinearDates: withLinearDates,
 	}
 
 	return res

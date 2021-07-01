@@ -19,6 +19,7 @@ limitations under the License.
 import (
 	"fmt"
 	"github.com/adjust/rmq/v3"
+	"lightning/utils/config"
 	"lightning/utils/db"
 	"log"
 	"net/http"
@@ -67,8 +68,9 @@ to quickly create a Cobra application.`,
 		fmt.Println("showQ called")
 
 		// also get the redis connection
-		client := db.GetRedisClient(7000)
-		queueConnection, err := rmq.OpenConnectionWithRedisClient("AGG", client, errChan)
+		redisEndpoint := config.GetRedisParams("ELASTICCACHE")
+		redisClient := db.GetRedisClient(7000, redisEndpoint)
+		queueConnection, err := rmq.OpenConnectionWithRedisClient("AGG", redisClient, errChan)
 		if err != nil {
 			fmt.Println("Something wrong with this queueConnection...")
 		}

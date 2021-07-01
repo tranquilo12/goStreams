@@ -5,9 +5,9 @@ import (
 	"github.com/go-redis/redis/v7"
 )
 
-func GetRedisClient(port int) *redis.Client {
-	addr := fmt.Sprintf("localhost: %d", port)
+func GetRedisClient(port int, endpoint string) *redis.Client {
 
+	addr := fmt.Sprintf("%s:%d", endpoint, port)
 	client := redis.NewClient(&redis.Options{
 		Network:            "tcp",
 		Addr:               addr,

@@ -9,10 +9,12 @@ import (
 
 // AggCliParams Struct for parsing cli params
 type AggCliParams struct {
-	Timespan   string
-	From       string
-	To         string
-	Multiplier int
+	Timespan        string
+	From            string
+	To              string
+	Multiplier      int
+	Limit           int
+	WithLinearDates int
 }
 
 // NewsCliParams Struct for parsing cli params
@@ -48,6 +50,18 @@ func SetDBParams(params *structs.DBParams, section string) error {
 	params.Password = config.Section(section).Key("password").String()
 
 	return err
+}
+
+func GetRedisParams(section string) string {
+	pwd, err := os.Getwd()
+	config, err := ini.Load(pwd + "/config.ini")
+	if err != nil {
+		panic(err)
+	}
+
+	section = strings.ToUpper(section)
+	endpoint := config.Section(section).Key("primaryEndpoint").String()
+	return endpoint
 }
 
 // SetPolygonCred Function that reads the config.ini file within the directory, and returns the API Key.

@@ -43,10 +43,10 @@ services:
     volumes:
       - ./config/redis/data:/data # persistence
       - ./config/redis/conf:/usr/local/etc/redis # for config files
-    networks:
-      - data_sharing
+#    networks:
+#      - data_sharing
     ports:
-      - "7000:6379"
+      - "6379:6379"
     environment:
       - REDIS_URL=redis://redis:6379
 

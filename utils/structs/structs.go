@@ -1352,3 +1352,14 @@ type RedisAggBarsResults struct {
 	InsertThis []AggregatesBarsResults
 	Key        string
 }
+
+type StartEndDateStruct struct {
+	Start string
+	End   string
+}
+
+type S3BucketProp struct {
+	StartDate string   `json:"startDate"`
+	EndDate   string   `json:"endDate"`
+	Tickers   []string `json:"tickers"`
+}

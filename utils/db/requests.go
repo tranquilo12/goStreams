@@ -7,6 +7,7 @@ import (
 	"github.com/go-redis/redis/v7"
 	"github.com/schollz/progressbar/v3"
 	"go.uber.org/ratelimit"
+	"lightning/utils/config"
 	"lightning/utils/structs"
 	"net/http"
 	"net/url"
@@ -123,7 +124,7 @@ func MakeAllTickersVxRequests(u *url.URL) chan []structs.TickerVx {
 				p.Host = "api.polygon.io:443"
 				p.RawQuery = q.Encode()
 
-				fmt.Println(p.String())
+				//fmt.Println(p.String())
 				response, err = http.Get(p.String())
 				if err != nil {
 					panic(err)
@@ -237,15 +238,51 @@ func GetAllTickers(pgDB *pg.DB, timespan string) []string {
 	return tickers
 }
 
-func GetAllTickersFromRedis(redisClient *redis.Client) []string {
+func GetAllTickersFromRedis(redisClient *redis.Client) *[]string {
 	result := redisClient.Get("allTickers")
-
 	strResult, err := result.Result()
 	if err != nil {
-		panic(err)
+		apiKey := config.SetPolygonCred("other")
+		u := MakeTickerVxQuery(apiKey)
+		Chan1 := MakeAllTickersVxRequests(u)
+		err := PushTickerVxIntoRedis(Chan1, redisClient)
+		if err != nil {
+			panic(err)
+		}
+
+		result := redisClient.Get("allTickers")
+		strResult, err = result.Result()
 	}
 	strArrResults := strings.Split(strResult, ",")
-	return strArrResults
+	return &strArrResults
+}
+
+func GetDifferenceBtwTickersInRedisAndS3(slice1 []string, slice2 []string) []string {
+	var diff []string
+
+	// Loop two times, first to find slice1 strings not in slice2,
+	// second loop to find slice2 strings not in slice1
+	for i := 0; i < 2; i++ {
+		for _, s1 := range slice1 {
+			found := false
+			for _, s2 := range slice2 {
+				if s1 == s2 {
+					found = true
+					break
+				}
+			}
+			// String not found. We add it to return slice
+			if !found {
+				diff = append(diff, s1)
+			}
+		}
+		// Swap the slices, only if it was the first loop
+		if i == 0 {
+			slice1, slice2 = slice2, slice1
+		}
+	}
+
+	return diff
 }
 
 func MakeAllTickerNews2Requests(u *url.URL) chan []structs.TickerNews2 {
