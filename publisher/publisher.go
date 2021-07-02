@@ -299,6 +299,19 @@ func AggPublisher(urls []*url.URL, limit int) error {
 	return nil
 }
 
+func Unique2dStr(strSlice [][]string) [][]string {
+	k := make(map[string][]string)
+	txs := make([][]string, 0, len(k))
+	for _, r := range strSlice {
+		combo := r[0] + "-" + r[1]
+		k[combo] = r
+	}
+	for _, tx := range k {
+		txs = append(txs, tx)
+	}
+	return txs
+}
+
 func TickerNewsPublisherRMQ(urls []*url.URL) error {
 	AmqpServerUrl := "amqp://guest:guest@localhost:5672"
 	connectRabbitMQ, err := amqp.Dial(AmqpServerUrl)

@@ -24,7 +24,6 @@ import (
 	"lightning/subscriber"
 	"lightning/utils/config"
 	"lightning/utils/db"
-	"lightning/utils/structs"
 	"strings"
 	"time"
 )
@@ -68,26 +67,26 @@ to quickly create a Cobra application.`,
 		redisTickers := db.GetAllTickersFromRedis(redisClient)
 		today := time.Now().Format("2006-01-02")
 
-		fmt.Printf("Getting All agg tickers from s3...")
+		fmt.Printf("Getting All agg tickers from s3...\n")
 		s3Tickers := publisher.GetAggTickersFromS3(today, aggParams.Timespan, aggParams.Multiplier, aggParams.From, aggParams.To)
 
-		fmt.Printf("Getting the difference between tickers in redis and s3...")
+		fmt.Printf("Getting the difference between tickers in redis and s3...\n")
 		tickers := db.GetDifferenceBtwTickersInRedisAndS3(*redisTickers, *s3Tickers)
 
-		fmt.Printf("Making all stocks aggs queries...")
+		fmt.Printf("Making all stocks aggs queries...\n")
 		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey, aggParams.WithLinearDates)
 
-		fmt.Printf("Publishing all values to the db...")
+		fmt.Printf("Publishing all values to the db...\n")
 		err = publisher.AggPublisher(urls, aggParams.Limit)
 		if err != nil {
 			fmt.Println("Something wrong with AggPublisher...")
 			panic(err)
 		}
 
-		fmt.Printf("Pushing current status of all data in s3 to s3 as currentDataStatus.json...")
+		fmt.Printf("Pushing current status of all data in s3 to s3 as currentDataStatus.json...\n")
 		var s3tickers []string
-		m1 := make(map[string]structs.S3BucketProp)
-		m2 := make(map[string]map[string]structs.S3BucketProp)
+		m1 := make(map[string][][]string)
+		m2 := make(map[string]map[string][][]string)
 
 		fmt.Printf("Fetching all objects from %s with prefix %s ...\n", "polygonio-all", "aggs")
 		allObjs := subscriber.ListAllBucketObjsS3("polygonio-all", "aggs")
@@ -99,12 +98,9 @@ to quickly create a Cobra application.`,
 			startDate := strings.Join(splitEle[6:9], "-")
 			endDate := strings.Join(splitEle[9:12], "-")
 			timespan := splitEle[4]
-			//mult := splitEle[5]
-			//dataType := splitEle[13]
 			s3tickers = append(s3tickers, splitEle[12])
-			m1[insertDate] = structs.S3BucketProp{
-				StartDate: startDate, EndDate: endDate, Tickers: s3tickers,
-			}
+			m1[insertDate] = append(m1[insertDate], []string{startDate, endDate})
+			m1[insertDate] = publisher.Unique2dStr(m1[insertDate])
 			m2[timespan] = m1
 		}
 
