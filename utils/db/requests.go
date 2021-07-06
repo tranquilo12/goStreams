@@ -203,6 +203,55 @@ func MakeAllTickersRequests(urls []*url.URL, pgDB *pg.DB) error {
 	return nil
 }
 
+func MakeAllTickerDetailsRequestsAndPushToDB(urls []*url.URL, pgDB *pg.DB) error {
+
+	// we are already receiving the AggregatesBarsRequests (un-flattened) here, so the job is to send over this data
+	// to the flattener
+	bar := progressbar.Default(int64(len(urls)), "Downloading and inserting Ticker Details...")
+
+	// create a rate limiter to stop over-requesting
+	rateLimiter := ratelimit.New(300)
+	prev := time.Now()
+
+	// use WaitGroup to make things more smooth with channels
+	var wg sync.WaitGroup
+
+	// create a buffer of the waitGroup, of the same length as urls
+	wg.Add(len(urls))
+
+	for _, u := range urls {
+		now := rateLimiter.Take()
+		target := new(structs.TickerDetails)
+
+		go func() {
+			resp, err := http.Get(u.String())
+
+			if err != nil {
+				fmt.Println("Some Error: ", err)
+				panic(err)
+			} else {
+				defer resp.Body.Close()
+				err = json.NewDecoder(resp.Body).Decode(&target)
+				_, err := pgDB.Model(target).OnConflict("(symbol) DO NOTHING").Insert()
+				if err != nil {
+					panic(err)
+				}
+			}
+			wg.Done()
+		}()
+
+		now.Sub(prev)
+		prev = now
+
+		var barerr = bar.Add(1)
+		if barerr != nil {
+			fmt.Println("\nSomething wrong with bar: ", barerr)
+		}
+	}
+	wg.Wait()
+	return nil
+}
+
 // GetAllTickers Just get a list of all the tickers that are present in "ticker_vxes"
 func GetAllTickers(pgDB *pg.DB, timespan string) []string {
 	fmt.Println("Getting all tickers...")

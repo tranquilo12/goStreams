@@ -11,11 +11,12 @@ import (
 
 const (
 	//Scheme               = "https" // universal for all schemes here
-	aggsHost        = "api.polygon.io/v2/aggs"
-	tickerTypesHost = "api.polygon.io/v2/reference/types"
-	tickersVxHost   = "api.polygon.io/v3/reference/tickers"
-	tickersHost     = "api.polygon.io/v2/reference/tickers"
-	tickerNews2Host = "api.polygon.io/v2/reference/news"
+	aggsHost          = "api.polygon.io/v2/aggs"
+	tickerTypesHost   = "api.polygon.io/v2/reference/types"
+	tickersVxHost     = "api.polygon.io/v3/reference/tickers"
+	tickersHost       = "api.polygon.io/v2/reference/tickers"
+	tickerNews2Host   = "api.polygon.io/v2/reference/news"
+	tickerDetailsHost = "api.polygon.io/v1/meta"
 	//dailyOpenCloseHost   = "api.polygon.io/v1/open-close"
 	//groupedDailyBarsHost = "api.polygon.io/v2/aggs/grouped/locale/us/market/stocks"
 
@@ -86,6 +87,28 @@ const (
 //	}
 //	return urls
 //}
+
+// MakeTickerDetailsQuery generate all the queries for this endpoint
+func MakeTickerDetailsQuery(apiKey string, ticker string) *url.URL {
+	p, err := url.Parse("https://" + tickerDetailsHost + "/symbols/" + ticker + "/company")
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+	// make the url values
+	q := url.Values{}
+	q.Add("apiKey", apiKey)
+	p.RawQuery = q.Encode()
+	return p
+}
+
+func MakeAllTickerDetailsQueries(apiKey string, allTickers []string) []*url.URL {
+	var allUrls []*url.URL
+	for _, ticker := range allTickers {
+		allUrls = append(allUrls, MakeTickerDetailsQuery(apiKey, ticker))
+	}
+	return allUrls
+}
 
 // CreateLinearDatePairs creates a slice of arrays [[date, date+1], [date+1, date+2]...]
 func CreateLinearDatePairs(from string, to string) []structs.StartEndDateStruct {

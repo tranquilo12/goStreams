@@ -65,10 +65,17 @@ to quickly create a Cobra application.`,
 		fmt.Printf("Getting redis client and tickers from redis...")
 		redisClient := db.GetRedisClient(6379, redisEndpoint)
 		redisTickers := db.GetAllTickersFromRedis(redisClient)
-		today := time.Now().Format("2006-01-02")
+		forceInsertDate := aggParams.ForceInsertDate
+
+		var insertDate string
+		if forceInsertDate == "" {
+			insertDate = time.Now().Format("2006-01-02")
+		} else {
+			insertDate = aggParams.ForceInsertDate
+		}
 
 		fmt.Printf("Getting All agg tickers from s3...\n")
-		s3Tickers := publisher.GetAggTickersFromS3(today, aggParams.Timespan, aggParams.Multiplier, aggParams.From, aggParams.To)
+		s3Tickers := publisher.GetAggTickersFromS3(insertDate, aggParams.Timespan, aggParams.Multiplier, aggParams.From, aggParams.To)
 
 		fmt.Printf("Getting the difference between tickers in redis and s3...\n")
 		tickers := db.GetDifferenceBtwTickersInRedisAndS3(*redisTickers, *s3Tickers)
@@ -124,4 +131,5 @@ func init() {
 	aggsPubCmd.Flags().IntP("mult", "m", 2, "Multiplier to use with Timespan")
 	aggsPubCmd.Flags().IntP("limit", "l", 300, "Rate limit to pull from polygonio")
 	aggsPubCmd.Flags().IntP("withLinearDates", "w", 1, "Usually 1, if appending datasets day-to-day, but if for backup, use 0.")
+	aggsPubCmd.Flags().StringP("forceInsertDate", "F", "", "Force an insert date, to overwrite past data?")
 }
