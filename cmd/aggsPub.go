@@ -62,9 +62,14 @@ to quickly create a Cobra application.`,
 			redisEndpoint = "localhost"
 		}
 
-		fmt.Printf("Getting redis client and tickers from redis...")
-		redisClient := db.GetRedisClient(6379, redisEndpoint)
-		redisTickers := db.GetAllTickersFromRedis(redisClient)
+		var polygonTickers *[]string
+		if aggParams.UseRedis == 1 {
+			fmt.Printf("Getting redis client and tickers from redis...")
+			redisClient := db.GetRedisClient(6379, redisEndpoint)
+			polygonTickers = db.GetAllTickersFromRedis(redisClient)
+		} else {
+			polygonTickers = db.GetAllTickersFromPolygonioDirectly()
+		}
 		forceInsertDate := aggParams.ForceInsertDate
 
 		var insertDate string
@@ -78,13 +83,13 @@ to quickly create a Cobra application.`,
 		s3Tickers := publisher.GetAggTickersFromS3(insertDate, aggParams.Timespan, aggParams.Multiplier, aggParams.From, aggParams.To)
 
 		fmt.Printf("Getting the difference between tickers in redis and s3...\n")
-		tickers := db.GetDifferenceBtwTickersInRedisAndS3(*redisTickers, *s3Tickers)
+		tickers := db.GetDifferenceBtwTickersInMemAndS3(*polygonTickers, *s3Tickers)
 
 		fmt.Printf("Making all stocks aggs queries...\n")
 		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey, aggParams.WithLinearDates)
 
 		fmt.Printf("Publishing all values to the db...\n")
-		err = publisher.AggPublisher(urls, aggParams.Limit)
+		err = publisher.AggPublisher(urls, aggParams.Limit, forceInsertDate)
 		if err != nil {
 			fmt.Println("Something wrong with AggPublisher...")
 			panic(err)
@@ -132,4 +137,5 @@ func init() {
 	aggsPubCmd.Flags().IntP("limit", "l", 300, "Rate limit to pull from polygonio")
 	aggsPubCmd.Flags().IntP("withLinearDates", "w", 1, "Usually 1, if appending datasets day-to-day, but if for backup, use 0.")
 	aggsPubCmd.Flags().StringP("forceInsertDate", "F", "", "Force an insert date, to overwrite past data?")
+	aggsPubCmd.Flags().IntP("useRedis", "u", 0, "Should you use redis?")
 }

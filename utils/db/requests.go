@@ -287,6 +287,15 @@ func GetAllTickers(pgDB *pg.DB, timespan string) []string {
 	return tickers
 }
 
+func GetAllTickersFromPolygonioDirectly() *[]string {
+	apiKey := config.SetPolygonCred("other")
+	u := MakeTickerVxQuery(apiKey)
+	Chan1 := MakeAllTickersVxRequests(u)
+	strResult := GetTickerVxs(Chan1)
+	strArrResults := strings.Split(strResult, ",")
+	return &strArrResults
+}
+
 func GetAllTickersFromRedis(redisClient *redis.Client) *[]string {
 	result := redisClient.Get("allTickers")
 	strResult, err := result.Result()
@@ -306,7 +315,7 @@ func GetAllTickersFromRedis(redisClient *redis.Client) *[]string {
 	return &strArrResults
 }
 
-func GetDifferenceBtwTickersInRedisAndS3(slice1 []string, slice2 []string) []string {
+func GetDifferenceBtwTickersInMemAndS3(slice1 []string, slice2 []string) []string {
 	var diff []string
 
 	// Loop two times, first to find slice1 strings not in slice2,

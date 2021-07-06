@@ -27,7 +27,7 @@ import (
 //	Err    error
 //}
 
-func CreateAggKey(url string) string {
+func CreateAggKey(url string, forceInsertDate string) string {
 	splitUrl := strings.Split(url, "/")
 	ticker := splitUrl[6]
 	multiplier := splitUrl[8]
@@ -44,12 +44,12 @@ func CreateAggKey(url string) string {
 	toDay := strings.Split(to_, "-")[2]
 	toDay = strings.Split(toDay, "?")[0]
 
-	today := time.Now().Format("2006-01-02")
-	todayYear := strings.Split(today, "-")[0]
-	todayMon := strings.Split(today, "-")[1]
-	todayDay := strings.Split(today, "-")[2]
+	insertDate := forceInsertDate
+	insertDateYear := strings.Split(insertDate, "-")[0]
+	insertDateMon := strings.Split(insertDate, "-")[1]
+	insertDateDay := strings.Split(insertDate, "-")[2]
 
-	newKey := fmt.Sprintf("aggs/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/data.json", todayYear, todayMon, todayDay, timespan, multiplier, fromYear, fromMon, fromDay, toYear, toMon, toDay, ticker)
+	newKey := fmt.Sprintf("aggs/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/data.json", insertDateYear, insertDateMon, insertDateDay, timespan, multiplier, fromYear, fromMon, fromDay, toYear, toMon, toDay, ticker)
 	return newKey
 }
 
@@ -188,7 +188,7 @@ func GetAggTickersFromS3(insertDate string, timespan string, multiplier int, fro
 	return &results
 }
 
-func AggPublisher(urls []*url.URL, limit int) error {
+func AggPublisher(urls []*url.URL, limit int, forceInsertDate string) error {
 
 	//AmqpServerUrl := "amqp://guest:guest@localhost:5672"
 	//connectRabbitMQ, err := amqp.Dial(AmqpServerUrl)
@@ -261,7 +261,7 @@ func AggPublisher(urls []*url.URL, limit int) error {
 				logger.Println(err.Error())
 			} else {
 				// create the key
-				messageKey := CreateAggKey(u.String())
+				messageKey := CreateAggKey(u.String(), forceInsertDate)
 
 				// Marshal target to bytes
 				err = json.NewDecoder(resp.Body).Decode(&target)

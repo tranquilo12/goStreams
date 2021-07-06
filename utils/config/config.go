@@ -16,6 +16,7 @@ type AggCliParams struct {
 	Limit           int
 	WithLinearDates int
 	ForceInsertDate string
+	UseRedis        int
 }
 
 // NewsCliParams Struct for parsing cli params

@@ -43,7 +43,7 @@ func DownloadFromS3(bucket string, key string) *manager.WriteAtBuffer {
 	return buff
 }
 
-func AggDownloader(urls []*url.URL) chan structs.RedisAggBarsResults {
+func AggDownloader(urls []*url.URL, forceInsertDate string) chan structs.RedisAggBarsResults {
 
 	insertIntoRedisChan := make(chan structs.RedisAggBarsResults, 100000)
 
@@ -62,7 +62,7 @@ func AggDownloader(urls []*url.URL) chan structs.RedisAggBarsResults {
 
 		go func(url *url.URL) {
 			defer wg.Done()
-			messageKey := publisher.CreateAggKey(url.String())
+			messageKey := publisher.CreateAggKey(url.String(), forceInsertDate)
 			fromS3 := DownloadFromS3("polygonio-all", messageKey)
 
 			// For example, show received message in a console.

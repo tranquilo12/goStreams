@@ -168,6 +168,22 @@ func PushTickerVxIntoRedis(insertIntoRedis <-chan []structs.TickerVx, rClient *r
 	return nil
 }
 
+func GetTickerVxs(insertIntoRedis <-chan []structs.TickerVx) string {
+	// use WaitGroup to make things more smooth with channels
+	var allTickers []string
+
+	// for each insertIntoDB that follows...spin off another go routine
+	for val, ok := <-insertIntoRedis; ok; val, ok = <-insertIntoRedis {
+		if ok && val != nil {
+			for _, v := range val {
+				allTickers = append(allTickers, v.Ticker)
+			}
+		}
+	}
+	allTickersStr := strings.Join(allTickers[:], ",")
+	return allTickersStr
+}
+
 func PushAggIntoRedis(insertIntoRedis <-chan structs.RedisAggBarsResults, rClient *redis.Client) error {
 	// for each insertIntoDB that follows...spin off another go routine
 	for val, ok := <-insertIntoRedis; ok; val, ok = <-insertIntoRedis {
