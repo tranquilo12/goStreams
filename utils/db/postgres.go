@@ -6,7 +6,10 @@ import (
 	"github.com/spf13/cobra"
 	"lightning/utils/config"
 	"lightning/utils/structs"
+	"time"
 )
+
+const dateFmt = "2006-01-02"
 
 // ReadPostgresDBParamsFromCMD A function that reads in parameters related to the postgres DB.
 func ReadPostgresDBParamsFromCMD(cmd *cobra.Command) structs.DBParams {
@@ -75,6 +78,10 @@ func ReadAggregateParamsFromCMD(cmd *cobra.Command) config.AggCliParams {
 
 	withLinearDates, _ := cmd.Flags().GetInt("withLinearDates")
 	forceInsertDate, _ := cmd.Flags().GetString("forceInsertDate")
+	if forceInsertDate == "" {
+		currDate := time.Now()
+		forceInsertDate = currDate.Format(dateFmt)
+	}
 	useRedis, _ := cmd.Flags().GetInt("useRedis")
 
 	res := config.AggCliParams{
