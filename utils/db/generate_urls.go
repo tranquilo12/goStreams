@@ -143,7 +143,7 @@ func CreateLinearDatePairs(from string, to string) []structs.StartEndDateStruct 
 }
 
 // MakeAggQueryStr A function that makes urls like: /v2/aggs/ticker/{stocksTicker}/range/{multiplier}/{timespan}/{from}/{to}
-func MakeAggQueryStr(stocksTicker string, multiplier string, timespan string, from_ string, to_ string, apiKey string) *url.URL {
+func MakeAggQueryStr(stocksTicker string, multiplier string, timespan string, from_ string, to_ string, apiKey string, adjusted int) *url.URL {
 	p, err := url.Parse("https://" + aggsHost)
 	if err != nil {
 		fmt.Println(err)
@@ -155,7 +155,11 @@ func MakeAggQueryStr(stocksTicker string, multiplier string, timespan string, fr
 
 	// make the url values
 	q := url.Values{}
-	q.Add("unadjusted", "true")
+	if adjusted == 1 {
+		q.Add("unadjusted", "false")
+	} else {
+		q.Add("unadjusted", "true")
+	}
 	q.Add("sort", "asc")
 	q.Add("apiKey", apiKey)
 	p.RawQuery = q.Encode()
@@ -165,7 +169,7 @@ func MakeAggQueryStr(stocksTicker string, multiplier string, timespan string, fr
 
 // MakeAllStocksAggsQueries A quick function that uses MakeAggQueryStr and iterates through combos and returns a
 // list of urls that will be queried.
-func MakeAllStocksAggsQueries(tickers []string, timespan string, from_ string, to_ string, apiKey string, withLinearDates int) []*url.URL {
+func MakeAllStocksAggsQueries(tickers []string, timespan string, from_ string, to_ string, apiKey string, withLinearDates int, adjusted int) []*url.URL {
 	// no need for channels in this yet, just a quick function that makes all the queries and sends it back
 	fmt.Println("Making all urls...")
 
@@ -174,13 +178,13 @@ func MakeAllStocksAggsQueries(tickers []string, timespan string, from_ string, t
 		datePairs := CreateLinearDatePairs(from_, to_)
 		for _, ticker := range tickers {
 			for _, dp := range datePairs {
-				u := MakeAggQueryStr(ticker, "1", timespan, dp.Start, dp.End, apiKey)
+				u := MakeAggQueryStr(ticker, "1", timespan, dp.Start, dp.End, apiKey, adjusted)
 				urls = append(urls, u)
 			}
 		}
 	} else {
 		for _, ticker := range tickers {
-			u := MakeAggQueryStr(ticker, "1", timespan, from_, to_, apiKey)
+			u := MakeAggQueryStr(ticker, "1", timespan, from_, to_, apiKey, adjusted)
 			urls = append(urls, u)
 		}
 

@@ -27,7 +27,7 @@ import (
 //	Err    error
 //}
 
-func CreateAggKey(url string, forceInsertDate string) string {
+func CreateAggKey(url string, forceInsertDate string, adjusted int) string {
 	splitUrl := strings.Split(url, "/")
 	ticker := splitUrl[6]
 	multiplier := splitUrl[8]
@@ -50,6 +50,9 @@ func CreateAggKey(url string, forceInsertDate string) string {
 	insertDateDay := strings.Split(insertDate, "-")[2]
 
 	newKey := fmt.Sprintf("aggs/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/data.json", insertDateYear, insertDateMon, insertDateDay, timespan, multiplier, fromYear, fromMon, fromDay, toYear, toMon, toDay, ticker)
+	if adjusted == 1 {
+		newKey = fmt.Sprintf("aggs/adj/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/data.json", insertDateYear, insertDateMon, insertDateDay, timespan, multiplier, fromYear, fromMon, fromDay, toYear, toMon, toDay, ticker)
+	}
 	return newKey
 }
 
@@ -122,25 +125,19 @@ func ListObjects(c context.Context, api S3ListObjectsAPI, input *s3.ListObjectsV
 	return api.ListObjectsV2(c, input)
 }
 
-func GetAggTickersFromS3(insertDate string, timespan string, multiplier int, from_ string, to_ string) *[]string {
+func GetAggTickersFromS3(insertDate string, timespan string, multiplier int, from_ string, to_ string, adjusted int) *[]string {
 	var results []string
 
 	s3Client := CreateS3Client()
 
-	fromYear := strings.Split(from_, "-")[0]
-	fromMon := strings.Split(from_, "-")[1]
-	fromDay := strings.Split(from_, "-")[2]
+	from_ = strings.Replace(from_, "-", "/", -1)
+	to_ = strings.Replace(to_, "-", "/", -1)
+	insertDate = strings.Replace(insertDate, "-", "/", -1)
+	newKey := fmt.Sprintf("aggs/%s/%s/%d/%s/%s", insertDate, timespan, multiplier, from_, to_)
 
-	toYear := strings.Split(to_, "-")[0]
-	toMon := strings.Split(to_, "-")[1]
-	toDay := strings.Split(to_, "-")[2]
-	toDay = strings.Split(toDay, "?")[0]
-
-	InsertDateYear := strings.Split(insertDate, "-")[0]
-	InsertDateMon := strings.Split(insertDate, "-")[1]
-	InsertDateDay := strings.Split(insertDate, "-")[2]
-
-	newKey := fmt.Sprintf("aggs/%s/%s/%s/%s/%d/%s/%s/%s/%s/%s/%s/", InsertDateYear, InsertDateMon, InsertDateDay, timespan, multiplier, fromYear, fromMon, fromDay, toYear, toMon, toDay)
+	if adjusted == 1 {
+		newKey = fmt.Sprintf("aggs/adj/%s/%s/%d/%s/%s", insertDate, timespan, multiplier, from_, to_)
+	}
 
 	input := &s3.ListObjectsV2Input{
 		Bucket: aws.String("polygonio-all"),
@@ -188,7 +185,7 @@ func GetAggTickersFromS3(insertDate string, timespan string, multiplier int, fro
 	return &results
 }
 
-func AggPublisher(urls []*url.URL, limit int, forceInsertDate string) error {
+func AggPublisher(urls []*url.URL, limit int, forceInsertDate string, adjusted int) error {
 
 	//AmqpServerUrl := "amqp://guest:guest@localhost:5672"
 	//connectRabbitMQ, err := amqp.Dial(AmqpServerUrl)
@@ -261,7 +258,7 @@ func AggPublisher(urls []*url.URL, limit int, forceInsertDate string) error {
 				logger.Println(err.Error())
 			} else {
 				// create the key
-				messageKey := CreateAggKey(u.String(), forceInsertDate)
+				messageKey := CreateAggKey(u.String(), forceInsertDate, adjusted)
 
 				// Marshal target to bytes
 				err = json.NewDecoder(resp.Body).Decode(&target)

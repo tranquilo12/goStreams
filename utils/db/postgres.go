@@ -76,13 +76,15 @@ func ReadAggregateParamsFromCMD(cmd *cobra.Command) config.AggCliParams {
 		limit = 100
 	}
 
+	useRedis, _ := cmd.Flags().GetInt("useRedis")
+	adjusted, _ := cmd.Flags().GetInt("adjusted")
 	withLinearDates, _ := cmd.Flags().GetInt("withLinearDates")
+
 	forceInsertDate, _ := cmd.Flags().GetString("forceInsertDate")
 	if forceInsertDate == "" {
 		currDate := time.Now()
 		forceInsertDate = currDate.Format(dateFmt)
 	}
-	useRedis, _ := cmd.Flags().GetInt("useRedis")
 
 	res := config.AggCliParams{
 		Timespan:        timespan,
@@ -93,6 +95,7 @@ func ReadAggregateParamsFromCMD(cmd *cobra.Command) config.AggCliParams {
 		WithLinearDates: withLinearDates,
 		ForceInsertDate: forceInsertDate,
 		UseRedis:        useRedis,
+		Adjusted:        adjusted,
 	}
 
 	return res

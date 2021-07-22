@@ -80,49 +80,94 @@ to quickly create a Cobra application.`,
 		}
 
 		fmt.Printf("Getting All agg tickers from s3...\n")
-		s3Tickers := publisher.GetAggTickersFromS3(insertDate, aggParams.Timespan, aggParams.Multiplier, aggParams.From, aggParams.To)
+		s3Tickers := publisher.GetAggTickersFromS3(
+			insertDate,
+			aggParams.Timespan,
+			aggParams.Multiplier,
+			aggParams.From,
+			aggParams.To,
+			aggParams.Adjusted,
+		)
 
 		fmt.Printf("Getting the difference between tickers in redis and s3...\n")
 		tickers := db.GetDifferenceBtwTickersInMemAndS3(*polygonTickers, *s3Tickers)
 
 		fmt.Printf("Making all stocks aggs queries...\n")
-		urls := db.MakeAllStocksAggsQueries(tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey, aggParams.WithLinearDates)
+		urls := db.MakeAllStocksAggsQueries(
+			tickers,
+			aggParams.Timespan,
+			aggParams.From,
+			aggParams.To,
+			apiKey,
+			aggParams.WithLinearDates,
+			aggParams.Adjusted,
+		)
 
 		fmt.Printf("Publishing all values to the db...\n")
-		err = publisher.AggPublisher(urls, aggParams.Limit, forceInsertDate)
+		err = publisher.AggPublisher(urls, aggParams.Limit, forceInsertDate, aggParams.Adjusted)
 		if err != nil {
 			fmt.Println("Something wrong with AggPublisher...")
 			panic(err)
 		}
 
-		fmt.Printf("Pushing current status of all data in s3 to s3 as currentDataStatus.json...\n")
-		var s3tickers []string
-		m1 := make(map[string][][]string)
-		m2 := make(map[string]map[string][][]string)
+		if aggParams.Adjusted == 1 {
+			fmt.Printf("Pushing current status of all data in s3 to s3 as currentDataStatusAdj.json...\n")
+			var s3tickers []string
+			m1 := make(map[string][][]string)
+			m2 := make(map[string]map[string][][]string)
+			fmt.Printf("Fetching all objects from %s with prefix %s ...\n", "polygonio-all", "aggs/adj")
+			allObjs := subscriber.ListAllBucketObjsS3("polygonio-all", "aggs/adj")
 
-		fmt.Printf("Fetching all objects from %s with prefix %s ...\n", "polygonio-all", "aggs")
-		allObjs := subscriber.ListAllBucketObjsS3("polygonio-all", "aggs")
+			fmt.Printf("Parsing all objects from %s with prefix %s ...\n", "polygonio-all", "aggs/adj")
+			for _, ele := range *allObjs {
+				splitEle := strings.Split(ele, "/")
+				insertDate := strings.Join(splitEle[2:5], "-")
+				startDate := strings.Join(splitEle[7:10], "-")
+				endDate := strings.Join(splitEle[10:13], "-")
+				timespan := splitEle[5]
+				s3tickers = append(s3tickers, splitEle[13])
+				m1[insertDate] = append(m1[insertDate], []string{startDate, endDate})
+				m1[insertDate] = publisher.Unique2dStr(m1[insertDate])
+				m2[timespan] = m1
+			}
 
-		fmt.Printf("Parsing all objects from %s with prefix %s ...\n", "polygonio-all", "aggs")
-		for _, ele := range *allObjs {
-			splitEle := strings.Split(ele, "/")
-			insertDate := strings.Join(splitEle[1:4], "-")
-			startDate := strings.Join(splitEle[6:9], "-")
-			endDate := strings.Join(splitEle[9:12], "-")
-			timespan := splitEle[4]
-			s3tickers = append(s3tickers, splitEle[12])
-			m1[insertDate] = append(m1[insertDate], []string{startDate, endDate})
-			m1[insertDate] = publisher.Unique2dStr(m1[insertDate])
-			m2[timespan] = m1
+			sendToS3, err := json.Marshal(m2)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Printf("Pushing all objects from %s with prefix %s to s3 as %s...\n", "polygonio-all", "aggs/adj", "currentDataStatusAdj.json")
+			err = publisher.UploadToS3("polygonio-all", "currentDataStatusAdj.json", sendToS3)
+		} else {
+			fmt.Printf("Pushing current status of all data in s3 to s3 as currentDataStatus.json...\n")
+			var s3tickers []string
+			m1 := make(map[string][][]string)
+			m2 := make(map[string]map[string][][]string)
+			fmt.Printf("Fetching all objects from %s with prefix %s ...\n", "polygonio-all", "aggs")
+			allObjs := subscriber.ListAllBucketObjsS3("polygonio-all", "aggs")
+
+			fmt.Printf("Parsing all objects from %s with prefix %s ...\n", "polygonio-all", "aggs")
+			for _, ele := range *allObjs {
+				splitEle := strings.Split(ele, "/")
+				insertDate := strings.Join(splitEle[1:4], "-")
+				startDate := strings.Join(splitEle[6:9], "-")
+				endDate := strings.Join(splitEle[9:12], "-")
+				timespan := splitEle[4]
+				s3tickers = append(s3tickers, splitEle[12])
+				m1[insertDate] = append(m1[insertDate], []string{startDate, endDate})
+				m1[insertDate] = publisher.Unique2dStr(m1[insertDate])
+				m2[timespan] = m1
+			}
+
+			sendToS3, err := json.Marshal(m2)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Printf("Pushing all objects from %s with prefix %s to s3 as %s...\n", "polygonio-all", "aggs", "currentDataStatus.json")
+			err = publisher.UploadToS3("polygonio-all", "currentDataStatus.json", sendToS3)
+
 		}
-
-		sendToS3, err := json.Marshal(m2)
-		if err != nil {
-			panic(err)
-		}
-
-		fmt.Printf("Pushing all objects from %s with prefix %s to s3 as %s...\n", "polygonio-all", "aggs", "currentDataStatus.json")
-		err = publisher.UploadToS3("polygonio-all", "currentDataStatus.json", sendToS3)
 	},
 }
 
@@ -138,4 +183,5 @@ func init() {
 	aggsPubCmd.Flags().IntP("withLinearDates", "w", 1, "Usually 1, if appending datasets day-to-day, but if for backup, use 0.")
 	aggsPubCmd.Flags().StringP("forceInsertDate", "F", "", "Force an insert date, to overwrite past data?")
 	aggsPubCmd.Flags().IntP("useRedis", "u", 0, "Should you use redis?")
+	aggsPubCmd.Flags().IntP("adjusted", "a", 1, "Adjusted or unadjusted?")
 }
