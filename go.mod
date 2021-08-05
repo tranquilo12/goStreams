@@ -4,8 +4,6 @@ go 1.16
 
 require (
 	github.com/adjust/rmq/v3 v3.0.0
-	github.com/anaskhan96/soup v1.2.4 // indirect
-	github.com/aws/aws-sdk-go v1.38.61
 	github.com/aws/aws-sdk-go-v2 v1.6.0
 	github.com/aws/aws-sdk-go-v2/config v1.3.0
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.2.3
@@ -20,7 +18,6 @@ require (
 	github.com/schollz/progressbar/v3 v3.8.0
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/viper v1.7.1
-	github.com/streadway/amqp v1.0.0
 	go.uber.org/ratelimit v0.2.0
 	golang.org/x/sys v0.0.0-20210403161142-5e06dd20ab57 // indirect
 	gopkg.in/ini.v1 v1.62.0
