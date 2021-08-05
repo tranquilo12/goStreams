@@ -21,10 +21,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	TimeLayout = "2006-01-02"
-)
-
 // tickerVxesCmd represents the tickerVxes command
 var tickerVxesCmd = &cobra.Command{
 	Use:   "tickerVxes",

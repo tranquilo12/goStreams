@@ -12,11 +12,11 @@ import (
 
 type DBLogger struct{}
 
-func (d DBLogger) BeforeQuery(c context.Context, q *pg.QueryEvent) (context.Context, error) {
+func (d DBLogger) BeforeQuery(c context.Context) (context.Context, error) {
 	return c, nil
 }
 
-func (d DBLogger) AfterQuery(c context.Context, q *pg.QueryEvent) error {
+func (d DBLogger) AfterQuery(q *pg.QueryEvent) error {
 	fmt.Println(q.FormattedQuery())
 	return nil
 }
@@ -266,7 +266,7 @@ type (
 	}
 )
 
-// TickerDetails
+// TickerDetails A struct for all the tickers, and their details
 type TickerDetails struct {
 	Logo           string   `json:"logo"`
 	Listdate       string   `json:"listdate"`
@@ -297,7 +297,7 @@ type TickerDetails struct {
 	Active         bool     `json:"active"`
 }
 
-// TickerNews
+// TickerNews For all the news
 type TickerNews struct {
 	Symbols   []string `json:"symbols"`
 	Timestamp string   `json:"timestamp"`
@@ -375,7 +375,7 @@ type (
 	}
 )
 
-// StockDividendsResponse
+// StockDividendsResponse A struct for all the dividends
 type StockDividendsResponse struct {
 	Status  string `json:"status"`
 	Count   int    `json:"count"`
@@ -389,7 +389,7 @@ type StockDividendsResponse struct {
 	} `json:"results"`
 }
 
-// StockDividends
+// StockDividends From above, the dividends expand to this
 type StockDividends struct {
 	InsertDate   time.Time `json:"insert_date"`
 	Status       string    `json:"status"`
@@ -402,7 +402,7 @@ type StockDividends struct {
 	Declareddate string    `json:"declaredDate,omitempty"`
 }
 
-// StockFinancialsResponse
+// StockFinancialsResponse Stock financials response, dont know what to do with this
 type StockFinancialsResponse struct {
 	Status  string `json:"status"`
 	Results []struct {
@@ -520,7 +520,7 @@ type StockFinancialsResponse struct {
 	} `json:"results"`
 }
 
-// StockFinancials
+// StockFinancials The above struct expands into this
 type StockFinancials struct {
 	Status                                                 string    `json:"status"`
 	InsertDate                                             time.Time `json:"insert_date"`
@@ -637,7 +637,7 @@ type StockFinancials struct {
 	Returnonsales                                          float64   `json:"returnOnSales,omitempty"`
 }
 
-// MarketHolidays
+// MarketHolidays All the holidays possible
 type MarketHolidays struct {
 	Exchange string    `json:"exchange"`
 	Name     string    `json:"name"`
@@ -647,7 +647,7 @@ type MarketHolidays struct {
 	Close    time.Time `json:"close,omitempty"`
 }
 
-// MarketStatusResponse []
+// MarketStatusResponse What's happening with the market now
 type MarketStatusResponse []struct {
 	Market     string    `json:"market"`
 	Servertime time.Time `json:"serverTime"`
@@ -662,7 +662,7 @@ type MarketStatusResponse []struct {
 	} `json:"currencies"`
 }
 
-// MarketStatus
+// MarketStatus the above expands into this struct
 type MarketStatus struct {
 	InsertDate time.Time `json:"insert_date"`
 	Market     string    `json:"market"`
@@ -685,7 +685,7 @@ type StockExchanges struct {
 	Code   string `json:"code,omitempty"`
 }
 
-// ConditionMappings
+// ConditionsMapping Map a lot of conditions to this struct
 type ConditionsMapping struct {
 	Num0  string `json:"0"`
 	Num1  string `json:"1"`
@@ -754,7 +754,7 @@ type CryptoExchangesResponse []struct {
 	Locale string `json:"locale"`
 }
 
-// CryptoExchanges
+// CryptoExchanges Basic struct for cryptos
 type CryptoExchanges struct {
 	InsertDate time.Time `json:"insert_date"`
 	ID         int       `json:"id"`
@@ -765,7 +765,7 @@ type CryptoExchanges struct {
 	Locale     string    `json:"locale"`
 }
 
-// DailyOpenClose
+// DailyOpenClose Struct for all those daily open closes
 type DailyOpenClose struct {
 	Status     string  `json:"status"`
 	From       string  `json:"from"`
@@ -863,55 +863,6 @@ func TickersVxFlattenPayloadBeforeInsert(target TickersVxResponse) []TickerVx {
 		output = append(output, r)
 	}
 
-	return output
-}
-
-// TickersFlattenPayloadBeforeInsert Function that flattens result from '/v2/reference/tickers' (depreciated)
-func TickersFlattenPayloadBeforeInsert(target TickersResponse) []Tickers {
-	var output []Tickers
-	tickersInner := target.Tickers // creates TickersInner
-
-	for i := range tickersInner {
-		t := tickersInner[i]
-
-		r := Tickers{
-			InsertDate:  time.Now(),
-			Page:        target.Page,
-			Perpage:     target.Perpage,
-			Count:       target.Count,
-			Status:      target.Status,
-			Ticker:      t.Ticker,
-			Name:        t.Name,
-			Market:      t.Market,
-			Locale:      t.Locale,
-			Currency:    t.Currency,
-			Active:      t.Active,
-			Primaryexch: t.Primaryexch,
-		}
-
-		if t.Type != nil {
-			r.Type = t.Type
-		}
-
-		if t.Codes != nil {
-			r.Cik = t.Codes.Cik
-			r.Figiuid = t.Codes.Figiuid
-			r.Scfigi = t.Codes.Scfigi
-			r.Cfigi = t.Codes.Cfigi
-			r.Figi = t.Codes.Figi
-		}
-
-		r.Updated = t.Updated
-		r.URL = t.URL
-
-		if t.Attrs != nil {
-			r.Currencyname = t.Attrs.Currencyname
-			r.Currency = t.Attrs.Currency
-			r.Basename = t.Attrs.Basename
-			r.Base = t.Attrs.Base
-		}
-		output = append(output, r)
-	}
 	return output
 }
 
@@ -1055,7 +1006,7 @@ func (aggsConnCombo *NewConsumerStruct) Consume(batch rmq.Deliveries) {
 		}
 
 		if errors := batch.Ack(); len(errors) > 0 {
-			e := fmt.Sprintf("Something Ack Error:: %s\n", errors)
+			e := fmt.Sprintf("Something Ack Error:: %v\n", errors)
 			fmt.Printf(e)
 		}
 	}

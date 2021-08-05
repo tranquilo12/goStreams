@@ -5,7 +5,6 @@ import (
 	"lightning/utils/structs"
 	"net/url"
 	"path"
-	"strconv"
 	"time"
 )
 
@@ -14,14 +13,12 @@ const (
 	aggsHost          = "api.polygon.io/v2/aggs"
 	tickerTypesHost   = "api.polygon.io/v2/reference/types"
 	tickersVxHost     = "api.polygon.io/v3/reference/tickers"
-	tickersHost       = "api.polygon.io/v2/reference/tickers"
 	tickerNews2Host   = "api.polygon.io/v2/reference/news"
 	tickerDetailsHost = "api.polygon.io/v1/meta"
 	//dailyOpenCloseHost   = "api.polygon.io/v1/open-close"
 	//groupedDailyBarsHost = "api.polygon.io/v2/aggs/grouped/locale/us/market/stocks"
 
-	layout    = "2006-01-02" // go uses this date as a format specifier
-	rateLimit = 50           // can be changed
+	layout = "2006-01-02" // go uses this date as a format specifier
 	//timespan   = "day"
 	//multiplier = 1
 	//from_      = "2020-11-22"
@@ -226,34 +223,6 @@ func MakeTickerVxQuery(apiKey string) *url.URL {
 	p.RawQuery = q.Encode()
 
 	return p
-}
-
-// MakeTickersQuery A function that takes in the apikey + page number to make urls.
-func MakeTickersQuery(apiKey string, page int) *url.URL {
-	p, err := url.Parse("https://" + tickersHost)
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
-	}
-
-	// make the url values
-	q := url.Values{}
-	q.Add("page", strconv.Itoa(page))
-	q.Add("perpage", "50")
-	q.Add("apiKey", apiKey)
-	q.Add("locale", "g")
-	p.RawQuery = q.Encode()
-	return p
-}
-
-// MakeAllTickersQuery A function that iterates through 'MakeTickersQuery' using the numPages parameter.
-func MakeAllTickersQuery(apiKey string, numPages int) []*url.URL {
-	var urls []*url.URL
-	for i := 1; i <= numPages; i++ {
-		u := MakeTickersQuery(apiKey, i)
-		urls = append(urls, u)
-	}
-	return urls
 }
 
 // MakeTickerNews2Query A function that takes in the apikey + page number to make urls.

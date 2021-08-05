@@ -50,7 +50,10 @@ func (handler *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 	}
 
 	log.Printf("queue stats\n%s", stats)
-	fmt.Fprint(writer, stats.GetHtml(layout, refresh))
+	_, err = fmt.Fprint(writer, stats.GetHtml(layout, refresh))
+	if err != nil {
+		panic(err)
+	}
 }
 
 // showQCmd represents the showQ command

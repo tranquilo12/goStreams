@@ -1,61 +1,6 @@
 package db
 
-import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"net/url"
-	"strings"
-)
-
-type urlDetails struct {
-	Ticker     string
-	Multiplier string
-	Timespan   string
-	From       string
-	To         string
-}
-
 // https://api.polygonio/v2/aggs/{stocksTicker}/range/{multiplier}/{timespan}/{from}/{to}
-func getDetailsFromUrl(url *url.URL) urlDetails {
-	urlPart := strings.Split(url.String(), "/")
-	res := urlDetails{
-		Ticker:     urlPart[6],
-		Multiplier: urlPart[8],
-		Timespan:   urlPart[9],
-		From:       urlPart[10],
-		To:         strings.Split(urlPart[8], "?")[0],
-	}
-	return res
-}
-
-func CreateNewS3Session() *s3.S3 {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
-	svc := s3.New(sess)
-	return svc
-}
-
-func keyExists(svc *s3.S3, bucket string, key string) (bool, error) {
-	_, err := svc.HeadObject(&s3.HeadObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-	})
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case "NotFound": // s3.ErrCodeNoSuchKey does not work, aws is missing this error code so we hardwire a string
-				return false, nil
-			default:
-				return false, err
-			}
-		}
-		return false, err
-	}
-	return true, nil
-}
 
 // UploadAggToS3 s3 path /aggs/{insert_date}/{timespan_multiplier}/{trade_date}/{stocksTickers}/data.tape
 //func UploadAggToS3(svc *s3.S3, url *url.URL, response *http.Response) error {
