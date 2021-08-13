@@ -25,66 +25,6 @@ const (
 	//to_        = "2020-12-15"
 )
 
-// daily open close url: /v1/open-close/{stocksTicker}/{date}
-//func MakeDailyOpenCloseStr(stocksTicker string, date string, apiKey string) *url.URL {
-//	p, err := url.Parse(Scheme + "://" + dailyOpenCloseHost)
-//	if err != nil {
-//		fmt.Println(err)
-//		panic(err)
-//	}
-//
-//	// Make the entire path
-//	p.Path = path.Join(p.Path, stocksTicker, date)
-//
-//	// make the url values
-//	q := url.Values{}
-//	q.Add("unadjusted", "true")
-//	q.Add("sort", "asc")
-//	q.Add("apiKey", apiKey)
-//	p.RawQuery = q.Encode()
-//
-//	return p
-//}
-
-//func MakeDailyOpenCloseQueries(tickers []string, date string, apiKey string)[]*url.URL{
-//	var urls []*url.URL
-//	for _, ticker := range tickers {
-//		u := MakeDailyOpenCloseStr(ticker, date, apiKey)
-//		urls = append(urls, u)
-//	}
-//	return urls
-//}
-
-// grouped daily bars url: /v2/aggs/grouped/locale/us/market/stocks/{date}
-//func MakeGroupedDailyBarsStr(date string, apiKey string) *url.URL {
-//	p, err := url.Parse(Scheme + "://" + groupedDailyBarsHost)
-//	if err != nil {
-//		fmt.Println(err)
-//		panic(err)
-//	}
-//
-//	// Make the entire path
-//	p.Path = path.Join(p.Path, date)
-//
-//	// make the url values
-//	q := url.Values{}
-//	q.Add("unadjusted", "true")
-//	q.Add("sort", "asc")
-//	q.Add("apiKey", apiKey)
-//	p.RawQuery = q.Encode()
-//
-//	return p
-//}
-
-//func MakeGroupedDailyBarsQueries(dates []string,  apiKey string)[]*url.URL{
-//	var urls []*url.URL
-//	for _, date := range dates {
-//		u := MakeGroupedDailyBarsStr(date, apiKey)
-//		urls = append(urls, u)
-//	}
-//	return urls
-//}
-
 // MakeTickerDetailsQuery generate all the queries for this endpoint
 func MakeTickerDetailsQuery(apiKey string, ticker string) *url.URL {
 	p, err := url.Parse("https://" + tickerDetailsHost + "/symbols/" + ticker + "/company")
@@ -164,8 +104,7 @@ func MakeAggQueryStr(stocksTicker string, multiplier string, timespan string, fr
 	return p
 }
 
-// MakeAllStocksAggsQueries A quick function that uses MakeAggQueryStr and iterates through combos and returns a
-// list of urls that will be queried.
+// MakeAllStocksAggsQueries A quick function that uses MakeAggQueryStr and iterates through combos and returns a list of urls that will be queried.
 func MakeAllStocksAggsQueries(tickers []string, timespan string, from_ string, to_ string, apiKey string, withLinearDates int, adjusted int) []*url.URL {
 	// no need for channels in this yet, just a quick function that makes all the queries and sends it back
 	fmt.Println("Making all urls...")

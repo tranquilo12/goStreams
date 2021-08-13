@@ -1,7 +1,7 @@
 package cmd
 
 /*
-Copyright © 2021 NAME HERE <EMAIL ADDRESS>
+Copyright © 2021 Shriram Sunder <shriram.sunder121091@gmail.com>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -31,13 +31,27 @@ import (
 // aggsPubCmd represents the aggs command
 var aggsPubCmd = &cobra.Command{
 	Use:   "aggsPub",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "aggsPub will help 'Publish' 'Aggregates' to any database that you point it to (S3/postgres).",
+	Long: `aggsPub: This command will help publish aggregates to any database that you point it towards. 
+After inserting data into S3, it will make a file called "currentDataStatus.json", placed at the head of the S3 path, 
+that will contain a succinct method of determining which dates have been inserted.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Accepts flags like: 
+	1.  forceInsertDate (type: str) (called by: --forceInsertDate) = 0 or 1; If this flag is set to 0, today's date
+         will be used as the first index in the flat file structure-like index that's used in S3. 
+	2.  useRedis (type: int) (called by: --useRedis) = 0 or 1; If this flag is set to 0, redis will not be used as a 
+         middle-man, between polygon-io and the database. It was (will-be) important when queues need to be implemented, 
+         i.e if things will go back to Postgres.
+	3.  withLinearDates (type: int) (called by: --withLinearDates) = 0 or 1; If this flag is set to 0, the urls that are called will not be
+        split into (start_day, start_day + 1... end_date) but rather (start_date, end_date).
+	4.  dbtype (type: str) (called by: --dbtype) = "ec2db"; Either keep this param empty or make it ec2db; (Will be removed in later versions).
+	5.  timespan (type: str) (called by: --timespan) = minute/hour/day/week/month/quarter/year, found in (https://polygon.io/docs/get_v2_aggs_ticker__stocksTicker__range__multiplier___timespan___from___to__anchor).
+	6.  multiplier (type: int) (called by: --mult) = usually 1.
+	7.  from (type: str) (called by: --from) = the start date in %Y-%m-%d format.
+	8.  to (type: str) (called by: --to) = the end date in %Y-%m-%d format.
+	9.  adjusted (type: int) (called by: --adj) = 0 or 1; If this flag is set 0, only adjusted data will be called. 
+	10. limit (type: int) (called by: --limit) = 300; The rate limit by which data will be pulled (from polygon-io) and inserted into S3.
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("aggsPub called")
 		dbType, _ := cmd.Flags().GetString("dbtype")

@@ -104,8 +104,7 @@ func UploadToS3(bucket string, key string, body []byte) error {
 	return nil
 }
 
-// S3ListObjectsAPI defines the interface for the ListObjectsV2 function.
-// We use this interface to test the function using a mocked service.
+// S3ListObjectsAPI defines the interface for the ListObjectsV2 function. Tests the function using a mocked service.
 type S3ListObjectsAPI interface {
 	ListObjectsV2(ctx context.Context,
 		params *s3.ListObjectsV2Input,
@@ -307,56 +306,3 @@ func Unique2dStr(strSlice [][]string) [][]string {
 	}
 	return txs
 }
-
-//func AggPublisherS3(urls []*url.URL) error {
-//
-//	// use WaitGroup to make things more smooth with goroutines
-//	var wg sync.WaitGroup
-//
-//	// create a buffer of the waitGroup, of the same length as urls
-//	wg.Add(len(urls))
-//
-//	// create a rate limiter to stop over-requesting
-//	prev := time.Now()
-//	rateLimiter := ratelimit.New(30)
-//
-//	// Create new session
-//	svc := db.CreateNewS3Session()
-//
-//	for _, u := range urls {
-//		now := rateLimiter.Take()
-//		//target := new(structs.AggregatesBarsResponse)
-//
-//		go func(u *url.URL) {
-//			defer wg.Done()
-//			resp, err := http.Get(u.String())
-//			if err != nil {
-//				fmt.Println("Error retrieving URL: ", err)
-//				panic(err)
-//			} else {
-//				err = db.UploadAggToS3(svc, u, resp)
-//				if err != nil {
-//					panic(err)
-//				}
-//
-//				// create the key
-//				//messageKey := CreateAggKey(u)
-//
-//				// Marshal target to bytes
-//				//err = json.NewDecoder(resp.Body).Decode(&target)
-//				//taskBytes, err := json.Marshal(target)
-//				//if err != nil {
-//				//	fmt.Println("Error retrieving URL: ", err)
-//				//}
-//
-//			}
-//		}(u)
-//
-//		now.Sub(prev)
-//		prev = now
-//	}
-//
-//	wg.Wait()
-//
-//	return nil
-//}
