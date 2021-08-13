@@ -3,63 +3,66 @@
 ## Project Structure
 ```bash
 .
-|-- cmd
-|   |-- aggsPub.go
-|   |-- aggsSub.go
-|   |-- createTables.go
-|   |-- refreshTickers.go
-|   |-- root.go
-|   |-- showQ.go
-|   |-- tickerNews.go
-|   |-- tickerTypes.go
-|   `-- tickerVxes.go
-|-- docker
-|   |-- config
-|   |   |-- grafana
-|   |   |-- pgbouncer
-|   |   |-- postgres
-|   |   |-- provisioning
-|   |   |-- rabbitmq
-|   |   |-- redis
-|   |   `-- config.env
-|   |-- postgres
-|   |   `-- data
-|   |-- docker-compose.yml
-|   |-- prom.env
-|   `-- prometheus.yaml
-|-- publisher
-|   `-- publisher.go
-|-- subscriber
-|   `-- subscriber.go
-|-- utils
-|   |-- config
-|   |   |-- config.go
-|   |   `-- equities_list.csv
-|   |-- db
-|   |   |-- create_tables.go
-|   |   |-- generate_urls.go
-|   |   |-- inserts.go
-|   |   |-- postgres.go
-|   |   |-- redis.go
-|   |   `-- requests.go
-|   |-- mocks
-|   |   `-- client.go
-|   |-- responses
-|   |   |-- responses.json
-|   |   `-- tickers_response.json
-|   `-- structs
-|       `-- structs.go
-|-- LICENSE
-|-- README.md
-|-- config.ini
-|-- go.mod
-|-- go.sum
-|-- main.go
-|-- make_ssh_tunnel.sh
-|-- out
-`-- tmux-sessions.sh
-
-19 directories, 36 files
+├── LICENSE
+├── README.md
+├── backfill_polygonio.sh
+├── cmd
+│   ├── aggsPub.go
+│   ├── aggsSub.go
+│   ├── createTables.go
+│   ├── deleteObjs.go
+│   ├── refreshTickers.go
+│   ├── root.go
+│   ├── tickerNews.go
+│   └── tickerTypes.go
+├── config.ini
+├── docker
+│   ├── config
+│   │   ├── config.env
+│   │   ├── grafana
+│   │   ├── pgbouncer
+│   │   ├── postgres
+│   │   ├── provisioning
+│   │   ├── rabbitmq
+│   │   └── redis
+│   ├── docker-compose.yml
+│   ├── prom.env
+│   ├── prometheus.yaml
+│   └── timescaledb
+│       └── data
+├── go.mod
+├── go.sum
+├── main.go
+├── make_ssh_tunnel.sh
+├── publisher
+│   └── publisher.go
+├── subscriber
+│   └── subscriber.go
+├── tmux-sessions.sh
+├── urlErrors.log
+└── utils
+    ├── config
+    │   ├── config.go
+    │   └── equities_list.csv
+    ├── db
+    │   ├── create_tables.go
+    │   ├── generate_urls.go
+    │   ├── inserts.go
+    │   ├── postgres.go
+    │   ├── redis.go
+    │   └── requests.go
+    ├── mocks
+    │   └── client.go
+    ├── responses
+    │   ├── daily_open_close.json
+    │   ├── grouped_daily_bars.json
+    │   ├── responses.json
+    │   ├── snapshot_all_tickers.json
+    │   ├── snapshot_gainers_losers.json
+    │   ├── snapshot_tickers.json
+    │   └── tickers_response.json
+    └── structs
+        └── structs.go
 ```
 
 ## Docker Setup and Usage
