@@ -59,7 +59,7 @@ Accepts flags like:
 			dbType = "ec2db"
 		}
 
-		// Get agg parameters from cli
+		// Get agg parameters from console
 		aggParams := db.ReadAggregateParamsFromCMD(cmd)
 
 		// Possibly get all the redis parameters from the .ini file.
@@ -71,16 +71,18 @@ Accepts flags like:
 
 		var redisEndpoint string
 		if dbType == "ELASTICCACHE" {
-			redisEndpoint = config.GetRedisParams("ELASTICCACHE")
+			redisEndpoint = config.GetElasticCacheEndpoint("ELASTICCACHE")
 		} else {
 			redisEndpoint = "localhost"
 		}
 
-		var polygonTickers *[]string
+		var polygonTickers []string
 		if aggParams.UseRedis == 1 {
 			fmt.Printf("Getting redis client and tickers from redis...")
-			redisClient := db.GetRedisClient(6379, redisEndpoint)
-			polygonTickers = db.GetAllTickersFromRedis(redisClient)
+			pool := db.GetRedisPool(6379, redisEndpoint)
+			// conn will close within GetAllTickersFromRedis
+			conn := pool.Get()
+			polygonTickers = db.GetAllTickersFromRedis(conn)
 		} else {
 			polygonTickers = db.GetAllTickersFromPolygonioDirectly()
 		}
@@ -104,10 +106,10 @@ Accepts flags like:
 		)
 
 		fmt.Printf("Getting the difference between tickers in redis and s3...\n")
-		tickers := db.GetDifferenceBtwTickersInMemAndS3(*polygonTickers, *s3Tickers)
+		tickers := db.GetDifferenceBtwTickersInMemAndS3(polygonTickers, *s3Tickers)
 
 		fmt.Printf("Making all stocks aggs queries...\n")
-		urls := db.MakeAllStocksAggsQueries(
+		urls := db.MakeAllStocksAggsUrls(
 			tickers,
 			aggParams.Timespan,
 			aggParams.From,
@@ -186,8 +188,8 @@ Accepts flags like:
 }
 
 func init() {
-	rootCmd.AddCommand(aggsPubCmd)
 	// Here you will define your flags and configuration settings.
+	rootCmd.AddCommand(aggsPubCmd)
 	aggsPubCmd.Flags().StringP("dbtype", "d", "ec2db", "One of two... ec2db or localdb")
 	aggsPubCmd.Flags().StringP("timespan", "T", "", "Timespan (minute, hour, day...)")
 	aggsPubCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")

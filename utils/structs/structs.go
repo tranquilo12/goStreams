@@ -1308,3 +1308,7 @@ type StartEndDateStruct struct {
 	Start string
 	End   string
 }
+
+type RedisOutputStruct interface {
+	[]string | []byte
+}

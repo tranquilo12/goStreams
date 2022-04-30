@@ -3,9 +3,10 @@ package config
 import (
 	"gopkg.in/ini.v1"
 	"lightning/utils/structs"
-	"os"
 	"strings"
 )
+
+const configPath = "/Users/shriramsunder/GolandProjects/goStreams/config.ini"
 
 // AggCliParams Struct for parsing cli params
 type AggCliParams struct {
@@ -18,6 +19,10 @@ type AggCliParams struct {
 	ForceInsertDate string
 	UseRedis        int
 	Adjusted        int
+}
+
+type AggCliParams2 struct {
+	Type string
 }
 
 // NewsCliParams Struct for parsing cli params
@@ -39,8 +44,7 @@ type RedisParams struct {
 // SetDBParams Function that reads the config.ini file within the directory, setting the Postgres db parameters.
 // param user has options 'grafana' and 'postgres'.
 func SetDBParams(params *structs.DBParams, section string) error {
-	pwd, err := os.Getwd()
-	config, err := ini.Load(pwd + "/config.ini")
+	config, err := ini.Load(configPath)
 	if err != nil {
 		return err
 	}
@@ -55,9 +59,8 @@ func SetDBParams(params *structs.DBParams, section string) error {
 	return err
 }
 
-func GetRedisParams(section string) string {
-	pwd, err := os.Getwd()
-	config, err := ini.Load(pwd + "/config.ini")
+func GetElasticCacheEndpoint(section string) string {
+	config, err := ini.Load(configPath)
 	if err != nil {
 		panic(err)
 	}
@@ -67,11 +70,20 @@ func GetRedisParams(section string) string {
 	return endpoint
 }
 
+func GetRedisHost(section string) string {
+	config, err := ini.Load(configPath)
+	if err != nil {
+		panic(err)
+	}
+
+	section = strings.ToUpper(section)
+	return config.Section(section).Key("host").String()
+}
+
 // SetPolygonCred Function that reads the config.ini file within the directory, and returns the API Key.
 // param user has options 'me' and 'other'.
 func SetPolygonCred(user string) string {
-	pwd, err := os.Getwd()
-	config, err := ini.Load(pwd + "/config.ini")
+	config, err := ini.Load(configPath)
 	if err != nil {
 		println(err)
 	}
@@ -90,7 +102,7 @@ func SetPolygonCred(user string) string {
 
 // SetRedisCred Function that reads the config.ini file within the directory, setting the Redis db parameters.
 func SetRedisCred(params *RedisParams) error {
-	config, err := ini.Load("config.ini")
+	config, err := ini.Load(configPath)
 	if err != nil {
 		return err
 	}

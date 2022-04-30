@@ -19,9 +19,9 @@ limitations under the License.
 import (
 	"fmt"
 	"github.com/spf13/cobra"
-	"lightning/subscriber"
 	"lightning/utils/config"
 	"lightning/utils/db"
+	"strconv"
 )
 
 // aggsPubCmd represents the aggs command
@@ -44,21 +44,45 @@ to quickly create a Cobra application.`,
 		// Get agg parameters from cli
 		aggParams := db.ReadAggregateParamsFromCMD(cmd)
 
-		redisEndpoint := config.GetRedisParams("ELASTICCACHE")
-		redisClient := db.GetRedisClient(6379, redisEndpoint)
-		tickers := db.GetAllTickersFromRedis(redisClient)
-		urls := db.MakeAllStocksAggsQueries(*tickers, aggParams.Timespan, aggParams.From, aggParams.To, apiKey, aggParams.WithLinearDates, aggParams.Adjusted)
-		insertIntoRedisChan := subscriber.AggDownloader(urls, aggParams.ForceInsertDate, aggParams.Adjusted)
-		err := db.PushAggIntoRedis(insertIntoRedisChan, redisClient)
-		if err != nil {
-			panic(err)
-		}
+		// Get the redis params from the config.ini file
+		redisParams := config.RedisParams{}
+		err := config.SetRedisCred(&redisParams)
+
+		// Create a redis client
+		port, err := strconv.Atoi(redisParams.Port)
+		Check(err)
+
+		// Get the apiKey from the config.ini file
+		apiKey := config.SetPolygonCred("me")
+
+		// Get all the tickers from the redis db
+		pool := db.GetRedisPool(port, redisParams.Host)
+
+		conn := pool.Get()
+		tickers := db.GetAllTickersFromRedis(conn)
+
+		// Make all urls from the tickers
+		_ = db.MakeAllStocksAggsUrls(
+			tickers,
+			aggParams.Timespan,
+			aggParams.From,
+			aggParams.To,
+			apiKey,
+			aggParams.WithLinearDates,
+			aggParams.Adjusted,
+		)
+
+		//// Download all data and push the data into redis
+		//err = subscriber.AggDownloader(urls, aggParams.ForceInsertDate, aggParams.Adjusted, pool)
+		//if err != nil {
+		//	fmt.Println("Error: ", err)
+		//}
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(aggsSubCmd)
 	// Here you will define your flags and configuration settings.
+	rootCmd.AddCommand(aggsSubCmd)
 	aggsSubCmd.Flags().StringP("dbtype", "d", "ec2db", "One of two... ec2db or localdb")
 	aggsSubCmd.Flags().StringP("timespan", "T", "", "Timespan (minute, hour, day...)")
 	aggsSubCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")

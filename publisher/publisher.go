@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/schollz/progressbar/v3"
 	"go.uber.org/ratelimit"
+	"lightning/subscriber"
 	"log"
 	"net/http"
 	"os"
@@ -21,44 +22,9 @@ import (
 	"time"
 )
 
-//type S3Result struct {
-//	Output *s3.PutObjectOutput
-//	Err    error
-//}
-
-func CreateAggKey(url string, forceInsertDate string, adjusted int) string {
-	splitUrl := strings.Split(url, "/")
-	ticker := splitUrl[6]
-	multiplier := splitUrl[8]
-	timespan := splitUrl[9]
-
-	from_ := splitUrl[10]
-	fromYear := strings.Split(from_, "-")[0]
-	fromMon := strings.Split(from_, "-")[1]
-	fromDay := strings.Split(from_, "-")[2]
-
-	to_ := splitUrl[11]
-	toYear := strings.Split(to_, "-")[0]
-	toMon := strings.Split(to_, "-")[1]
-	toDay := strings.Split(to_, "-")[2]
-	toDay = strings.Split(toDay, "?")[0]
-
-	insertDate := forceInsertDate
-	insertDateYear := strings.Split(insertDate, "-")[0]
-	insertDateMon := strings.Split(insertDate, "-")[1]
-	insertDateDay := strings.Split(insertDate, "-")[2]
-
-	newKey := fmt.Sprintf("aggs/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/data.json", insertDateYear, insertDateMon, insertDateDay, timespan, multiplier, fromYear, fromMon, fromDay, toYear, toMon, toDay, ticker)
-	if adjusted == 1 {
-		newKey = fmt.Sprintf("aggs/adj/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/data.json", insertDateYear, insertDateMon, insertDateDay, timespan, multiplier, fromYear, fromMon, fromDay, toYear, toMon, toDay, ticker)
-	}
-	return newKey
-}
-
 func CreateS3Client() *s3.Client {
 	cfg, err := config.LoadDefaultConfig(
 		context.TODO(),
-		//config.WithSharedConfigProfile("default"),
 		config.WithRegion("eu-central-1"),
 	)
 	if err != nil {
@@ -70,16 +36,6 @@ func CreateS3Client() *s3.Client {
 }
 
 func UploadToS3(bucket string, key string, body []byte) error {
-	//cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("default"), config.WithRegion("eu-central-1"))
-	//if err != nil {
-	//	panic(err)
-	//}
-	//
-	//// Define a strategy that will buffer 1Mib into memory
-	//uploader := manager.NewUploader(s3.NewFromConfig(cfg), func(u *manager.Uploader) {
-	//	u.BufferProvider = manager.NewBufferedReadSeekerWriteToPool(1 * 1024 * 1024)
-	//})
-
 	s3Client := CreateS3Client()
 
 	_, err := s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
@@ -91,15 +47,6 @@ func UploadToS3(bucket string, key string, body []byte) error {
 	if err != nil {
 		panic(err)
 	}
-
-	//_, err = uploader.Upload(context.TODO(), &s3.PutObjectInput{
-	//	Bucket: aws.String(bucket),
-	//	Key:    aws.String(key),
-	//	Body:   bytes.NewReader(body),
-	//})
-	//if err != nil {
-	//	panic(err)
-	//}
 
 	return nil
 }
@@ -185,47 +132,6 @@ func GetAggTickersFromS3(insertDate string, timespan string, multiplier int, fro
 
 func AggPublisher(urls []*url.URL, limit int, forceInsertDate string, adjusted int) error {
 
-	//AmqpServerUrl := "amqp://guest:guest@localhost:5672"
-	//connectRabbitMQ, err := amqp.Dial(AmqpServerUrl)
-	//if err != nil {
-	//	return err
-	//}
-	//defer connectRabbitMQ.Close()
-	//
-	//channelRabbitMQ, err := connectRabbitMQ.Channel()
-	//if err != nil {
-	//	return err
-	//}
-	//defer channelRabbitMQ.Close()
-	//
-	//_, err = channelRabbitMQ.QueueDeclare(
-	//	"AGG",
-	//	true,
-	//	false,
-	//	false,
-	//	false,
-	//	nil,
-	//)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//
-	////err = channelRabbitMQ.QueueBind(
-	////	q.Name,
-	////	"",
-	////	"FANNEDOUT",
-	////	false,
-	////	nil,
-	////)
-	////if err != nil {
-	////	return err
-	////}
-	//
-	//err = channelRabbitMQ.Qos(10, 0, false)
-	//if err != nil {
-	//	return err
-	//}
-
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
 
@@ -245,20 +151,26 @@ func AggPublisher(urls []*url.URL, limit int, forceInsertDate string, adjusted i
 
 		go func(u *url.URL) {
 			resp, err := http.Get(u.String())
+
 			if err != nil {
 				fmt.Println("Error retrieving URL (writing to file ./urlErrors.log): ", err.Error())
 				f, err := os.OpenFile("urlErrors.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 				if err != nil {
 					log.Println(err)
 				}
-				defer f.Close()
+				defer func(f *os.File) {
+					err := f.Close()
+					if err != nil {
+						panic(err)
+					}
+				}(f)
 				logger := log.New(f, "URL-ERROR: ", log.LstdFlags)
 				logger.Println(err.Error)
 			} else {
 				// create the key
-				messageKey := CreateAggKey(u.String(), forceInsertDate, adjusted)
+				messageKey := subscriber.CreateAggKey(u.String(), forceInsertDate, adjusted)
 
-				// Marshal target to bytes
+				// Marshal targets to bytes
 				err = json.NewDecoder(resp.Body).Decode(&target)
 				taskBytes, err := json.Marshal(target)
 				if err != nil {

@@ -10,10 +10,10 @@ import (
 
 const (
 	//Scheme               = "https" // universal for all schemes here
-	aggsHost          = "api.polygon.io/v2/aggs"
-	tickerTypesHost   = "api.polygon.io/v2/reference/types"
+	aggsHost          = "api.polygon.io/v3/aggs"
+	tickerTypesHost   = "api.polygon.io/v3/reference/types"
 	tickersVxHost     = "api.polygon.io/v3/reference/tickers"
-	tickerNews2Host   = "api.polygon.io/v2/reference/news"
+	tickerNews2Host   = "api.polygon.io/v3/reference/news"
 	tickerDetailsHost = "api.polygon.io/v1/meta"
 	//dailyOpenCloseHost   = "api.polygon.io/v1/open-close"
 	//groupedDailyBarsHost = "api.polygon.io/v2/aggs/grouped/locale/us/market/stocks"
@@ -79,8 +79,8 @@ func CreateLinearDatePairs(from string, to string) []structs.StartEndDateStruct 
 	return dateList
 }
 
-// MakeAggQueryStr A function that makes urls like: /v2/aggs/ticker/{stocksTicker}/range/{multiplier}/{timespan}/{from}/{to}
-func MakeAggQueryStr(stocksTicker string, multiplier string, timespan string, from_ string, to_ string, apiKey string, adjusted int) *url.URL {
+// MakeStocksAggUrl A function that makes urls like: /v2/aggs/ticker/{stocksTicker}/range/{multiplier}/{timespan}/{from}/{to}
+func MakeStocksAggUrl(stocksTicker string, multiplier string, timespan string, from_ string, to_ string, apiKey string, adjusted int) *url.URL {
 	p, err := url.Parse("https://" + aggsHost)
 	if err != nil {
 		fmt.Println(err)
@@ -104,8 +104,8 @@ func MakeAggQueryStr(stocksTicker string, multiplier string, timespan string, fr
 	return p
 }
 
-// MakeAllStocksAggsQueries A quick function that uses MakeAggQueryStr and iterates through combos and returns a list of urls that will be queried.
-func MakeAllStocksAggsQueries(tickers []string, timespan string, from_ string, to_ string, apiKey string, withLinearDates int, adjusted int) []*url.URL {
+// MakeAllStocksAggsUrls A quick function that uses MakeStocksAggUrl and iterates through combos and returns a list of urls that will be queried.
+func MakeAllStocksAggsUrls(tickers []string, timespan string, from_ string, to_ string, apiKey string, withLinearDates int, adjusted int) []*url.URL {
 	// no need for channels in this yet, just a quick function that makes all the queries and sends it back
 	fmt.Println("Making all urls...")
 
@@ -114,13 +114,13 @@ func MakeAllStocksAggsQueries(tickers []string, timespan string, from_ string, t
 		datePairs := CreateLinearDatePairs(from_, to_)
 		for _, ticker := range tickers {
 			for _, dp := range datePairs {
-				u := MakeAggQueryStr(ticker, "1", timespan, dp.Start, dp.End, apiKey, adjusted)
+				u := MakeStocksAggUrl(ticker, "1", timespan, dp.Start, dp.End, apiKey, adjusted)
 				urls = append(urls, u)
 			}
 		}
 	} else {
 		for _, ticker := range tickers {
-			u := MakeAggQueryStr(ticker, "1", timespan, from_, to_, apiKey, adjusted)
+			u := MakeStocksAggUrl(ticker, "1", timespan, from_, to_, apiKey, adjusted)
 			urls = append(urls, u)
 		}
 

@@ -22,7 +22,6 @@ import (
 	"lightning/utils/config"
 	"lightning/utils/db"
 	"lightning/utils/structs"
-	"strings"
 )
 
 // refreshTickersCmd represents the refreshTickers command
@@ -46,21 +45,19 @@ to quickly create a Cobra application.`,
 		//// get database conn
 		DBParams := structs.DBParams{}
 		err := config.SetDBParams(&DBParams, dbType)
-		if err != nil {
-			panic(err)
-		}
+		Check(err)
 
 		postgresDB := db.GetPostgresDBConn(&DBParams)
 		defer postgresDB.Close()
 
 		var redisEndpoint string
 		if dbType == "ELASTICCACHE" {
-			redisEndpoint = config.GetRedisParams("ELASTICCACHE")
+			redisEndpoint = config.GetElasticCacheEndpoint("ELASTICCACHE")
 		} else {
 			redisEndpoint = "localhost"
 		}
 
-		redisClient := db.GetRedisClient(6379, redisEndpoint)
+		pool := db.GetRedisPool(6379, redisEndpoint)
 		apiKey := config.SetPolygonCred("other")
 
 		fmt.Printf("-- Making all Ticker VX Queries...\n")
@@ -68,20 +65,19 @@ to quickly create a Cobra application.`,
 		Chan1 := db.MakeAllTickersVxRequests(url)
 
 		fmt.Printf("-- Pushing all Ticker VXs to redis...\n")
-		err = db.PushTickerVxIntoRedis(Chan1, redisClient)
-		if err != nil {
-			panic(err)
-		}
+		conn := pool.Get()
+		err = db.PushTickerVxIntoRedis(Chan1, conn)
+		Check(err)
 
-		allTickersKey := "allTickers"
-		allTickers, err := redisClient.Get(allTickersKey).Result()
-		if err != nil {
-			panic(err)
-		}
-
-		fmt.Printf("-- Pushing all Ticker Details to pgdb...\n")
-		allUrls := db.MakeAllTickerDetailsQueries(apiKey, strings.Split(allTickers, string(',')))
-		err = db.MakeAllTickerDetailsRequestsAndPushToDB(allUrls, postgresDB)
+		//allTickersKey := "allTickers"
+		//allTickers, err := pool.Get(allTickersKey).Result()
+		//if err != nil {
+		//	panic(err)
+		//}
+		//
+		//fmt.Printf("-- Pushing all Ticker Details to pgdb...\n")
+		//allUrls := db.MakeAllTickerDetailsQueries(apiKey, strings.Split(allTickers, string(',')))
+		//err = db.MakeAllTickerDetailsRequestsAndPushToDB(allUrls, postgresDB)
 
 	},
 }

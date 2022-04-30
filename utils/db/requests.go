@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-pg/pg/v10"
-	"github.com/go-redis/redis/v7"
+	"github.com/gomodule/redigo/redis"
 	"github.com/schollz/progressbar/v3"
 	"go.uber.org/ratelimit"
+	"io"
 	"lightning/utils/config"
 	"lightning/utils/structs"
 	"net/http"
@@ -153,34 +154,42 @@ func MakeAllTickerDetailsRequestsAndPushToDB(urls []*url.URL, pgDB *pg.DB) error
 	return nil
 }
 
-// GetAllTickers Just get a list of all the tickers that are present in "ticker_vxes"
-
-func GetAllTickersFromPolygonioDirectly() *[]string {
+func GetAllTickersFromPolygonioDirectly() []string {
 	apiKey := config.SetPolygonCred("other")
 	u := MakeTickerVxQuery(apiKey)
 	Chan1 := MakeAllTickersVxRequests(u)
 	strResult := GetTickerVxs(Chan1)
 	strArrResults := strings.Split(strResult, ",")
-	return &strArrResults
+	return strArrResults
 }
 
-func GetAllTickersFromRedis(redisClient *redis.Client) *[]string {
-	result := redisClient.Get("allTickers")
-	strResult, err := result.Result()
-	if err != nil {
-		apiKey := config.SetPolygonCred("other")
-		u := MakeTickerVxQuery(apiKey)
-		Chan1 := MakeAllTickersVxRequests(u)
-		err := PushTickerVxIntoRedis(Chan1, redisClient)
-		if err != nil {
-			panic(err)
-		}
+// GetAllTickersFromRedis returns a slice of strings of all the tickers in the redis database
+func GetAllTickersFromRedis(rConn redis.Conn) []string {
+	var resultStr string
+	var resultStrArr []string
 
-		result := redisClient.Get("allTickers")
-		strResult, err = result.Result()
+	// First, try and get the tickers from redis
+	args := []interface{}{"allTickers"}
+	result := ProcessRedisCommand[[]string](rConn, "GET", args, false, "string")
+
+	if result == nil {
+		apiKey := config.SetPolygonCred("other")
+
+		// Create url that will be used to make the request
+		u := MakeTickerVxQuery(apiKey)
+
+		// Make the requests and push it to the channel Chan1
+		Chan1 := MakeAllTickersVxRequests(u)
+
+		// Get the results from the channel and put it into redis
+		err := PushTickerVxIntoRedis(Chan1, rConn)
+		Check(err)
+
+		result = ProcessRedisCommand[[]string](rConn, "GET", args, false, "string")
 	}
-	strArrResults := strings.Split(strResult, ",")
-	return &strArrResults
+
+	resultStrArr = strings.Split(resultStr, ",")
+	return resultStrArr
 }
 
 func GetDifferenceBtwTickersInMemAndS3(slice1 []string, slice2 []string) []string {
@@ -226,7 +235,12 @@ func MakeAllTickerNews2Requests(u *url.URL) chan []structs.TickerNews2 {
 	if err != nil {
 		panic(err)
 	}
-	defer response.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(response.Body)
 
 	j := 0
 	i := 0

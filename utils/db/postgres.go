@@ -101,6 +101,14 @@ func ReadAggregateParamsFromCMD(cmd *cobra.Command) config.AggCliParams {
 	return res
 }
 
+func ReadAggParamsFromCMD2(cmd *cobra.Command) config.AggCliParams2 {
+	typ, _ := cmd.Flags().GetString("type")
+	res := config.AggCliParams2{
+		Type: typ,
+	}
+	return res
+}
+
 // ReadTickerNewsParamsFromCMD reads parameters like ticker, startDate, endDate
 func ReadTickerNewsParamsFromCMD(cmd *cobra.Command) config.NewsCliParams {
 	ticker, _ := cmd.Flags().GetStringSlice("ticker")
