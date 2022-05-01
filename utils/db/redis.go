@@ -65,7 +65,12 @@ func ProcessRedisCommand[T []string | []byte](
 	// This is to ensure that command with "SET" will always return a nil.
 	var res T
 	rConn := pool.Get()
-	defer rConn.Close()
+	defer func(rConn redis.Conn) {
+		err := rConn.Close()
+		if err != nil {
+
+		}
+	}(rConn)
 
 	// Send the command to redis, can be GET, SET, etc.
 	err := rConn.Send(cmd, args...)
