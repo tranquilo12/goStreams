@@ -65,8 +65,7 @@ to quickly create a Cobra application.`,
 		Chan1 := db.MakeAllTickersVxRequests(url)
 
 		fmt.Printf("-- Pushing all Ticker VXs to redis...\n")
-		conn := pool.Get()
-		err = db.PushTickerVxIntoRedis(Chan1, conn)
+		err = db.PushTickerVxIntoRedis(Chan1, pool)
 		Check(err)
 
 		//allTickersKey := "allTickers"

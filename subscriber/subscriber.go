@@ -8,10 +8,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/go-redis/redis/v7"
+	"github.com/gomodule/redigo/redis"
 	"github.com/schollz/progressbar/v3"
 	"go.uber.org/ratelimit"
 	"io"
+	"lightning/utils/db"
 	"lightning/utils/structs"
 	"log"
 	"net/http"
@@ -104,7 +105,7 @@ func DownloadFromPolygonIO(u url.URL, forceInsertDate string, adjusted int, res 
 	}
 }
 
-func AggDownloader(urls []*url.URL, forceInsertDate string, adjusted int, rClient *redis.Client) error {
+func AggDownloader(urls []*url.URL, forceInsertDate string, adjusted int, rPool *redis.Pool) error {
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
 
@@ -118,13 +119,13 @@ func AggDownloader(urls []*url.URL, forceInsertDate string, adjusted int, rClien
 	for _, u := range urls {
 		now := rateLimiter.Take()
 
-		go func(url *url.URL) {
+		go func(urls *url.URL) {
 			// Defer the waitGroup.Done() call until the end of the function
 			defer wg.Done()
 
 			// Download the data from PolygonIO
 			oneKey := DownloadFromPolygonIO(
-				*url,
+				*urls,
 				forceInsertDate,
 				adjusted,
 				&structs.AggregatesBarsResponse{},
@@ -135,8 +136,8 @@ func AggDownloader(urls []*url.URL, forceInsertDate string, adjusted int, rClien
 			Check(err)
 
 			// Set the key in Redis
-			err = rClient.Set(oneKey.Key, resBytes, 0).Err()
-			Check(err)
+			args := []interface{}{oneKey.Key, resBytes}
+			_ = db.ProcessRedisCommand[[]string](rPool, "SET", args, false, "string")
 
 			// Update the progress bar
 			err = bar.Add(1)

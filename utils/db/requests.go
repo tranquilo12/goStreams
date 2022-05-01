@@ -49,7 +49,12 @@ func MakeAllTickersVxRequests(u *url.URL) chan []structs.TickerVx {
 	if err != nil {
 		panic(err)
 	}
-	defer response.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(response.Body)
 
 	j := 0
 	i := 0
@@ -132,7 +137,12 @@ func MakeAllTickerDetailsRequestsAndPushToDB(urls []*url.URL, pgDB *pg.DB) error
 				fmt.Println("Some Error: ", err)
 				panic(err)
 			} else {
-				defer resp.Body.Close()
+				defer func(Body io.ReadCloser) {
+					err := Body.Close()
+					if err != nil {
+						panic(err)
+					}
+				}(resp.Body)
 				err = json.NewDecoder(resp.Body).Decode(&target)
 				_, err := pgDB.Model(target).OnConflict("(symbol) DO NOTHING").Insert()
 				if err != nil {
@@ -154,6 +164,8 @@ func MakeAllTickerDetailsRequestsAndPushToDB(urls []*url.URL, pgDB *pg.DB) error
 	return nil
 }
 
+// GetAllTickersFromPolygonioDirectly is a function that gets all tickers from polygon.io, without the hassle of
+// using a mid-level cache system like redis.
 func GetAllTickersFromPolygonioDirectly() []string {
 	apiKey := config.SetPolygonCred("other")
 	u := MakeTickerVxQuery(apiKey)
@@ -164,13 +176,14 @@ func GetAllTickersFromPolygonioDirectly() []string {
 }
 
 // GetAllTickersFromRedis returns a slice of strings of all the tickers in the redis database
-func GetAllTickersFromRedis(rConn redis.Conn) []string {
-	var resultStr string
-	var resultStrArr []string
+func GetAllTickersFromRedis(rPool *redis.Pool) []string {
+	var result []string
 
 	// First, try and get the tickers from redis
 	args := []interface{}{"allTickers"}
-	result := ProcessRedisCommand[[]string](rConn, "GET", args, false, "string")
+	res := ProcessRedisCommand[[]byte](rPool, "GET", args, false, "bytes")
+	err := json.Unmarshal(res, &result)
+	Check(err)
 
 	if result == nil {
 		apiKey := config.SetPolygonCred("other")
@@ -182,14 +195,15 @@ func GetAllTickersFromRedis(rConn redis.Conn) []string {
 		Chan1 := MakeAllTickersVxRequests(u)
 
 		// Get the results from the channel and put it into redis
-		err := PushTickerVxIntoRedis(Chan1, rConn)
+		err := PushTickerVxIntoRedis(Chan1, rPool)
 		Check(err)
 
-		result = ProcessRedisCommand[[]string](rConn, "GET", args, false, "string")
+		res := ProcessRedisCommand[[]byte](rPool, "GET", args, false, "string")
+		err = json.Unmarshal(res, &result)
+		Check(err)
 	}
 
-	resultStrArr = strings.Split(resultStr, ",")
-	return resultStrArr
+	return result
 }
 
 func GetDifferenceBtwTickersInMemAndS3(slice1 []string, slice2 []string) []string {

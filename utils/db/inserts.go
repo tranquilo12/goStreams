@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 )
 
 const DataDir = "/Users/shriramsunder/GolandProjects/goStreams/data"
@@ -34,28 +35,6 @@ func PushTickerTypesIntoDB(insertIntoDB *structs.TickerTypeResponse, db *pg.DB) 
 		panic(err)
 	}
 	println("Inserted all TickerTypes into the DB...")
-	return nil
-}
-
-func PushTickerVxIntoRedis(insertIntoRedis <-chan []structs.TickerVx, rConn redis.Conn) error {
-	// use WaitGroup to make things more smooth with channels
-	var allTickers []string
-
-	// for each insertIntoDB that follows...spin off another go routine
-	for val, ok := <-insertIntoRedis; ok; val, ok = <-insertIntoRedis {
-		if ok && val != nil {
-			for _, v := range val {
-				allTickers = append(allTickers, v.Ticker)
-			}
-		}
-	}
-
-	// Join all the tickers into a single string
-	allTickersStr := strings.Join(allTickers[:], ",")
-
-	// Create an args that's an array of strings, and process the redis command.
-	args := []interface{}{"allTickers", allTickersStr}
-	_ = ProcessRedisCommand[[]string](rConn, "SET", args, false, "string")
 	return nil
 }
 
@@ -107,59 +86,8 @@ func PushTickerNews2IntoDB(insertIntoDB <-chan []structs.TickerNews2, db *pg.DB)
 	return nil
 }
 
-// ProcessRedisCommand takes a redis command and returns the result
-// Trying out generics here, this function can return either a []string or a []byte
-func ProcessRedisCommand[T []string | []byte](
-	rConn redis.Conn,
-	cmd string,
-	args []interface{},
-	deleteKey bool,
-	retType string,
-) T {
-	// Create a new res variable of type T, that's instantiated with nil
-	// If there's anything to be returned, it will be assigned to res
-	// otherwise, it will remain nil.
-	// This is to ensure that command with "SET" will always return a nil.
-	var res T
-
-	// Send the command to redis, can be GET, SET, etc.
-	err := rConn.Send(cmd, args...)
-	Check(err)
-
-	// Flush the buffer, clears the output buffer
-	err = rConn.Flush()
-	Check(err)
-
-	// Receive the value from redis, if the command is GET, and depending on the type,
-	// can be either []string or []byte
-	if cmd == "GET" {
-		switch retType {
-		case "string":
-			r, err := redis.Strings(rConn.Receive())
-			Check(err)
-			res = any(r).(T)
-		default:
-			r, err := redis.Bytes(rConn.Receive())
-			Check(err)
-			res = any(r).(T)
-		}
-	}
-
-	// if deleteKey, then delete the key
-	if deleteKey {
-		err = rConn.Send("DEL", args)
-		Check(err)
-	}
-
-	// Close the redis connection
-	err = rConn.Close()
-	Check(err)
-
-	return res
-}
-
 // PushAggIntoFFS writes the Aggregate data to the file system
-func PushAggIntoFFS(wg *sync.WaitGroup, k string, rConn redis.Conn, bar *progressbar.ProgressBar) {
+func PushAggIntoFFS(wg *sync.WaitGroup, k string, rPool *redis.Pool, bar *progressbar.ProgressBar) {
 	// instantiate a new file buffer and defer wg.Done()
 	var fileGZ bytes.Buffer
 	defer wg.Done()
@@ -182,7 +110,7 @@ func PushAggIntoFFS(wg *sync.WaitGroup, k string, rConn redis.Conn, bar *progres
 
 	// Get the value from redis
 	args := []interface{}{k}
-	resBytes := ProcessRedisCommand[[]byte](rConn, "GET", args, true, "byte")
+	resBytes := ProcessRedisCommand[[]byte](rPool, "GET", args, true, "byte")
 
 	// Write the bytes to the gzip writer
 	zipper := gzip.NewWriter(&fileGZ)
@@ -222,24 +150,19 @@ func PushAggIntoFFSCont(rPool *redis.Pool) error {
 
 	// for each insertIntoDB that follows...spin off another go routine
 	for {
-		// Get a conn from the Pool
-		conn := rPool.Get()
-
 		// Get the keys from redis
-		args := []interface{}{"*"}
-		allKeys = ProcessRedisCommand[[]string](conn, "KEYS", args, false, "string")
+		args := []interface{}{"*aggs*"}
+		allKeys = ProcessRedisCommand[[]string](rPool, "KEYS", args, false, "string")
 
 		// If there are no keys, stay in the loop, don't exit
 		if len(allKeys) == 0 {
 			continue
 		} else {
-			// Get another conn from the Pool
-			conn := rPool.Get()
-
 			// If there are keys, write them to the flat file system
 			for _, key := range allKeys {
+				time.Sleep(time.Millisecond * 5)
 				wg.Add(1)
-				go PushAggIntoFFS(&wg, key, conn, bar)
+				go PushAggIntoFFS(&wg, key, rPool, bar)
 			}
 		}
 		wg.Wait()

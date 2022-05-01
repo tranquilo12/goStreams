@@ -19,6 +19,7 @@ limitations under the License.
 import (
 	"fmt"
 	"github.com/spf13/cobra"
+	"lightning/subscriber"
 	"lightning/utils/config"
 	"lightning/utils/db"
 	"strconv"
@@ -58,11 +59,11 @@ to quickly create a Cobra application.`,
 		// Get all the tickers from the redis db
 		pool := db.GetRedisPool(port, redisParams.Host)
 
-		conn := pool.Get()
-		tickers := db.GetAllTickersFromRedis(conn)
+		// Get all the tickers from the redis db
+		tickers := db.GetAllTickersFromRedis(pool)
 
 		// Make all urls from the tickers
-		_ = db.MakeAllStocksAggsUrls(
+		urls := db.MakeAllStocksAggsUrls(
 			tickers,
 			aggParams.Timespan,
 			aggParams.From,
@@ -72,11 +73,9 @@ to quickly create a Cobra application.`,
 			aggParams.Adjusted,
 		)
 
-		//// Download all data and push the data into redis
-		//err = subscriber.AggDownloader(urls, aggParams.ForceInsertDate, aggParams.Adjusted, pool)
-		//if err != nil {
-		//	fmt.Println("Error: ", err)
-		//}
+		// Download all data and push the data into redis
+		err = subscriber.AggDownloader(urls, aggParams.ForceInsertDate, aggParams.Adjusted, pool)
+		Check(err)
 	},
 }
 

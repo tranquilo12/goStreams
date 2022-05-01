@@ -52,12 +52,12 @@ to quickly create a Cobra application.`,
 
 		// Create a redis client
 		port, err := strconv.Atoi(redisParams.Port)
-		redisClient := db.GetRedisPool(port, redisParams.Host)
+		pool := db.GetRedisPool(port, redisParams.Host)
 		Check(err)
 
 		// TODO: Make a redis channel AGGPUB that contains Agg data.
 		// Push the data to redis
-		err = db.PushAggIntoFFSCont(redisClient)
+		err = db.PushAggIntoFFSCont(pool)
 		Check(err)
 	},
 }

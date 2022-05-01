@@ -81,8 +81,7 @@ Accepts flags like:
 			fmt.Printf("Getting redis client and tickers from redis...")
 			pool := db.GetRedisPool(6379, redisEndpoint)
 			// conn will close within GetAllTickersFromRedis
-			conn := pool.Get()
-			polygonTickers = db.GetAllTickersFromRedis(conn)
+			polygonTickers = db.GetAllTickersFromRedis(pool)
 		} else {
 			polygonTickers = db.GetAllTickersFromPolygonioDirectly()
 		}
