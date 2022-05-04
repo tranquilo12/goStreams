@@ -22,11 +22,6 @@ import (
 	"time"
 )
 
-type Downloaded struct {
-	Key  string
-	Body []byte
-}
-
 func Check(err error) {
 	if err != nil {
 		panic(err)

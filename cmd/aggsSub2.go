@@ -31,8 +31,8 @@ func Check(err error) {
 	}
 }
 
-// aggsPub2Cmd represents the aggsPub2 command
-var aggsPub2Cmd = &cobra.Command{
+// aggsSub2Cmd represents the aggsPub2 command
+var aggsSub2Cmd = &cobra.Command{
 	Use:   "aggsPub2",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
@@ -55,7 +55,6 @@ to quickly create a Cobra application.`,
 		pool := db.GetRedisPool(port, redisParams.Host)
 		Check(err)
 
-		// TODO: Make a redis channel AGGPUB that contains Agg data.
 		// Push the data to redis
 		err = db.PushAggIntoFFSCont(pool)
 		Check(err)
@@ -63,18 +62,18 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	rootCmd.AddCommand(aggsPub2Cmd)
+	rootCmd.AddCommand(aggsSub2Cmd)
 
 	// Here you will define your flags and configuration settings.
-	aggsPub2Cmd.Flags().StringP("dbtype", "d", "ec2db", "One of two... ec2db or localdb")
+	aggsSub2Cmd.Flags().StringP("dbtype", "d", "ec2db", "One of two... ec2db or localdb")
 
 	// Get agg parameters from console
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// aggsPub2Cmd.PersistentFlags().String("foo", "", "A help for foo")
+	// aggsSub2Cmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// aggsPub2Cmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// aggsSub2Cmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

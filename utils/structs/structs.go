@@ -1320,3 +1320,8 @@ type InfluxDBStruct struct {
 	ApiKey         string
 	PersonalApiKey string
 }
+
+type Downloaded struct {
+	Key  string
+	Body []byte
+}
