@@ -402,7 +402,7 @@ type StockDividends struct {
 	Declareddate string    `json:"declaredDate,omitempty"`
 }
 
-// StockFinancialsResponse Stock financials response, dont know what to do with this
+// StockFinancialsResponse Stock financials response, don't know what to do with this
 type StockFinancialsResponse struct {
 	Status  string `json:"status"`
 	Results []struct {
@@ -1257,7 +1257,7 @@ type (
 	}
 	TickerNews2Results struct {
 		ID           string               `json:"id"`
-		Publisher    TickerNews2Publisher `json:"publisher"`
+		Publisher    TickerNews2Publisher `json:"subscriber"`
 		Title        string               `json:"title"`
 		Author       string               `json:"author"`
 		PublishedUtc time.Time            `json:"published_utc"`
@@ -1311,4 +1311,12 @@ type StartEndDateStruct struct {
 
 type RedisOutputStruct interface {
 	[]string | []byte
+}
+
+type InfluxDBStruct struct {
+	Bucket         string
+	Url            string
+	Org            string
+	ApiKey         string
+	PersonalApiKey string
 }

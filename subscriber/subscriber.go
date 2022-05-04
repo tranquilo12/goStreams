@@ -1,200 +1,220 @@
 package subscriber
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/gomodule/redigo/redis"
 	"github.com/schollz/progressbar/v3"
 	"go.uber.org/ratelimit"
-	"io"
-	"lightning/utils/db"
-	"lightning/utils/structs"
+	"lightning/publisher"
 	"log"
 	"net/http"
-	"net/url"
+	"os"
 	"strings"
 	"sync"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"lightning/utils/structs"
+	"net/url"
 	"time"
 )
 
-type Downloaded struct {
-	Key  string
-	Body []byte
-}
-
-func Check(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-func DownloadFromS3(bucket string, key string) *manager.WriteAtBuffer {
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("default"), config.WithRegion("eu-central-1"))
+func CreateS3Client() *s3.Client {
+	cfg, err := config.LoadDefaultConfig(
+		context.TODO(),
+		config.WithRegion("eu-central-1"),
+	)
 	if err != nil {
 		panic(err)
 	}
 
-	// Define a strategy that will buffer 1Mib into memory
-	downloader := manager.NewDownloader(s3.NewFromConfig(cfg), func(u *manager.Downloader) {
-		u.BufferProvider = manager.NewPooledBufferedWriterReadFromProvider(1 * 1024 * 1024)
+	s3Client := s3.NewFromConfig(cfg)
+	return s3Client
+}
+
+func UploadToS3(bucket string, key string, body []byte) error {
+	s3Client := CreateS3Client()
+
+	_, err := s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket:      aws.String(bucket),
+		Key:         aws.String(key),
+		Body:        bytes.NewReader(body),
+		ContentType: aws.String("application/json"),
 	})
-
-	buff := &manager.WriteAtBuffer{}
-	_, err = downloader.Download(context.TODO(), buff,
-		&s3.GetObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(key),
-		})
 	if err != nil {
 		panic(err)
 	}
-	return buff
+
+	return nil
 }
 
-func CreateAggKey(url string, forceInsertDate string, adjusted int) string {
-	splitUrl := strings.Split(url, "/")
-	ticker := splitUrl[6]
-	multiplier := splitUrl[8]
-	timespan := splitUrl[9]
+// S3ListObjectsAPI defines the interface for the ListObjectsV2 function. Tests the function using a mocked service.
+type S3ListObjectsAPI interface {
+	ListObjectsV2(ctx context.Context,
+		params *s3.ListObjectsV2Input,
+		optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
+}
 
-	from_ := splitUrl[10]
-	fromYear := strings.Split(from_, "-")[0]
-	fromMon := strings.Split(from_, "-")[1]
-	fromDay := strings.Split(from_, "-")[2]
+// ListObjects retrieves the objects in an Amazon Simple Storage Service (Amazon S3) bucket
+// Inputs:
+//     c is the context of the method call, which includes the AWS Region
+//     api is the interface that defines the method call
+//     input defines the input arguments to the service call.
+// Output:
+//     If success, a ListObjectsV2Output object containing the result of the service call and nil
+//     Otherwise, nil and an error from the call to ListObjectsV2
+func ListObjects(c context.Context, api S3ListObjectsAPI, input *s3.ListObjectsV2Input) (*s3.ListObjectsV2Output, error) {
+	return api.ListObjectsV2(c, input)
+}
 
-	to_ := splitUrl[11]
-	toYear := strings.Split(to_, "-")[0]
-	toMon := strings.Split(to_, "-")[1]
-	toDay := strings.Split(to_, "-")[2]
-	toDay = strings.Split(toDay, "?")[0]
+func GetAggTickersFromS3(insertDate string, timespan string, multiplier int, from_ string, to_ string, adjusted int) *[]string {
+	var results []string
 
-	insertDate := forceInsertDate
-	insertDateYear := strings.Split(insertDate, "-")[0]
-	insertDateMon := strings.Split(insertDate, "-")[1]
-	insertDateDay := strings.Split(insertDate, "-")[2]
+	s3Client := CreateS3Client()
 
-	newKey := fmt.Sprintf("aggs/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/data.json", insertDateYear, insertDateMon, insertDateDay, timespan, multiplier, fromYear, fromMon, fromDay, toYear, toMon, toDay, ticker)
+	from_ = strings.Replace(from_, "-", "/", -1)
+	to_ = strings.Replace(to_, "-", "/", -1)
+	insertDate = strings.Replace(insertDate, "-", "/", -1)
+	newKey := fmt.Sprintf("aggs/%s/%s/%d/%s/%s", insertDate, timespan, multiplier, from_, to_)
+
 	if adjusted == 1 {
-		newKey = fmt.Sprintf("aggs/adj/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/data.json", insertDateYear, insertDateMon, insertDateDay, timespan, multiplier, fromYear, fromMon, fromDay, toYear, toMon, toDay, ticker)
+		newKey = fmt.Sprintf("aggs/adj/%s/%s/%d/%s/%s", insertDate, timespan, multiplier, from_, to_)
 	}
-	return newKey
-}
 
-// DownloadFromPolygonIO downloads the prices from PolygonIO
-func DownloadFromPolygonIO(
-	u url.URL,
-	forceInsertDate string,
-	adjusted int,
-	res *structs.AggregatesBarsResponse,
-) structs.RedisAggBarsResults {
-	resp, err := http.Get(u.String())
+	input := &s3.ListObjectsV2Input{
+		Bucket: aws.String("polygonio-all"),
+		Prefix: aws.String(newKey),
+	}
+
+	resp, err := ListObjects(context.TODO(), s3Client, input)
 	if err != nil {
-		panic(err)
-	} else {
-		defer func(Body io.ReadCloser) {
-			err := Body.Close()
+		fmt.Println("Got error retrieving list of objects:")
+		fmt.Println(err)
+	}
+
+	for _, item := range resp.Contents {
+		splt := strings.Split(*item.Key, "/")
+		tkr := splt[len(splt)-2]
+		results = append(results, tkr)
+	}
+
+	nextContToken := resp.NextContinuationToken
+	for {
+		if nextContToken != nil {
+			input2 := &s3.ListObjectsV2Input{
+				Bucket:            aws.String("polygonio-all"),
+				Prefix:            aws.String(newKey),
+				ContinuationToken: nextContToken,
+			}
+
+			resp2, err := ListObjects(context.TODO(), s3Client, input2)
 			if err != nil {
 				panic(err)
 			}
-		}(resp.Body)
-		messageKey := CreateAggKey(u.String(), forceInsertDate, adjusted)
-		err = json.NewDecoder(resp.Body).Decode(&res)
-		return structs.RedisAggBarsResults{InsertThis: res.Results, Key: messageKey}
+
+			for _, item := range resp2.Contents {
+				splt := strings.Split(*item.Key, "/")
+				tkr := splt[len(splt)-2]
+				results = append(results, tkr)
+			}
+
+			nextContToken = resp2.NextContinuationToken
+		} else {
+			break
+		}
 	}
+
+	return &results
 }
 
-func AggDownloader(urls []*url.URL, forceInsertDate string, adjusted int, pool *redis.Pool) error {
+func AggPublisher(urls []*url.URL, limit int, forceInsertDate string, adjusted int) error {
+
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
 
 	// create a buffer of the waitGroup, of the same length as urls
 	wg.Add(len(urls))
 
-	// Max allow 1000 requests per second
+	// create a rate limiter to stop over-requesting
 	prev := time.Now()
-	rateLimiter := ratelimit.New(5000)
+	rateLimiter := ratelimit.New(limit)
+
+	s3Client := CreateS3Client()
 
 	bar := progressbar.Default(int64(len(urls)))
 	for _, u := range urls {
 		now := rateLimiter.Take()
+		target := new(structs.AggregatesBarsResponse)
 
-		// Just sleep for 10 milliseconds, will add jitter
-		time.Sleep(time.Millisecond * 20)
+		go func(u *url.URL) {
+			resp, err := http.Get(u.String())
 
-		go func(urls *url.URL, p *redis.Pool) {
-			// Defer the waitGroup.Done() call until the end of the function
-			defer wg.Done()
+			if err != nil {
+				fmt.Println("Error retrieving URL (writing to file ./urlErrors.log): ", err.Error())
+				f, err := os.OpenFile("urlErrors.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+				if err != nil {
+					log.Println(err)
+				}
+				defer func(f *os.File) {
+					err := f.Close()
+					if err != nil {
+						panic(err)
+					}
+				}(f)
+				logger := log.New(f, "URL-ERROR: ", log.LstdFlags)
+				logger.Println(err.Error)
+			} else {
+				// create the key
+				messageKey := publisher.CreateAggKey(u.String(), forceInsertDate, adjusted)
 
-			// Download the data from PolygonIO
-			oneKey := DownloadFromPolygonIO(
-				*urls,
-				forceInsertDate,
-				adjusted,
-				&structs.AggregatesBarsResponse{},
-			)
+				// Marshal targets to bytes
+				err = json.NewDecoder(resp.Body).Decode(&target)
+				taskBytes, err := json.Marshal(target)
+				if err != nil {
+					fmt.Println("Error retrieving URL: ", err)
+				}
 
-			// Convert the data to JSONBytes
-			resBytes, err := json.Marshal(oneKey.InsertThis)
-			Check(err)
+				_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
+					Bucket:      aws.String("polygonio-all"),
+					Key:         aws.String(messageKey),
+					Body:        bytes.NewReader(taskBytes),
+					ContentType: aws.String("application/json"),
+				})
+				if err != nil {
+					println(err)
+				}
 
-			// Set the key in Redis
-			//args := []interface{}{oneKey.Key, resBytes}
-			err = db.Set(p, oneKey.Key, resBytes)
-			//_ = db.ProcessRedisCommand[[]string](p, "SET", args, false, "string")
+				err = bar.Add(1)
+				if err != nil {
+					return
+				}
 
-			// Update the progress bar
-			err = bar.Add(1)
-			Check(err)
-
-		}(u, pool)
+				time.Sleep(5 * time.Millisecond)
+			}
+			wg.Done()
+		}(u)
 
 		now.Sub(prev)
 		prev = now
 	}
+
 	wg.Wait()
+
 	return nil
 }
 
-func ListAllBucketObjsS3(bucket string, prefix string) *[]string {
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("default"), config.WithRegion("eu-central-1"))
-	if err != nil {
-		panic(err)
+func Unique2dStr(strSlice [][]string) [][]string {
+	k := make(map[string][]string)
+	txs := make([][]string, 0, len(k))
+	for _, r := range strSlice {
+		combo := r[0] + "-" + r[1]
+		k[combo] = r
 	}
-
-	client := s3.NewFromConfig(cfg)
-
-	// Set the parameters based on teh CLI flag inputs.
-	params := &s3.ListObjectsV2Input{
-		Bucket: aws.String(bucket),
+	for _, tx := range k {
+		txs = append(txs, tx)
 	}
-	if len(prefix) != 0 {
-		params.Prefix = aws.String(prefix)
-	}
-
-	p := s3.NewListObjectsV2Paginator(client, params, func(o *s3.ListObjectsV2PaginatorOptions) {
-		if v := int32(20000); v != 0 {
-			o.Limit = v
-		}
-	})
-
-	var res []string
-	var i int
-	for p.HasMorePages() {
-		i++
-
-		page, err := p.NextPage(context.TODO())
-		if err != nil {
-			log.Fatalf("Failed to get page %v, %v", i, err)
-		}
-
-		for _, obj := range page.Contents {
-			res = append(res, *obj.Key)
-		}
-	}
-	return &res
+	return txs
 }

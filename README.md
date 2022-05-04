@@ -34,10 +34,10 @@
 ├── go.sum
 ├── main.go
 ├── make_ssh_tunnel.sh
-├── publisher
-│   └── publisher.go
 ├── subscriber
 │   └── subscriber.go
+├── publisher
+│   └── publisher.go
 ├── tmux-sessions.sh
 ├── urlErrors.log
 └── utils

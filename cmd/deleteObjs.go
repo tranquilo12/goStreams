@@ -78,7 +78,7 @@ to quickly create a Cobra application.`,
 		prefix := fmt.Sprintf("aggs/%s/", insertDate)
 
 		fmt.Printf("Fetching all objects from %s with prefix %s ...\n", "polygonio-all", prefix)
-		allObjs := subscriber.ListAllBucketObjsS3("polygonio-all", prefix)
+		allObjs := publisher.ListAllBucketObjsS3("polygonio-all", prefix)
 		for _, url := range *allObjs {
 			if url[:16] == prefix {
 				toDelete = append(toDelete, url)
@@ -86,7 +86,7 @@ to quickly create a Cobra application.`,
 		}
 
 		// Create s3Client
-		s3Client := publisher.CreateS3Client()
+		s3Client := subscriber.CreateS3Client()
 
 		// use WaitGroup to make things more smooth with goroutines
 		var wg sync.WaitGroup
