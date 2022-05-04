@@ -109,30 +109,34 @@ func PushAggIntoFFS(wg *sync.WaitGroup, k string, rPool *redis.Pool, bar *progre
 	Check(err)
 
 	// Get the value from redis
-	args := []interface{}{k}
-	resBytes := ProcessRedisCommand[[]byte](rPool, "GET", args, true, "byte")
+	//args := []interface{}{k}
+	resBytes, err := Get(rPool, k)
+	Check(err)
+	//resBytes := ProcessRedisCommand[[]byte](rPool, "GET", args, true, "byte")
 
 	// Write the bytes to the gzip writer
 	zipper := gzip.NewWriter(&fileGZ)
+	defer zipper.Close()
+
 	_, err = zipper.Write(resBytes)
 	Check(err)
 
 	// Close the gzip writer, don't defer the close as it causes a problem
-	err = zipper.Close()
-	Check(err)
+	//err = zipper.Close()
+	//Check(err)
 
 	// Open/Create the file to the filesystem
 	fullFilePath := filepath.Join(kPath + ".gz")
 	wf, err := os.OpenFile(fullFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
+	defer wf.Close()
 	Check(err)
 
 	// Write the gzipped bytes to the flat file system
 	_, err = wf.Write(fileGZ.Bytes())
 	Check(err)
 
-	// Close the file, don't defer the close as it causes a problem
-	err = wf.Close()
-	Check(err)
+	// Delete the key from redis
+	_ = Delete(rPool, k)
 
 	// Add to the progress bar
 	err = bar.Add(1)
@@ -143,24 +147,27 @@ func PushAggIntoFFS(wg *sync.WaitGroup, k string, rPool *redis.Pool, bar *progre
 func PushAggIntoFFSCont(rPool *redis.Pool) error {
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
-	var allKeys []string
-
-	// Define a progress bar
-	bar := progressbar.New(30000)
+	//var allKeys []string
 
 	// for each insertIntoDB that follows...spin off another go routine
 	for {
 		// Get the keys from redis
-		args := []interface{}{"*aggs*"}
-		allKeys = ProcessRedisCommand[[]string](rPool, "KEYS", args, false, "string")
+		//args := []interface{}{"*aggs*"}
+		allKeys, err := GetKeys(rPool, "*aggs*")
+		Check(err)
+
+		//allKeys = ProcessRedisCommand[[]string](rPool, "KEYS", args, false, "string")
 
 		// If there are no keys, stay in the loop, don't exit
 		if len(allKeys) == 0 {
 			continue
 		} else {
+			// Define a progress bar
+			bar := progressbar.Default(int64(len(allKeys)))
+
 			// If there are keys, write them to the flat file system
 			for _, key := range allKeys {
-				time.Sleep(time.Millisecond * 5)
+				time.Sleep(time.Millisecond * 10)
 				wg.Add(1)
 				go PushAggIntoFFS(&wg, key, rPool, bar)
 			}

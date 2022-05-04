@@ -73,17 +73,28 @@ func ReadAggregateParamsFromCMD(cmd *cobra.Command) config.AggCliParams {
 
 	limit, _ := cmd.Flags().GetInt("limit")
 	if limit < 0 {
-		limit = 100
+		limit = 50000
 	}
 
 	useRedis, _ := cmd.Flags().GetInt("useRedis")
+	useRedis = 1
+
 	adjusted, _ := cmd.Flags().GetInt("adjusted")
+	adjusted = 1
+
 	withLinearDates, _ := cmd.Flags().GetInt("withLinearDates")
+	withLinearDates = 1
 
 	forceInsertDate, _ := cmd.Flags().GetString("forceInsertDate")
 	if forceInsertDate == "" {
 		currDate := time.Now()
 		forceInsertDate = currDate.Format(dateFmt)
+	}
+
+	gap, _ := cmd.Flags().GetInt("gap")
+	if gap%24 != 0 {
+		err := fmt.Errorf("gap must be a multiple of 24")
+		panic(err)
 	}
 
 	res := config.AggCliParams{
@@ -96,6 +107,7 @@ func ReadAggregateParamsFromCMD(cmd *cobra.Command) config.AggCliParams {
 		ForceInsertDate: forceInsertDate,
 		UseRedis:        useRedis,
 		Adjusted:        adjusted,
+		Gap:             gap,
 	}
 
 	return res

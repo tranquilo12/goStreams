@@ -19,6 +19,7 @@ type AggCliParams struct {
 	ForceInsertDate string
 	UseRedis        int
 	Adjusted        int
+	Gap             int
 }
 
 type AggCliParams2 struct {

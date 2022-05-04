@@ -116,6 +116,7 @@ Accepts flags like:
 			apiKey,
 			aggParams.WithLinearDates,
 			aggParams.Adjusted,
+			aggParams.Gap,
 		)
 
 		fmt.Printf("Publishing all values to the db...\n")

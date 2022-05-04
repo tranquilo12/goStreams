@@ -10,11 +10,11 @@ import (
 
 const (
 	//Scheme               = "https" // universal for all schemes here
-	aggsHost          = "api.polygon.io/v3/aggs"
-	tickerTypesHost   = "api.polygon.io/v3/reference/types"
-	tickersVxHost     = "api.polygon.io/v3/reference/tickers"
-	tickerNews2Host   = "api.polygon.io/v3/reference/news"
-	tickerDetailsHost = "api.polygon.io/v1/meta"
+	aggsHost        = "api.polygon.io/v2/aggs"
+	tickerTypesHost = "api.polygon.io/v3/reference/types"
+	tickersVxHost   = "api.polygon.io/v3/reference/tickers"
+	tickerNews2Host = "api.polygon.io/v3/reference/news"
+	//tickerDetailsHost = "api.polygon.io/v1/meta"
 	//dailyOpenCloseHost   = "api.polygon.io/v1/open-close"
 	//groupedDailyBarsHost = "api.polygon.io/v2/aggs/grouped/locale/us/market/stocks"
 
@@ -25,62 +25,83 @@ const (
 	//to_        = "2020-12-15"
 )
 
-// MakeTickerDetailsQuery generate all the queries for this endpoint
-func MakeTickerDetailsQuery(apiKey string, ticker string) *url.URL {
-	p, err := url.Parse("https://" + tickerDetailsHost + "/symbols/" + ticker + "/company")
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
-	}
-	// make the url values
-	q := url.Values{}
-	q.Add("apiKey", apiKey)
-	p.RawQuery = q.Encode()
-	return p
-}
+//// MakeTickerDetailsQuery generate all the queries for this endpoint
+//func MakeTickerDetailsQuery(apiKey string, ticker string) *url.URL {
+//	p, err := url.Parse("https://" + tickerDetailsHost + "/symbols/" + ticker + "/company")
+//	if err != nil {
+//		fmt.Println(err)
+//		panic(err)
+//	}
+//	// make the url values
+//	q := url.Values{}
+//	q.Add("apiKey", apiKey)
+//	p.RawQuery = q.Encode()
+//	return p
+//}
 
-func MakeAllTickerDetailsQueries(apiKey string, allTickers []string) []*url.URL {
-	var allUrls []*url.URL
-	for _, ticker := range allTickers {
-		allUrls = append(allUrls, MakeTickerDetailsQuery(apiKey, ticker))
-	}
-	return allUrls
-}
+//func MakeAllTickerDetailsQueries(apiKey string, allTickers []string) []*url.URL {
+//	var allUrls []*url.URL
+//	for _, ticker := range allTickers {
+//		allUrls = append(allUrls, MakeTickerDetailsQuery(apiKey, ticker))
+//	}
+//	return allUrls
+//}
 
 // CreateLinearDatePairs creates a slice of arrays [[date, date+1], [date+1, date+2]...]
-func CreateLinearDatePairs(from string, to string) []structs.StartEndDateStruct {
+// gap has been added to the params, so the gap between the dates is defined by the gap * time.Hour
+// So it has to be a multiple of 24
+func CreateLinearDatePairs(from string, to string, gap int) []structs.StartEndDateStruct {
+	// Create a slice of structs
 	startDate, _ := time.Parse("2006-01-02", from)
 	endDate, _ := time.Parse("2006-01-02", to)
 
+	// Create the dateList slice
 	var dateList []structs.StartEndDateStruct
 
-	prevDate := startDate
-	prevDatePlusOne := prevDate.Add(time.Hour * 24)
+	// Only allow for gaps that are multiples of 24
+	if gap%24 == 0 {
+		// Instantiate the prevDate and prevDatePlusOne
+		// For 50K minutes between time gaps, gap = 816
+		gapHours := time.Duration(gap) * time.Hour
+		prevDate := startDate
+		prevDatePlusOne := prevDate.Add(gapHours)
 
-	for {
+		for {
+			// If the next date is after the end date, break
+			if prevDatePlusOne.Before(endDate) {
+				// Make sure start and end are well-defined
+				dp := structs.StartEndDateStruct{
+					Start: prevDate.Format(layout),
+					End:   prevDatePlusOne.Format(layout),
+				}
+				dateList = append(dateList, dp)
 
-		if prevDatePlusOne.Before(endDate) {
-
-			dp := structs.StartEndDateStruct{
-				Start: prevDate.Format(layout),
-				End:   prevDatePlusOne.Format(layout),
+				// make sure prevDate is set again
+				prevDate = prevDatePlusOne
+				prevDatePlusOne = prevDatePlusOne.Add(gapHours)
+			} else {
+				// The next date exceeds the end date, so break
+				break
 			}
-
-			dateList = append(dateList, dp)
-			//fmt.Printf("start: %s, end: %s...\n", prevDate.Format(layout), prevDatePlusOne.Format(layout))
-
-			// make sure prevDate is set again
-			prevDate = prevDatePlusOne
-			prevDatePlusOne = prevDatePlusOne.Add(time.Hour * 24)
-		} else {
-			break
 		}
+	} else {
+		// The gap is not a multiple of 24, so return an empty slice (dateList)
+		fmt.Println("Gap must be a multiple of 24")
 	}
+
 	return dateList
 }
 
 // MakeStocksAggUrl A function that makes urls like: /v2/aggs/ticker/{stocksTicker}/range/{multiplier}/{timespan}/{from}/{to}
-func MakeStocksAggUrl(stocksTicker string, multiplier string, timespan string, from_ string, to_ string, apiKey string, adjusted int) *url.URL {
+func MakeStocksAggUrl(
+	stocksTicker string,
+	multiplier string,
+	timespan string,
+	from_ string,
+	to_ string,
+	apiKey string,
+	adjusted int,
+) *url.URL {
 	p, err := url.Parse("https://" + aggsHost)
 	if err != nil {
 		fmt.Println(err)
@@ -93,9 +114,9 @@ func MakeStocksAggUrl(stocksTicker string, multiplier string, timespan string, f
 	// make the url values
 	q := url.Values{}
 	if adjusted == 1 {
-		q.Add("unadjusted", "false")
+		q.Add("adjusted", "true")
 	} else {
-		q.Add("unadjusted", "true")
+		q.Add("adjusted", "false")
 	}
 	q.Add("sort", "asc")
 	q.Add("apiKey", apiKey)
@@ -105,13 +126,22 @@ func MakeStocksAggUrl(stocksTicker string, multiplier string, timespan string, f
 }
 
 // MakeAllStocksAggsUrls A quick function that uses MakeStocksAggUrl and iterates through combos and returns a list of urls that will be queried.
-func MakeAllStocksAggsUrls(tickers []string, timespan string, from_ string, to_ string, apiKey string, withLinearDates int, adjusted int) []*url.URL {
+func MakeAllStocksAggsUrls(
+	tickers []string,
+	timespan string,
+	from_ string,
+	to_ string,
+	apiKey string,
+	withLinearDates int,
+	adjusted int,
+	gap int,
+) []*url.URL {
 	// no need for channels in this yet, just a quick function that makes all the queries and sends it back
 	fmt.Println("Making all urls...")
 
 	var urls []*url.URL
 	if withLinearDates == 1 {
-		datePairs := CreateLinearDatePairs(from_, to_)
+		datePairs := CreateLinearDatePairs(from_, to_, gap)
 		for _, ticker := range tickers {
 			for _, dp := range datePairs {
 				u := MakeStocksAggUrl(ticker, "1", timespan, dp.Start, dp.End, apiKey, adjusted)
@@ -146,7 +176,7 @@ func MakeTickerTypesUrl(apiKey string) *url.URL {
 	return p
 }
 
-// MakeTickerVxQuery A function that takes the API string and time, and generates a url.
+// MakeTickerVxQuery A function that takes the API string and time, and generates an url.
 func MakeTickerVxQuery(apiKey string) *url.URL {
 	p, err := url.Parse("https://" + tickersVxHost)
 	if err != nil {

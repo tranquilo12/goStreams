@@ -23,6 +23,65 @@ func GetRedisPool(port int, endpoint string) *redis.Pool {
 	return pool
 }
 
+func Get(pool *redis.Pool, key string) ([]byte, error) {
+	conn := pool.Get()
+	defer conn.Close()
+
+	var data []byte
+	data, err := redis.Bytes(conn.Do("GET", key))
+	if err != nil {
+		return data, fmt.Errorf("error getting key %s: %v", key, err)
+	}
+	return data, err
+}
+
+func Set(pool *redis.Pool, key string, value []byte) error {
+	conn := pool.Get()
+	defer conn.Close()
+
+	_, err := conn.Do("SET", key, value)
+	if err != nil {
+		v := string(value)
+		if len(v) > 15 {
+			v = v[0:12] + "..."
+		}
+		return fmt.Errorf("error setting key %s to %s: %v", key, v, err)
+	}
+	return err
+}
+
+func GetKeys(pool *redis.Pool, pattern string) ([]string, error) {
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	iter := 0
+	var keys []string
+	for {
+		arr, err := redis.Values(conn.Do("SCAN", iter, "MATCH", pattern))
+		if err != nil {
+			return keys, fmt.Errorf("error retrieving '%s' keys", pattern)
+		}
+
+		iter, _ = redis.Int(arr[0], nil)
+		k, _ := redis.Strings(arr[1], nil)
+		keys = append(keys, k...)
+
+		if iter == 0 {
+			break
+		}
+	}
+
+	return keys, nil
+}
+
+func Delete(pool *redis.Pool, key string) error {
+	conn := pool.Get()
+	defer conn.Close()
+	_, err := conn.Do("DEL", key)
+	return err
+}
+
 // PushTickerVxIntoRedis Reads from the channel and pushes the ticker struct into redis,
 // the key is the ticker path that will be stored in the file system eventually, the value is the ticker struct
 func PushTickerVxIntoRedis(insertIntoRedis <-chan []structs.TickerVx, pool *redis.Pool) error {
@@ -45,8 +104,11 @@ func PushTickerVxIntoRedis(insertIntoRedis <-chan []structs.TickerVx, pool *redi
 	res, err := json.Marshal(allTickers)
 	Check(err)
 
-	args := []interface{}{"allTickers", res}
-	_ = ProcessRedisCommand[[]string](pool, "SET", args, false, "string")
+	//args := []interface{}{"allTickers", res}
+	err = Set(pool, "allTickers", res)
+	Check(err)
+
+	//_ = ProcessRedisCommand[[]string](pool, "SET", args, false, "string")
 	return nil
 }
 
@@ -59,17 +121,10 @@ func ProcessRedisCommand[T []string | []byte](
 	deleteKey bool,
 	retType string,
 ) T {
-	// Create a new res variable of type T, that's instantiated with nil
-	// If there's anything to be returned, it will be assigned to res
-	// otherwise, it will remain nil.
-	// This is to ensure that command with "SET" will always return a nil.
 	var res T
 	rConn := pool.Get()
 	defer func(rConn redis.Conn) {
-		err := rConn.Close()
-		if err != nil {
-
-		}
+		_ = rConn.Close()
 	}(rConn)
 
 	// Send the command to redis, can be GET, SET, etc.
@@ -83,6 +138,8 @@ func ProcessRedisCommand[T []string | []byte](
 	// Receive the value from redis, if the command is GET, and depending on the type,
 	// can be either []string or []byte
 	if cmd == "GET" || cmd == "KEYS" {
+
+		// Depending upon the return type, return either a []string or []byte
 		switch retType {
 		case "string":
 			r, err := redis.Strings(rConn.Receive())

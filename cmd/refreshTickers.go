@@ -18,6 +18,7 @@ limitations under the License.
 
 import (
 	"fmt"
+	"github.com/go-pg/pg/v10"
 	"github.com/spf13/cobra"
 	"lightning/utils/config"
 	"lightning/utils/db"
@@ -42,14 +43,21 @@ to quickly create a Cobra application.`,
 			dbType = "ec2db"
 		}
 
-		//// get database conn
+		// get database conn
 		DBParams := structs.DBParams{}
 		err := config.SetDBParams(&DBParams, dbType)
 		Check(err)
 
+		// Get the DB connection
 		postgresDB := db.GetPostgresDBConn(&DBParams)
-		defer postgresDB.Close()
+		defer func(postgresDB *pg.DB) {
+			err := postgresDB.Close()
+			if err != nil {
+				panic(err)
+			}
+		}(postgresDB)
 
+		// Get the tickers
 		var redisEndpoint string
 		if dbType == "ELASTICCACHE" {
 			redisEndpoint = config.GetElasticCacheEndpoint("ELASTICCACHE")
@@ -57,13 +65,20 @@ to quickly create a Cobra application.`,
 			redisEndpoint = "localhost"
 		}
 
+		// Get the redis pool
 		pool := db.GetRedisPool(6379, redisEndpoint)
+
+		// Get the Polygon API key
 		apiKey := config.SetPolygonCred("other")
 
+		// Make all the Ticker Vx queries
 		fmt.Printf("-- Making all Ticker VX Queries...\n")
 		url := db.MakeTickerVxQuery(apiKey)
+
+		// Push all the Ticker Vx queries to a channel
 		Chan1 := db.MakeAllTickersVxRequests(url)
 
+		// Get the ticker data from the channel, and push the data to redis
 		fmt.Printf("-- Pushing all Ticker VXs to redis...\n")
 		err = db.PushTickerVxIntoRedis(Chan1, pool)
 		Check(err)

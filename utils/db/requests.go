@@ -180,9 +180,12 @@ func GetAllTickersFromRedis(rPool *redis.Pool) []string {
 	var result []string
 
 	// First, try and get the tickers from redis
-	args := []interface{}{"allTickers"}
-	res := ProcessRedisCommand[[]byte](rPool, "GET", args, false, "bytes")
-	err := json.Unmarshal(res, &result)
+	//args := []interface{}{"allTickers"}
+	res, err := Get(rPool, "allTickers")
+	Check(err)
+
+	//res := ProcessRedisCommand[[]byte](rPool, "GET", args, false, "bytes")
+	err = json.Unmarshal(res, &result)
 	Check(err)
 
 	if result == nil {
@@ -198,7 +201,9 @@ func GetAllTickersFromRedis(rPool *redis.Pool) []string {
 		err := PushTickerVxIntoRedis(Chan1, rPool)
 		Check(err)
 
-		res := ProcessRedisCommand[[]byte](rPool, "GET", args, false, "string")
+		res, err := Get(rPool, "allTickers")
+		Check(err)
+
 		err = json.Unmarshal(res, &result)
 		Check(err)
 	}

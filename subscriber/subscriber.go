@@ -86,7 +86,12 @@ func CreateAggKey(url string, forceInsertDate string, adjusted int) string {
 }
 
 // DownloadFromPolygonIO downloads the prices from PolygonIO
-func DownloadFromPolygonIO(u url.URL, forceInsertDate string, adjusted int, res *structs.AggregatesBarsResponse) structs.RedisAggBarsResults {
+func DownloadFromPolygonIO(
+	u url.URL,
+	forceInsertDate string,
+	adjusted int,
+	res *structs.AggregatesBarsResponse,
+) structs.RedisAggBarsResults {
 	resp, err := http.Get(u.String())
 	if err != nil {
 		panic(err)
@@ -94,32 +99,34 @@ func DownloadFromPolygonIO(u url.URL, forceInsertDate string, adjusted int, res 
 		defer func(Body io.ReadCloser) {
 			err := Body.Close()
 			if err != nil {
-
+				panic(err)
 			}
 		}(resp.Body)
-
 		messageKey := CreateAggKey(u.String(), forceInsertDate, adjusted)
-
 		err = json.NewDecoder(resp.Body).Decode(&res)
 		return structs.RedisAggBarsResults{InsertThis: res.Results, Key: messageKey}
 	}
 }
 
-func AggDownloader(urls []*url.URL, forceInsertDate string, adjusted int, rPool *redis.Pool) error {
+func AggDownloader(urls []*url.URL, forceInsertDate string, adjusted int, pool *redis.Pool) error {
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
 
 	// create a buffer of the waitGroup, of the same length as urls
 	wg.Add(len(urls))
 
+	// Max allow 1000 requests per second
 	prev := time.Now()
-	rateLimiter := ratelimit.New(1000)
+	rateLimiter := ratelimit.New(5000)
 
 	bar := progressbar.Default(int64(len(urls)))
 	for _, u := range urls {
 		now := rateLimiter.Take()
 
-		go func(urls *url.URL) {
+		// Just sleep for 10 milliseconds, will add jitter
+		time.Sleep(time.Millisecond * 20)
+
+		go func(urls *url.URL, p *redis.Pool) {
 			// Defer the waitGroup.Done() call until the end of the function
 			defer wg.Done()
 
@@ -136,13 +143,15 @@ func AggDownloader(urls []*url.URL, forceInsertDate string, adjusted int, rPool 
 			Check(err)
 
 			// Set the key in Redis
-			args := []interface{}{oneKey.Key, resBytes}
-			_ = db.ProcessRedisCommand[[]string](rPool, "SET", args, false, "string")
+			//args := []interface{}{oneKey.Key, resBytes}
+			err = db.Set(p, oneKey.Key, resBytes)
+			//_ = db.ProcessRedisCommand[[]string](p, "SET", args, false, "string")
 
 			// Update the progress bar
 			err = bar.Add(1)
 			Check(err)
-		}(u)
+
+		}(u, pool)
 
 		now.Sub(prev)
 		prev = now

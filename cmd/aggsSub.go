@@ -25,7 +25,7 @@ import (
 	"strconv"
 )
 
-// aggsPubCmd represents the aggs command
+// aggsSubCmd represents the aggs command
 var aggsSubCmd = &cobra.Command{
 	Use:   "aggsSub",
 	Short: "A brief description of your command",
@@ -58,6 +58,7 @@ to quickly create a Cobra application.`,
 
 		// Get all the tickers from the redis db
 		pool := db.GetRedisPool(port, redisParams.Host)
+		defer pool.Close()
 
 		// Get all the tickers from the redis db
 		tickers := db.GetAllTickersFromRedis(pool)
@@ -71,6 +72,7 @@ to quickly create a Cobra application.`,
 			apiKey,
 			aggParams.WithLinearDates,
 			aggParams.Adjusted,
+			aggParams.Gap,
 		)
 
 		// Download all data and push the data into redis
@@ -87,4 +89,10 @@ func init() {
 	aggsSubCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")
 	aggsSubCmd.Flags().StringP("to", "t", "", "To which date? (format = %Y-%m-%d)")
 	aggsSubCmd.Flags().IntP("mult", "m", 2, "Multiplier to use with Timespan")
+	aggsSubCmd.Flags().IntP("withLinearDates", "l", 1, "With linear dates? (1/0)")
+	aggsSubCmd.Flags().IntP("adjusted", "a", 1, "Adjusted? (1/0)")
+	aggsSubCmd.Flags().IntP("gap", "g", 24, "Gap?")
+	aggsSubCmd.Flags().StringP("forceInsertDate", "i", "", "Force insert date?")
+	aggsSubCmd.Flags().IntP("useRedis", "r", 1, "Use redis?(1/0)")
+	aggsSubCmd.Flags().IntP("limit", "L", 50000, "Limit?")
 }
