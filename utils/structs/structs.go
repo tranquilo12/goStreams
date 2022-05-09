@@ -1304,6 +1304,11 @@ type RedisAggBarsResults struct {
 	Key        string
 }
 
+type InfluxDBAggBarsResults struct {
+	InsertThis []AggregatesBarsResults
+	Key        string
+}
+
 type StartEndDateStruct struct {
 	Start string
 	End   string

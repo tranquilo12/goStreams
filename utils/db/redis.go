@@ -97,9 +97,6 @@ func PushTickerVxIntoRedis(insertIntoRedis <-chan []structs.TickerVx, pool *redi
 		}
 	}
 
-	// Join all the tickers into a single string
-	//allTickersStr := strings.Join(allTickers[:], ",")
-
 	// Create an args that's an array of strings, and process the redis command.
 	res, err := json.Marshal(allTickers)
 	Check(err)

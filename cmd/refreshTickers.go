@@ -38,14 +38,9 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("refreshTickers called")
 
-		dbType, _ := cmd.Flags().GetString("dbtype")
-		if dbType == "" {
-			dbType = "ec2db"
-		}
-
 		// get database conn
 		DBParams := structs.DBParams{}
-		err := config.SetDBParams(&DBParams, dbType)
+		err := config.SetDBParams(&DBParams, "ec2db")
 		Check(err)
 
 		// Get the DB connection
@@ -56,17 +51,6 @@ to quickly create a Cobra application.`,
 				panic(err)
 			}
 		}(postgresDB)
-
-		// Get the tickers
-		var redisEndpoint string
-		if dbType == "ELASTICCACHE" {
-			redisEndpoint = config.GetElasticCacheEndpoint("ELASTICCACHE")
-		} else {
-			redisEndpoint = "localhost"
-		}
-
-		// Get the redis pool
-		pool := db.GetRedisPool(6379, redisEndpoint)
 
 		// Get the Polygon API key
 		apiKey := config.SetPolygonCred("other")
@@ -79,27 +63,15 @@ to quickly create a Cobra application.`,
 		Chan1 := db.MakeAllTickersVxRequests(url)
 
 		// Get the ticker data from the channel, and push the data to redis
-		fmt.Printf("-- Pushing all Ticker VXs to redis...\n")
-		err = db.PushTickerVxIntoRedis(Chan1, pool)
-		Check(err)
-
-		//allTickersKey := "allTickers"
-		//allTickers, err := pool.Get(allTickersKey).Result()
-		//if err != nil {
-		//	panic(err)
-		//}
-		//
-		//fmt.Printf("-- Pushing all Ticker Details to pgdb...\n")
-		//allUrls := db.MakeAllTickerDetailsQueries(apiKey, strings.Split(allTickers, string(',')))
-		//err = db.MakeAllTickerDetailsRequestsAndPushToDB(allUrls, postgresDB)
-
+		fmt.Printf("-- Pushing all Ticker VXs to influxDB...\n")
+		influxDBClient := db.GetInfluxDBClient(true)
+		db.PushTickerVxIntoInfluxDB(Chan1, influxDBClient)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(refreshTickersCmd)
 
-	refreshTickersCmd.Flags().StringP("dbtype", "d", "ec2db", "One of two... ec2db or localdb")
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command

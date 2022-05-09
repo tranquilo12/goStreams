@@ -8,11 +8,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/gomodule/redigo/redis"
-	"github.com/schollz/progressbar/v3"
+	"github.com/gosuri/uiprogress"
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"go.uber.org/ratelimit"
-	"io"
-	"lightning/utils/db"
 	"lightning/utils/structs"
 	"log"
 	"net/http"
@@ -80,30 +78,29 @@ func CreateAggKey(url string, forceInsertDate string, adjusted int) string {
 	return newKey
 }
 
-// DownloadFromPolygonIO downloads the prices from PolygonIO
-func DownloadFromPolygonIO(
-	u url.URL,
-	forceInsertDate string,
-	adjusted int,
-	res *structs.AggregatesBarsResponse,
-) structs.RedisAggBarsResults {
-	resp, err := http.Get(u.String())
-	if err != nil {
-		panic(err)
-	} else {
-		defer func(Body io.ReadCloser) {
-			err := Body.Close()
-			if err != nil {
-				panic(err)
-			}
-		}(resp.Body)
-		messageKey := CreateAggKey(u.String(), forceInsertDate, adjusted)
-		err = json.NewDecoder(resp.Body).Decode(&res)
-		return structs.RedisAggBarsResults{InsertThis: res.Results, Key: messageKey}
-	}
+func CreateAggKey2(url string) string {
+	splitUrl := strings.Split(url, "/")
+	ticker := splitUrl[6]
+	from_ := splitUrl[10]
+	to_ := strings.Split(splitUrl[11], "?")[0]
+	return fmt.Sprintf("%s/%s/%s", from_, to_, ticker)
 }
 
-func AggDownloader(urls []*url.URL, forceInsertDate string, adjusted int, pool *redis.Pool) error {
+// DownloadFromPolygonIO downloads the prices from PolygonIO
+func DownloadFromPolygonIO(u url.URL, res *structs.AggregatesBarsResponse) structs.InfluxDBAggBarsResults {
+	// Create a new client
+	resp, err := http.Get(u.String())
+	Check(err)
+
+	// Defer the closing of the body
+	defer resp.Body.Close()
+
+	// Decode the response
+	err = json.NewDecoder(resp.Body).Decode(&res)
+	return structs.InfluxDBAggBarsResults{InsertThis: res.Results, Key: res.Ticker}
+}
+
+func AggDownloader(urls []*url.URL, client influxdb2.Client) error {
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
 
@@ -112,46 +109,67 @@ func AggDownloader(urls []*url.URL, forceInsertDate string, adjusted int, pool *
 
 	// Max allow 1000 requests per second
 	prev := time.Now()
-	rateLimiter := ratelimit.New(5000)
+	rateLimiter := ratelimit.New(500)
 
-	bar := progressbar.Default(int64(len(urls)))
+	// Get Write client
+	writeAPI := client.WriteAPI("lightning", "Lightning")
+
+	// Start the UI progress bar
+	uiprogress.Start()
+
+	// Create ui progress bar, formatted
+	bar1 := uiprogress.AddBar(len(urls)).AppendCompleted().PrependElapsed()
+	bar1.PrependFunc(func(b *uiprogress.Bar) string {
+		return fmt.Sprintf("Pushing data into db (%d/%d)", b.Current(), len(urls))
+	})
+
+	// Iterate over every url
 	for _, u := range urls {
+		// rate limit the requests
 		now := rateLimiter.Take()
 
-		// Just sleep for 10 milliseconds, will add jitter
-		time.Sleep(time.Millisecond * 20)
-
-		go func(urls *url.URL, p *redis.Pool) {
-			// Defer the waitGroup.Done() call until the end of the function
+		go func(urls *url.URL) {
+			// Defer the waitGroup
 			defer wg.Done()
 
 			// Download the data from PolygonIO
 			oneKey := DownloadFromPolygonIO(
 				*urls,
-				forceInsertDate,
-				adjusted,
 				&structs.AggregatesBarsResponse{},
 			)
 
-			// Convert the data to JSONBytes
-			resBytes, err := json.Marshal(oneKey.InsertThis)
-			Check(err)
+			// Write the data to InfluxDB
+			for _, v := range oneKey.InsertThis {
+				// Convert the data to influx points
+				p := influxdb2.NewPoint(
+					"aggregates",
+					map[string]string{"ticker": oneKey.Key},
+					map[string]interface{}{
+						"open": v.O, "high": v.H, "low": v.L, "close": v.C, "vWap": v.Vw, "volume": v.V,
+					},
+					time.Unix(int64(v.T)/1000, 0),
+				)
 
-			// Set the key in Redis
-			//args := []interface{}{oneKey.Key, resBytes}
-			err = db.Set(p, oneKey.Key, resBytes)
-			//_ = db.ProcessRedisCommand[[]string](p, "SET", args, false, "string")
+				// Progress bar2 update
+				bar1.Incr()
 
-			// Update the progress bar
-			err = bar.Add(1)
-			Check(err)
+				// Write the point
+				writeAPI.WritePoint(p)
 
-		}(u, pool)
-
+				// Flush write API
+				writeAPI.Flush()
+			}
+		}(u)
+		// Rate limit the requests, so note the time
 		now.Sub(prev)
 		prev = now
 	}
+	// Wait for all the goroutines to finish
 	wg.Wait()
+
+	// Stop the UI progress bar
+	uiprogress.Stop()
+
 	return nil
 }
 

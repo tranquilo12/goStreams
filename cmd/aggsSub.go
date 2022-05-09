@@ -28,10 +28,10 @@ import (
 	"time"
 )
 
-// aggsPubCmd represents the aggs command
-var aggsPubCmd = &cobra.Command{
-	Use:   "aggsPub",
-	Short: "aggsPub will help 'Publish' 'Aggregates' to any database that you point it to (S3/postgres).",
+// aggsSubCmd represents the aggs command
+var aggsSubCmd = &cobra.Command{
+	Use:   "aggsSub",
+	Short: "aggsSub will help 'Publish' 'Aggregates' to any database that you point it to (S3/postgres).",
 	Long: `aggsPub: This command will help publish aggregates to any database that you point it towards. 
 After inserting data into S3, it will make a file called "currentDataStatus.json", placed at the head of the S3 path, 
 that will contain a succinct method of determining which dates have been inserted.
@@ -189,15 +189,15 @@ Accepts flags like:
 
 func init() {
 	// Here you will define your flags and configuration settings.
-	rootCmd.AddCommand(aggsPubCmd)
-	aggsPubCmd.Flags().StringP("dbtype", "d", "ec2db", "One of two... ec2db or localdb")
-	aggsPubCmd.Flags().StringP("timespan", "T", "", "Timespan (minute, hour, day...)")
-	aggsPubCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")
-	aggsPubCmd.Flags().StringP("to", "t", "", "To which date? (format = %Y-%m-%d)")
-	aggsPubCmd.Flags().IntP("mult", "m", 2, "Multiplier to use with Timespan")
-	aggsPubCmd.Flags().IntP("limit", "l", 300, "Rate limit to pull from polygonio")
-	aggsPubCmd.Flags().IntP("withLinearDates", "w", 1, "Usually 1, if appending datasets day-to-day, but if for backup, use 0.")
-	aggsPubCmd.Flags().StringP("forceInsertDate", "F", "", "Force an insert date, to overwrite past data?")
-	aggsPubCmd.Flags().IntP("useRedis", "u", 0, "Should you use redis?")
-	aggsPubCmd.Flags().IntP("adjusted", "a", 1, "Adjusted or unadjusted?")
+	rootCmd.AddCommand(aggsSubCmd)
+	aggsSubCmd.Flags().StringP("dbtype", "d", "ec2db", "One of two... ec2db or localdb")
+	aggsSubCmd.Flags().StringP("timespan", "T", "", "Timespan (minute, hour, day...)")
+	aggsSubCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")
+	aggsSubCmd.Flags().StringP("to", "t", "", "To which date? (format = %Y-%m-%d)")
+	aggsSubCmd.Flags().IntP("mult", "m", 2, "Multiplier to use with Timespan")
+	aggsSubCmd.Flags().IntP("limit", "l", 300, "Rate limit to pull from polygonio")
+	aggsSubCmd.Flags().IntP("withLinearDates", "w", 1, "Usually 1, if appending datasets day-to-day, but if for backup, use 0.")
+	aggsSubCmd.Flags().StringP("forceInsertDate", "F", "", "Force an insert date, to overwrite past data?")
+	aggsSubCmd.Flags().IntP("useRedis", "u", 0, "Should you use redis?")
+	aggsSubCmd.Flags().IntP("adjusted", "a", 1, "Adjusted or unadjusted?")
 }

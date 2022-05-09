@@ -116,3 +116,19 @@ func SetRedisCred(params *RedisParams) error {
 
 	return err
 }
+
+// SetInfluxDBCred Function that reads the config.ini file within the directory, setting the Influx db parameters.
+func SetInfluxDBCred(params *structs.InfluxDBStruct) error {
+	config, err := ini.Load(configPath)
+	if err != nil {
+		return err
+	}
+
+	params.Url = config.Section("INFLUXDB").Key("url").String()
+	params.Bucket = config.Section("INFLUXDB").Key("bucket").String()
+	params.Org = config.Section("INFLUXDB").Key("org").String()
+	params.ApiKey = config.Section("INFLUXDB").Key("apikey").String()
+	params.PersonalApiKey = config.Section("INFLUXDB").Key("personalApiKey").String()
+
+	return err
+}
