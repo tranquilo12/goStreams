@@ -20,9 +20,8 @@ limitations under the License.
 import (
 	"fmt"
 	"github.com/spf13/cobra"
-	"lightning/utils/config"
+	"lightning/subscriber"
 	"lightning/utils/db"
-	"strconv"
 )
 
 func Check(err error) {
@@ -33,31 +32,21 @@ func Check(err error) {
 
 // aggsSub2Cmd represents the aggsPub2 command
 var aggsSub2Cmd = &cobra.Command{
-	Use:   "aggsPub2",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Use:   "aggsSub2",
+	Short: "Helps pull data from the Kafka topic to the InfluxDB database",
+	Long: `
+		This command helps pull data from the Kafka topic to the InfluxDB database.
+		Future versions will include a command line interface to the Kafka topic.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("aggsPub2 called")
-		_ = db.ReadAggParamsFromCMD2(cmd)
+		fmt.Println("aggsSub2 called")
+		readerConns := subscriber.CreateKafkaReaderConn("agg", "g1")
 
-		// Possibly get all the redis parameters from the .ini file.
-		var redisParams config.RedisParams
-		err := config.SetRedisCred(&redisParams)
-		Check(err)
+		fmt.Println("Getting influxDB client...")
+		influxDBClient := db.GetInfluxDBClient(true)
+		defer influxDBClient.Close()
 
-		// Create a redis client
-		port, err := strconv.Atoi(redisParams.Port)
-		pool := db.GetRedisPool(port, redisParams.Host)
-		Check(err)
-
-		// Push the data to redis
-		err = db.PushAggIntoFFSCont(pool)
-		Check(err)
+		fmt.Println("Starting to read from Kafka topic and pushing to InfluxDB...")
+		subscriber.WriteFromKafkaToInfluxDB(readerConns, influxDBClient)
 	},
 }
 
@@ -65,7 +54,7 @@ func init() {
 	rootCmd.AddCommand(aggsSub2Cmd)
 
 	// Here you will define your flags and configuration settings.
-	aggsSub2Cmd.Flags().StringP("dbtype", "d", "ec2db", "One of two... ec2db or localdb")
+	//aggsSub2Cmd.Flags().StringP("dbtype", "d", "ec2db", "One of two... ec2db or localdb")
 
 	// Get agg parameters from console
 

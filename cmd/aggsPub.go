@@ -27,13 +27,12 @@ import (
 // aggsPubCmd represents the aggs command
 var aggsPubCmd = &cobra.Command{
 	Use:   "aggsPub",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Helps pull data from Polygon-io and into a Kafka topic",
+	Long: `
+		This command pulls data from Polygon-io and into a Kafka topic.
+        Future enhancements will include a command line interface to
+		interact with the Kafka topic.
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("aggsSub called")
 
@@ -61,8 +60,9 @@ to quickly create a Cobra application.`,
 			aggParams.Gap,
 		)
 
-		// Download all data and push the data into redis
-		err := publisher.AggDownloader(urls, influxDBClient)
+		// Download all data and push the data into kafka
+		//err := publisher.AggDownloader(urls, influxDBClient)
+		err := publisher.AggKafkaWriter(urls)
 		Check(err)
 	},
 }

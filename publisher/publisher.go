@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gosuri/uiprogress"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	"github.com/segmentio/kafka-go"
 	"go.uber.org/ratelimit"
 	"lightning/utils/structs"
 	"log"
@@ -166,6 +167,91 @@ func AggDownloader(urls []*url.URL, client influxdb2.Client) error {
 	}
 	// Wait for all the goroutines to finish
 	wg.Wait()
+
+	// Stop the UI progress bar
+	uiprogress.Stop()
+
+	return nil
+}
+
+func AggKafkaWriter(urls []*url.URL) error {
+	// use WaitGroup to make things more smooth with goroutines
+	var wg sync.WaitGroup
+
+	// create a buffer of the waitGroup, of the same length as urls
+	wg.Add(len(urls))
+
+	// Max allow 1000 requests per second
+	prev := time.Now()
+	rateLimiter := ratelimit.New(1000)
+
+	// Get Write client
+	writeConn := CreateKafkaWriterConn("agg")
+
+	// Start the UI progress bar
+	uiprogress.Start()
+
+	// Create ui progress bar, formatted
+	bar1 := uiprogress.AddBar(len(urls)).AppendCompleted().PrependElapsed()
+	bar1.PrependFunc(func(b *uiprogress.Bar) string {
+		return fmt.Sprintf("Pushing data into kafka (%d/%d)", b.Current(), len(urls))
+	})
+
+	// Iterate over every url
+	for _, u := range urls {
+		// rate limit the requests
+		now := rateLimiter.Take()
+
+		go func(urls *url.URL) {
+			// All messages
+			var messages []kafka.Message
+
+			// Defer the waitGroup
+			defer wg.Done()
+
+			// Download the data from PolygonIO
+			oneKey := DownloadFromPolygonIO(
+				*urls,
+				&structs.AggregatesBarsResponse{},
+			)
+
+			// Write the data to InfluxDB
+			for _, v := range oneKey.InsertThis {
+				// Convert the data to influx points
+				val, err := json.Marshal(v)
+				Check(err)
+
+				// Create the key
+				key := []byte(oneKey.Key)
+
+				// Create the messages
+				messages = append(
+					messages,
+					kafka.Message{
+						Key:   key,
+						Value: val,
+						Time:  time.Time{},
+					},
+				)
+			}
+
+			// Write the messages to Kafka
+			err := writeConn.WriteMessages(context.Background(), messages...)
+			Check(err)
+
+			// Progress bar2 update
+			bar1.Incr()
+		}(u)
+		// Rate limit the requests, so note the time
+		now.Sub(prev)
+		prev = now
+	}
+	// Wait for all the goroutines to finish
+	wg.Wait()
+
+	// Stop the kafka writer
+	err := writeConn.Close()
+	Check(err)
 
 	// Stop the UI progress bar
 	uiprogress.Stop()
