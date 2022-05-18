@@ -63,7 +63,7 @@ var aggsPubCmd = &cobra.Command{
 		// Download all data and push the data into kafka
 		//err := publisher.AggDownloader(urls, influxDBClient)
 		err := publisher.AggKafkaWriter(urls)
-		Check(err)
+		db.Check(err)
 	},
 }
 

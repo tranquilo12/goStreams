@@ -48,6 +48,7 @@ func ReadPostgresDBParamsFromCMD(cmd *cobra.Command) structs.DBParams {
 	return res
 }
 
+// ReadAggregateParamsFromCMD A function that reads in parameters related to the aggregate.
 func ReadAggregateParamsFromCMD(cmd *cobra.Command) config.AggCliParams {
 
 	timespan, _ := cmd.Flags().GetString("timespan")
@@ -110,14 +111,6 @@ func ReadAggregateParamsFromCMD(cmd *cobra.Command) config.AggCliParams {
 		Gap:             gap,
 	}
 
-	return res
-}
-
-func ReadAggParamsFromCMD2(cmd *cobra.Command) config.AggCliParams2 {
-	typ, _ := cmd.Flags().GetString("type")
-	res := config.AggCliParams2{
-		Type: typ,
-	}
 	return res
 }
 

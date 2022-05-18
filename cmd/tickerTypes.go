@@ -50,19 +50,9 @@ var tickertypesCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(tickertypesCmd)
-
-	// Here you will define your flags and configuration settings.
 	tickertypesCmd.Flags().StringP("user", "u", "", "Postgres username")
 	tickertypesCmd.Flags().StringP("password", "P", "", "Postgres password")
 	tickertypesCmd.Flags().StringP("database", "d", "", "Postgres database name")
 	tickertypesCmd.Flags().StringP("host", "H", "127.0.0.1", "Postgres host (default localhost)")
 	tickertypesCmd.Flags().StringP("port", "p", "5432", "Postgres port (default 5432)")
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// tickertypesCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// tickertypesCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

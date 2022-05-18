@@ -3,7 +3,10 @@ package config
 import (
 	"gopkg.in/ini.v1"
 	"lightning/utils/structs"
+	"net"
+	"net/http"
 	"strings"
+	"time"
 )
 
 const configPath = "/Users/shriramsunder/GolandProjects/goStreams/config.ini"
@@ -20,10 +23,6 @@ type AggCliParams struct {
 	UseRedis        int
 	Adjusted        int
 	Gap             int
-}
-
-type AggCliParams2 struct {
-	Type string
 }
 
 // NewsCliParams Struct for parsing cli params
@@ -60,6 +59,7 @@ func SetDBParams(params *structs.DBParams, section string) error {
 	return err
 }
 
+// GetElasticCacheEndpoint Function that reads the config.ini file within the directory, setting the Elastic cache endpoint.
 func GetElasticCacheEndpoint(section string) string {
 	config, err := ini.Load(configPath)
 	if err != nil {
@@ -69,16 +69,6 @@ func GetElasticCacheEndpoint(section string) string {
 	section = strings.ToUpper(section)
 	endpoint := config.Section(section).Key("primaryEndpoint").String()
 	return endpoint
-}
-
-func GetRedisHost(section string) string {
-	config, err := ini.Load(configPath)
-	if err != nil {
-		panic(err)
-	}
-
-	section = strings.ToUpper(section)
-	return config.Section(section).Key("host").String()
 }
 
 // SetPolygonCred Function that reads the config.ini file within the directory, and returns the API Key.
@@ -131,4 +121,30 @@ func SetInfluxDBCred(params *structs.InfluxDBStruct) error {
 	params.PersonalApiKey = config.Section("INFLUXDB").Key("personalApiKey").String()
 
 	return err
+}
+
+// GetHttpClient Get a modified http client with the correct timeout.
+func GetHttpClient() *http.Client {
+	timeout := time.Duration(900 * time.Second)
+
+	dialer := &net.Dialer{
+		Timeout:   timeout,
+		KeepAlive: timeout,
+	}
+
+	// Create a new transport
+	transport := &http.Transport{
+		MaxIdleConns:        1000,
+		MaxIdleConnsPerHost: 1000,
+		IdleConnTimeout:     timeout,
+		MaxConnsPerHost:     1000,
+		ForceAttemptHTTP2:   true,
+		DialContext:         dialer.DialContext,
+	}
+
+	// Create a new http client and return it
+	return &http.Client{
+		Timeout:   timeout,
+		Transport: transport,
+	}
 }

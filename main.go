@@ -1,5 +1,5 @@
 /*
-Copyright © 2021 NAME HERE <EMAIL ADDRESS>
+Copyright © 2021 Shriram Sunder <shriram.sunder121091@gmail.com>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,8 +15,17 @@ limitations under the License.
 */
 package main
 
-import "lightning/cmd"
+import (
+	"github.com/pkg/profile"
+	"lightning/cmd"
+)
 
 func main() {
+	// CPU profiling
+	//defer profile.Start(profile.CPUProfile).Stop()
+
+	// Memory profiling
+	defer profile.Start(profile.MemProfile).Stop()
+
 	cmd.Execute()
 }

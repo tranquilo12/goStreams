@@ -42,13 +42,6 @@ type S3DeleteObjectAPI interface {
 }
 
 // DeleteItem deletes an object from an Amazon Simple Storage Service (Amazon S3) bucket
-// Inputs:
-//     c is the context of the method call, which includes the AWS Region
-//     api is the interface that defines the method call
-//     input defines the input arguments to the service call.
-// Output:
-//     If success, a DeleteObjectOutput object containing the result of the service call and nil
-//     Otherwise, an error from the call to DeleteObject
 func DeleteItem(c context.Context, api S3DeleteObjectAPI, input *s3.DeleteObjectInput) (*s3.DeleteObjectOutput, error) {
 	return api.DeleteObject(c, input)
 }
@@ -134,8 +127,6 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(deleteObjsCmd)
-
-	// Here you will define your flags and configuration settings.
 	deleteObjsCmd.Flags().StringP("dbtype", "d", "ec2db", "One of two... ec2db or localdb")
 	deleteObjsCmd.Flags().StringP("timespan", "T", "", "Timespan (minute, hour, day...)")
 	deleteObjsCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")
@@ -144,12 +135,4 @@ func init() {
 	deleteObjsCmd.Flags().IntP("limit", "l", 300, "Rate limit to pull from polygonio")
 	deleteObjsCmd.Flags().IntP("withLinearDates", "w", 1, "Usually 1, if appending datasets day-to-day, but if for backup, use 0.")
 	deleteObjsCmd.Flags().StringP("forceInsertDate", "F", "", "Force an insert date, to overwrite past data?")
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// deleteObjsCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// deleteObjsCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

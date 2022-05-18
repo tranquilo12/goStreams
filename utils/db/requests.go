@@ -3,20 +3,16 @@ package db
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-pg/pg/v10"
 	"github.com/gomodule/redigo/redis"
-	"github.com/schollz/progressbar/v3"
-	"go.uber.org/ratelimit"
 	"io"
 	"lightning/utils/config"
 	"lightning/utils/structs"
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
-	"time"
 )
 
+// MakeTickerTypesRequest makes a request to the ticker types endpoint
 func MakeTickerTypesRequest(apiKey string) *structs.TickerTypeResponse {
 	TickerTypesUrl := MakeTickerTypesUrl(apiKey)
 	TickerTypesTarget := new(structs.TickerTypeResponse)
@@ -34,6 +30,7 @@ func MakeTickerTypesRequest(apiKey string) *structs.TickerTypeResponse {
 	return TickerTypesTarget
 }
 
+// MakeAllTickersVxRequests makes a request to the API for all tickerVx data
 func MakeAllTickersVxRequests(u *url.URL) chan []structs.TickerVx {
 	var vxResponse *structs.TickersVxResponse
 	var response *http.Response
@@ -110,60 +107,6 @@ func MakeAllTickersVxRequests(u *url.URL) chan []structs.TickerVx {
 	return c
 }
 
-func MakeAllTickerDetailsRequestsAndPushToDB(urls []*url.URL, pgDB *pg.DB) error {
-
-	// we are already receiving the AggregatesBarsRequests (un-flattened) here, so the job is to send over this data
-	// to the flattener
-	bar := progressbar.Default(int64(len(urls)), "Downloading and inserting Ticker Details...")
-
-	// create a rate limiter to stop over-requesting
-	rateLimiter := ratelimit.New(300)
-	prev := time.Now()
-
-	// use WaitGroup to make things more smooth with channels
-	var wg sync.WaitGroup
-
-	// create a buffer of the waitGroup, of the same length as urls
-	wg.Add(len(urls))
-
-	for _, u := range urls {
-		now := rateLimiter.Take()
-		target := new(structs.TickerDetails)
-
-		go func() {
-			resp, err := http.Get(u.String())
-
-			if err != nil {
-				fmt.Println("Some Error: ", err)
-				panic(err)
-			} else {
-				defer func(Body io.ReadCloser) {
-					err := Body.Close()
-					if err != nil {
-						panic(err)
-					}
-				}(resp.Body)
-				err = json.NewDecoder(resp.Body).Decode(&target)
-				_, err := pgDB.Model(target).OnConflict("(symbol) DO NOTHING").Insert()
-				if err != nil {
-					panic(err)
-				}
-			}
-			wg.Done()
-		}()
-
-		now.Sub(prev)
-		prev = now
-
-		var barerr = bar.Add(1)
-		if barerr != nil {
-			fmt.Println("\nSomething wrong with bar: ", barerr)
-		}
-	}
-	wg.Wait()
-	return nil
-}
-
 // GetAllTickersFromPolygonioDirectly is a function that gets all tickers from polygon.io, without the hassle of
 // using a mid-level cache system like redis.
 func GetAllTickersFromPolygonioDirectly() []string {
@@ -211,6 +154,7 @@ func GetAllTickersFromRedis(rPool *redis.Pool) []string {
 	return result
 }
 
+// GetDifferenceBtwTickersInMemAndS3 returns a slice of strings of tickers that are in the S3 bucket but not in memory
 func GetDifferenceBtwTickersInMemAndS3(slice1 []string, slice2 []string) []string {
 	var diff []string
 
@@ -239,6 +183,7 @@ func GetDifferenceBtwTickersInMemAndS3(slice1 []string, slice2 []string) []strin
 	return diff
 }
 
+// MakeAllTickerNews2Requests makes all the requests to polygon.io to get all the news for a ticker
 func MakeAllTickerNews2Requests(u *url.URL) chan []structs.TickerNews2 {
 	var News2Response *structs.TickerNews2Response
 	var response *http.Response

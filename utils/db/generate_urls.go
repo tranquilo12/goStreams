@@ -25,28 +25,6 @@ const (
 	//to_        = "2020-12-15"
 )
 
-//// MakeTickerDetailsQuery generate all the queries for this endpoint
-//func MakeTickerDetailsQuery(apiKey string, ticker string) *url.URL {
-//	p, err := url.Parse("https://" + tickerDetailsHost + "/symbols/" + ticker + "/company")
-//	if err != nil {
-//		fmt.Println(err)
-//		panic(err)
-//	}
-//	// make the url values
-//	q := url.Values{}
-//	q.Add("apiKey", apiKey)
-//	p.RawQuery = q.Encode()
-//	return p
-//}
-
-//func MakeAllTickerDetailsQueries(apiKey string, allTickers []string) []*url.URL {
-//	var allUrls []*url.URL
-//	for _, ticker := range allTickers {
-//		allUrls = append(allUrls, MakeTickerDetailsQuery(apiKey, ticker))
-//	}
-//	return allUrls
-//}
-
 // CreateLinearDatePairs creates a slice of arrays [[date, date+1], [date+1, date+2]...]
 // gap has been added to the params, so the gap between the dates is defined by the gap * time.Hour
 // So it has to be a multiple of 24

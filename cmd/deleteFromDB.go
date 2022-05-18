@@ -50,17 +50,7 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(deleteFromDBCmd)
-
-	// Here you will define your flags and configuration settings.
 	deleteFromDBCmd.Flags().StringP("measurement", "m", "", "Which measurement to delete?")
 	deleteFromDBCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")
 	deleteFromDBCmd.Flags().StringP("to", "t", "", "To which date? (format = %Y-%m-%d)")
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// deleteFromDBCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// deleteFromDBCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

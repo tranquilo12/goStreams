@@ -79,17 +79,8 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(tickerNewsCmd)
-	// Here you will define your flags and configuration settings.
 	tickerNewsCmd.Flags().StringP("dbtype", "d", "ec2db", "One of two... ec2db or localdb")
 	tickerNewsCmd.Flags().StringSliceP("ticker", "T", []string{}, "Which ticker? (eg. AAPL)")
 	tickerNewsCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")
 	tickerNewsCmd.Flags().StringP("to", "t", "", "To which date? (format = %Y-%m-%d)")
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// refreshTickersCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// refreshTickersCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

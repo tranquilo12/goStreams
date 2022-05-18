@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/gosuri/uiprogress"
-	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
-	"github.com/segmentio/kafka-go"
+	"github.com/schollz/progressbar/v3"
 	"go.uber.org/ratelimit"
+	config2 "lightning/utils/config"
+	"lightning/utils/db"
 	"lightning/utils/structs"
 	"log"
 	"net/http"
@@ -21,35 +20,7 @@ import (
 	"time"
 )
 
-func Check(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-func DownloadFromS3(bucket string, key string) *manager.WriteAtBuffer {
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("default"), config.WithRegion("eu-central-1"))
-	if err != nil {
-		panic(err)
-	}
-
-	// Define a strategy that will buffer 1Mib into memory
-	downloader := manager.NewDownloader(s3.NewFromConfig(cfg), func(u *manager.Downloader) {
-		u.BufferProvider = manager.NewPooledBufferedWriterReadFromProvider(1 * 1024 * 1024)
-	})
-
-	buff := &manager.WriteAtBuffer{}
-	_, err = downloader.Download(context.TODO(), buff,
-		&s3.GetObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(key),
-		})
-	if err != nil {
-		panic(err)
-	}
-	return buff
-}
-
+// CreateAggKey creates the key for the aggregated data
 func CreateAggKey(url string, forceInsertDate string, adjusted int) string {
 	splitUrl := strings.Split(url, "/")
 	ticker := splitUrl[6]
@@ -79,169 +50,56 @@ func CreateAggKey(url string, forceInsertDate string, adjusted int) string {
 	return newKey
 }
 
-func CreateAggKey2(url string) string {
-	splitUrl := strings.Split(url, "/")
-	ticker := splitUrl[6]
-	from_ := splitUrl[10]
-	to_ := strings.Split(splitUrl[11], "?")[0]
-	return fmt.Sprintf("%s/%s/%s", from_, to_, ticker)
-}
-
 // DownloadFromPolygonIO downloads the prices from PolygonIO
-func DownloadFromPolygonIO(u url.URL, res *structs.AggregatesBarsResponse) structs.InfluxDBAggBarsResults {
+func DownloadFromPolygonIO(client *http.Client, u url.URL, res *structs.AggregatesBarsResponse) error {
 	// Create a new client
-	resp, err := http.Get(u.String())
-	Check(err)
+	resp, err := client.Get(u.String())
+	db.Check(err)
 
 	// Defer the closing of the body
 	defer resp.Body.Close()
 
 	// Decode the response
 	err = json.NewDecoder(resp.Body).Decode(&res)
-	return structs.InfluxDBAggBarsResults{InsertThis: res.Results, Key: res.Ticker}
+	db.Check(err)
+
+	return err
 }
 
-func AggDownloader(urls []*url.URL, client influxdb2.Client) error {
-	// use WaitGroup to make things more smooth with goroutines
-	var wg sync.WaitGroup
-
-	// create a buffer of the waitGroup, of the same length as urls
-	wg.Add(len(urls))
-
-	// Max allow 1000 requests per second
-	prev := time.Now()
-	rateLimiter := ratelimit.New(500)
-
-	// Get Write client
-	writeAPI := client.WriteAPI("lightning", "Lightning")
-
-	// Start the UI progress bar
-	uiprogress.Start()
-
-	// Create ui progress bar, formatted
-	bar1 := uiprogress.AddBar(len(urls)).AppendCompleted().PrependElapsed()
-	bar1.PrependFunc(func(b *uiprogress.Bar) string {
-		return fmt.Sprintf("Pushing data into db (%d/%d)", b.Current(), len(urls))
-	})
-
-	// Iterate over every url
-	for _, u := range urls {
-		// rate limit the requests
-		now := rateLimiter.Take()
-
-		go func(urls *url.URL) {
-			// Defer the waitGroup
-			defer wg.Done()
-
-			// Download the data from PolygonIO
-			oneKey := DownloadFromPolygonIO(
-				*urls,
-				&structs.AggregatesBarsResponse{},
-			)
-
-			// Write the data to InfluxDB
-			for _, v := range oneKey.InsertThis {
-				// Convert the data to influx points
-				p := influxdb2.NewPoint(
-					"aggregates",
-					map[string]string{"ticker": oneKey.Key},
-					map[string]interface{}{
-						"open": v.O, "high": v.H, "low": v.L, "close": v.C, "vWap": v.Vw, "volume": v.V,
-					},
-					time.Unix(int64(v.T)/1000, 0),
-				)
-
-				// Progress bar2 update
-				bar1.Incr()
-
-				// Write the point
-				writeAPI.WritePoint(p)
-
-				// Flush write API
-				writeAPI.Flush()
-			}
-		}(u)
-		// Rate limit the requests, so note the time
-		now.Sub(prev)
-		prev = now
-	}
-	// Wait for all the goroutines to finish
-	wg.Wait()
-
-	// Stop the UI progress bar
-	uiprogress.Stop()
-
-	return nil
-}
-
+// AggKafkaWriter writes the aggregates to Kafka
 func AggKafkaWriter(urls []*url.URL) error {
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
 
+	//urls = urls[177376+68320+48688:]
+	urls = urls[:10000]
+
 	// create a buffer of the waitGroup, of the same length as urls
 	wg.Add(len(urls))
 
-	// Max allow 1000 requests per second
+	// Max allow 500 requests per second
 	prev := time.Now()
-	rateLimiter := ratelimit.New(1000)
+	rateLimiter := ratelimit.New(100)
 
 	// Get Write client
 	writeConn := CreateKafkaWriterConn("agg")
-
-	// Start the UI progress bar
-	uiprogress.Start()
+	defer writeConn.Close()
 
 	// Create ui progress bar, formatted
-	bar1 := uiprogress.AddBar(len(urls)).AppendCompleted().PrependElapsed()
-	bar1.PrependFunc(func(b *uiprogress.Bar) string {
-		return fmt.Sprintf("Pushing data into kafka (%d/%d)", b.Current(), len(urls))
-	})
+	bar1 := progressbar.Default(int64(len(urls)))
+	defer bar1.Close()
+
+	// Get the http client
+	httpClient := config2.GetHttpClient()
 
 	// Iterate over every url
 	for _, u := range urls {
 		// rate limit the requests
 		now := rateLimiter.Take()
 
-		go func(urls *url.URL) {
-			// All messages
-			var messages []kafka.Message
+		// Create the goroutine
+		go KafkaWriter(context.Background(), httpClient, u, writeConn, &wg, bar1)
 
-			// Defer the waitGroup
-			defer wg.Done()
-
-			// Download the data from PolygonIO
-			oneKey := DownloadFromPolygonIO(
-				*urls,
-				&structs.AggregatesBarsResponse{},
-			)
-
-			// Write the data to InfluxDB
-			for _, v := range oneKey.InsertThis {
-				// Convert the data to influx points
-				val, err := json.Marshal(v)
-				Check(err)
-
-				// Create the key
-				key := []byte(oneKey.Key)
-
-				// Create the messages
-				messages = append(
-					messages,
-					kafka.Message{
-						Key:   key,
-						Value: val,
-						Time:  time.Time{},
-					},
-				)
-			}
-
-			// Write the messages to Kafka
-			err := writeConn.WriteMessages(context.Background(), messages...)
-			Check(err)
-
-			// Progress bar2 update
-			bar1.Incr()
-		}(u)
 		// Rate limit the requests, so note the time
 		now.Sub(prev)
 		prev = now
@@ -249,16 +107,10 @@ func AggKafkaWriter(urls []*url.URL) error {
 	// Wait for all the goroutines to finish
 	wg.Wait()
 
-	// Stop the kafka writer
-	err := writeConn.Close()
-	Check(err)
-
-	// Stop the UI progress bar
-	uiprogress.Stop()
-
 	return nil
 }
 
+// ListAllBucketObjsS3 lists all the objects in a bucket
 func ListAllBucketObjsS3(bucket string, prefix string) *[]string {
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("default"), config.WithRegion("eu-central-1"))
 	if err != nil {

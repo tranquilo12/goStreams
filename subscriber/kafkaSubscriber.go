@@ -8,6 +8,7 @@ import (
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/schollz/progressbar/v3"
 	"github.com/segmentio/kafka-go"
+	_ "github.com/segmentio/kafka-go/snappy"
 	"io/ioutil"
 	"lightning/publisher"
 	"lightning/utils/db"
@@ -50,21 +51,21 @@ func CreateKafkaReaderConn(topic string, groupID string) *kafka.Reader {
 		DualStack: true,
 	}
 
-	// Create the readers
-	//var readers []*kafka.Reader
+	// Create the reader
 	r := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  []string{"kafka-trial-shriram-c8ec.aivencloud.com:26032"},
-		GroupID:  groupID,
-		Topic:    topic,
-		Dialer:   dialer,
-		MinBytes: 1e6,
-		MaxBytes: batchSize,
+		Brokers:        []string{"kafka-trial-shriram-c8ec.aivencloud.com:26032"},
+		GroupID:        groupID,
+		Topic:          topic,
+		Dialer:         dialer,
+		MinBytes:       1e6,           // 1MB
+		MaxBytes:       batchSize * 5, // 5MB
+		CommitInterval: time.Second,
 	})
 	return r
 }
 
 // WriteFromKafkaToInfluxDB writes the data from kafka to influxdb
-func WriteFromKafkaToInfluxDB(kafkaReaders *kafka.Reader, influxDBClient influxdb2.Client) {
+func WriteFromKafkaToInfluxDB(kafkaReader *kafka.Reader, influxDBClient influxdb2.Client) {
 	// Get Write influxDBClient
 	writeAPI := influxDBClient.WriteAPI("lightning", "Lightning")
 	defer influxDBClient.Close()
@@ -74,8 +75,11 @@ func WriteFromKafkaToInfluxDB(kafkaReaders *kafka.Reader, influxDBClient influxd
 
 	for {
 		// Get the message
-		m, err := kafkaReaders.ReadMessage(context.Background())
-		db.Check(err)
+		m, err := kafkaReader.ReadMessage(context.Background())
+		if err != nil {
+			log.Println("Error reading message: ", err)
+			break
+		}
 
 		// Get the ticker from the message
 		ticker := string(m.Key)
@@ -104,6 +108,10 @@ func WriteFromKafkaToInfluxDB(kafkaReaders *kafka.Reader, influxDBClient influxd
 		// Update the progress bar
 		err = bar.Add(1)
 		db.Check(err)
+	}
+
+	if err := kafkaReader.Close(); err != nil {
+		log.Fatal("failed to close kafkaReader:", err)
 	}
 
 }

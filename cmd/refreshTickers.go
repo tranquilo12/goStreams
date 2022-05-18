@@ -41,7 +41,7 @@ to quickly create a Cobra application.`,
 		// get database conn
 		DBParams := structs.DBParams{}
 		err := config.SetDBParams(&DBParams, "ec2db")
-		Check(err)
+		db.Check(err)
 
 		// Get the DB connection
 		postgresDB := db.GetPostgresDBConn(&DBParams)
@@ -71,14 +71,4 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(refreshTickersCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// refreshTickersCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// refreshTickersCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

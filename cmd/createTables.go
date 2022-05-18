@@ -18,11 +18,10 @@ limitations under the License.
 
 import (
 	"fmt"
+	"github.com/spf13/cobra"
 	"lightning/utils/config"
 	"lightning/utils/db"
 	"lightning/utils/structs"
-
-	"github.com/spf13/cobra"
 )
 
 // createTablesCmd represents the createTables command
@@ -50,14 +49,5 @@ var createTablesCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(createTablesCmd)
-	// Here you will define your flags and configuration settings.
 	createTablesCmd.Flags().StringP("dbtype", "d", "", "One of two... ec2db or localdb")
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// createTablesCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// createTablesCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
