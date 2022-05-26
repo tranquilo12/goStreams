@@ -10,10 +10,11 @@ import (
 	"github.com/segmentio/kafka-go"
 	_ "github.com/segmentio/kafka-go/snappy"
 	"io/ioutil"
-	"lightning/publisher"
 	"lightning/utils/db"
 	"lightning/utils/structs"
 	"log"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -23,10 +24,18 @@ const (
 
 // CreateKafkaReaderConn creates a new kafka subscriber connection
 func CreateKafkaReaderConn(topic string, groupID string) *kafka.Reader {
+	// Load User's home directory
+	dirname, err := os.UserHomeDir()
+	db.Check(err)
+
+	// Load the client cert
+	serviceCertPath := filepath.Join(dirname, ".avn", "service.cert")
+	serviceKeyPath := filepath.Join(dirname, ".avn", "service.key")
+	serviceCAPath := filepath.Join(dirname, ".avn", "ca.pem")
 
 	// Get the key and cert files
-	keypair, err := tls.LoadX509KeyPair(publisher.ServiceCertPath, publisher.ServiceKeyPath)
-	caCert, err := ioutil.ReadFile(publisher.ServiceCAPath)
+	keypair, err := tls.LoadX509KeyPair(serviceCertPath, serviceKeyPath)
+	caCert, err := ioutil.ReadFile(serviceCAPath)
 	if err != nil {
 		log.Println(err)
 	}
@@ -57,9 +66,9 @@ func CreateKafkaReaderConn(topic string, groupID string) *kafka.Reader {
 		GroupID:        groupID,
 		Topic:          topic,
 		Dialer:         dialer,
-		MinBytes:       1e6,           // 1MB
-		MaxBytes:       batchSize * 5, // 5MB
-		CommitInterval: time.Second,
+		MinBytes:       batchSize * 10,  // 500MB
+		MaxBytes:       batchSize * 100, // 1000MB
+		CommitInterval: time.Second * 60,
 	})
 	return r
 }

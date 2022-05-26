@@ -197,3 +197,6 @@ Create Tables in a raw database:
 - `docker exec -i docker_timescale_1 /bin/bash -c "PGPASSWORD={} pg_dump --dbname=polygonio --host=host.docker.internal --port=5432 --username=postgres --schema='public' --table=public."aggregates_bars" --data-only" > C:\Users\SHIRAM\Documents\Numerai\aggregates_bars-2015-01-01-2021-06-05-dump.sql`
 - Example for converting from sql to txt: `awk 'NR >= 57890000 && NR <= 57890010' /path/to/file > new_file.txt`
 - or an easier way of doing things: `sudo docker exec -u postgres ${CONTAINER} psql -d ${DB} -c "COPY ${TABLE} TO STDOUT WITH CSV HEADER " > ${FILE}`
+
+### AWS Firehose notes
+- 

@@ -11,25 +11,32 @@ import (
 	"lightning/utils/db"
 	"lightning/utils/structs"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"sync"
-)
-
-const (
-	ServiceCertPath = "/Users/shriramsunder/.avn/service.cert"
-	ServiceKeyPath  = "/Users/shriramsunder/.avn/service.key"
-	ServiceCAPath   = "/Users/shriramsunder/.avn/ca.pem"
+	"time"
 )
 
 // CreateKafkaWriterConn creates a new kafka producer connection
 func CreateKafkaWriterConn(topic string) *kafka.Writer {
+	// Load User's home directory
+	dirname, err := os.UserHomeDir()
+	db.Check(err)
+
+	// Load the client cert
+	serviceCertPath := filepath.Join(dirname, ".avn", "service.cert")
+	serviceKeyPath := filepath.Join(dirname, ".avn", "service.key")
+	serviceCAPath := filepath.Join(dirname, ".avn", "ca.pem")
+
 	// Get the key and cert files
-	keypair, err := tls.LoadX509KeyPair(ServiceCertPath, ServiceKeyPath)
-	caCert, err := ioutil.ReadFile(ServiceCAPath)
-	if err != nil {
-		log.Println(err)
-	}
+	keypair, err := tls.LoadX509KeyPair(serviceCertPath, serviceKeyPath)
+	db.Check(err)
+
+	caCert, err := ioutil.ReadFile(serviceCAPath)
+	db.Check(err)
 
 	// Get the CA cert pool
 	caCertPool := x509.NewCertPool()
@@ -69,7 +76,7 @@ func KafkaWriter(
 	bar *progressbar.ProgressBar,
 ) {
 	// All messages
-	//var messages []kafka.Message
+	var messages []kafka.Message
 
 	// Download the data from PolygonIO
 	var res structs.AggregatesBarsResponse
@@ -78,23 +85,27 @@ func KafkaWriter(
 
 	for _, v := range res.Results {
 		// Convert the data to influx points
-		_, err := json.Marshal(v)
+		val, err := json.Marshal(v)
 		db.Check(err)
 
+		// Convert float to second, and then to the time
+		sec, dec := math.Modf(v.T)
+		t := time.Unix(int64(sec), int64(dec*(1e9)))
+
 		// Create the messages
-		//messages = append(
-		//	messages,
-		//	kafka.Message{
-		//		Key:   []byte(res.Ticker),
-		//		Value: val,
-		//		Time:  time.Time{},
-		//	},
-		//)
+		messages = append(
+			messages,
+			kafka.Message{
+				Key:   []byte(res.Ticker),
+				Value: val,
+				Time:  t,
+			},
+		)
 	}
 
 	// Write the messages to Kafka
-	//err = kafkaWriter.WriteMessages(ctx, messages...)
-	//Check(err)
+	err = kafkaWriter.WriteMessages(ctx, messages...)
+	db.Check(err)
 
 	// Progress bar update
 	bar.Add(1)

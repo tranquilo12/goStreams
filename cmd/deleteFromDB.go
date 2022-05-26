@@ -37,7 +37,7 @@ to quickly create a Cobra application.`,
 
 		to_, _ := cmd.Flags().GetString("to")
 		if to_ == "" {
-			to_ = "2021-03-01"
+			to_ = "2022-06-01"
 		}
 
 		fmt.Println("Get influxDB client...")

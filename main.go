@@ -16,7 +16,6 @@ limitations under the License.
 package main
 
 import (
-	"github.com/pkg/profile"
 	"lightning/cmd"
 )
 
@@ -25,7 +24,7 @@ func main() {
 	//defer profile.Start(profile.CPUProfile).Stop()
 
 	// Memory profiling
-	defer profile.Start(profile.MemProfile).Stop()
+	//defer profile.Start(profile.MemProfile).Stop()
 
 	cmd.Execute()
 }

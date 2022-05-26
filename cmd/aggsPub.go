@@ -40,7 +40,7 @@ var aggsPubCmd = &cobra.Command{
 		aggParams := db.ReadAggregateParamsFromCMD(cmd)
 
 		// Get the apiKey from the config.ini file
-		apiKey := config.SetPolygonCred("me")
+		apiKey := config.SetPolygonCred("loving_aryabhata_key")
 
 		fmt.Println("Getting influxDB client...")
 		influxDBClient := db.GetInfluxDBClient(true)
@@ -61,7 +61,6 @@ var aggsPubCmd = &cobra.Command{
 		)
 
 		// Download all data and push the data into kafka
-		//err := publisher.AggDownloader(urls, influxDBClient)
 		err := publisher.AggKafkaWriter(urls)
 		db.Check(err)
 	},

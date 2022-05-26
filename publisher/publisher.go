@@ -60,9 +60,10 @@ func DownloadFromPolygonIO(client *http.Client, u url.URL, res *structs.Aggregat
 	defer resp.Body.Close()
 
 	// Decode the response
-	err = json.NewDecoder(resp.Body).Decode(&res)
-	db.Check(err)
-
+	if resp.StatusCode == http.StatusOK {
+		err = json.NewDecoder(resp.Body).Decode(&res)
+		db.Check(err)
+	}
 	return err
 }
 
@@ -71,23 +72,22 @@ func AggKafkaWriter(urls []*url.URL) error {
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
 
-	//urls = urls[177376+68320+48688:]
-	urls = urls[:10000]
+	urls = urls[27299+72598+319843+872323+139078:]
 
 	// create a buffer of the waitGroup, of the same length as urls
 	wg.Add(len(urls))
 
 	// Max allow 500 requests per second
 	prev := time.Now()
-	rateLimiter := ratelimit.New(100)
+	rateLimiter := ratelimit.New(200)
 
 	// Get Write client
 	writeConn := CreateKafkaWriterConn("agg")
 	defer writeConn.Close()
 
 	// Create ui progress bar, formatted
-	bar1 := progressbar.Default(int64(len(urls)))
-	defer bar1.Close()
+	bar := progressbar.Default(int64(len(urls)))
+	defer bar.Close()
 
 	// Get the http client
 	httpClient := config2.GetHttpClient()
@@ -98,7 +98,7 @@ func AggKafkaWriter(urls []*url.URL) error {
 		now := rateLimiter.Take()
 
 		// Create the goroutine
-		go KafkaWriter(context.Background(), httpClient, u, writeConn, &wg, bar1)
+		go KafkaWriter(context.Background(), httpClient, u, writeConn, &wg, bar)
 
 		// Rate limit the requests, so note the time
 		now.Sub(prev)
@@ -112,14 +112,16 @@ func AggKafkaWriter(urls []*url.URL) error {
 
 // ListAllBucketObjsS3 lists all the objects in a bucket
 func ListAllBucketObjsS3(bucket string, prefix string) *[]string {
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("default"), config.WithRegion("eu-central-1"))
-	if err != nil {
-		panic(err)
-	}
+	cfg, err := config.LoadDefaultConfig(
+		context.TODO(),
+		config.WithSharedConfigProfile("default"),
+		config.WithRegion("eu-central-1"),
+	)
+	db.Check(err)
 
 	client := s3.NewFromConfig(cfg)
 
-	// Set the parameters based on teh CLI flag inputs.
+	// Set the parameters based on the CLI flag inputs.
 	params := &s3.ListObjectsV2Input{
 		Bucket: aws.String(bucket),
 	}
@@ -137,7 +139,6 @@ func ListAllBucketObjsS3(bucket string, prefix string) *[]string {
 	var i int
 	for p.HasMorePages() {
 		i++
-
 		page, err := p.NextPage(context.TODO())
 		if err != nil {
 			log.Fatalf("Failed to get page %v, %v", i, err)

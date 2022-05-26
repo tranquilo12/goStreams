@@ -20,8 +20,8 @@ func GetInfluxDBClient(withOptions bool) influxdb2.Client {
 	params := new(structs.InfluxDBStruct)
 	err := config.SetInfluxDBCred(params)
 	Check(err)
-	if withOptions == true {
 
+	if withOptions == true {
 		// Create HTTP client,
 		// For efficient reuse of HTTP resources among multiple clients,
 		// create an HTTP client and use Options.SetHTTPClient() for setting it to all clients:
@@ -123,10 +123,10 @@ func GetAllTickersFromInfluxDB(client influxdb2.Client) []string {
 // DeleteFromInfluxDB Just delete something from the influxDB database
 func DeleteFromInfluxDB(client influxdb2.Client, measurement string, from_ string, to_ string) {
 	// Get client's organization ID
-	orgID := domain.Organization{Id: aws.String("50f21dbeb2c94acc")}
+	orgID := domain.Organization{Id: aws.String("5e77c309d37d334c")}
 
 	// Get Bucket ID
-	bucketID := domain.Bucket{OrgID: orgID.Id, Name: "Lightning", Id: aws.String("3a675d3b8f306259")}
+	bucketID := domain.Bucket{OrgID: orgID.Id, Name: "Lightning", Id: aws.String("40f987f2bf92d6c5")}
 
 	// Get Delete client
 	deleteAPI := client.DeleteAPI()
