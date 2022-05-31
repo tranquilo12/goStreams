@@ -9,7 +9,6 @@ import (
 )
 
 const (
-	//Scheme               = "https" // universal for all schemes here
 	aggsHost        = "api.polygon.io/v2/aggs"
 	tickerTypesHost = "api.polygon.io/v3/reference/types"
 	tickersVxHost   = "api.polygon.io/v3/reference/tickers"
@@ -17,12 +16,7 @@ const (
 	//tickerDetailsHost = "api.polygon.io/v1/meta"
 	//dailyOpenCloseHost   = "api.polygon.io/v1/open-close"
 	//groupedDailyBarsHost = "api.polygon.io/v2/aggs/grouped/locale/us/market/stocks"
-
 	layout = "2006-01-02" // go uses this date as a format specifier
-	//timespan   = "day"
-	//multiplier = 1
-	//from_      = "2020-11-22"
-	//to_        = "2020-12-15"
 )
 
 // CreateLinearDatePairs creates a slice of arrays [[date, date+1], [date+1, date+2]...]
@@ -110,16 +104,16 @@ func MakeAllStocksAggsUrls(
 	from_ string,
 	to_ string,
 	apiKey string,
-	withLinearDates int,
+	withLinearSteps int,
 	adjusted int,
-	gap int,
+	stepSize int,
 ) []*url.URL {
 	// no need for channels in this yet, just a quick function that makes all the queries and sends it back
 	fmt.Println("Making all urls...")
 
 	var urls []*url.URL
-	if withLinearDates == 1 {
-		datePairs := CreateLinearDatePairs(from_, to_, gap)
+	if withLinearSteps == 1 {
+		datePairs := CreateLinearDatePairs(from_, to_, stepSize)
 		for _, ticker := range tickers {
 			for _, dp := range datePairs {
 				u := MakeStocksAggUrl(ticker, "1", timespan, dp.Start, dp.End, apiKey, adjusted)
@@ -131,7 +125,6 @@ func MakeAllStocksAggsUrls(
 			u := MakeStocksAggUrl(ticker, "1", timespan, from_, to_, apiKey, adjusted)
 			urls = append(urls, u)
 		}
-
 	}
 
 	fmt.Println("Done...")

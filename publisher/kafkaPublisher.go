@@ -11,7 +11,6 @@ import (
 	"lightning/utils/db"
 	"lightning/utils/structs"
 	"log"
-	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -75,6 +74,9 @@ func KafkaWriter(
 	wg *sync.WaitGroup,
 	bar *progressbar.ProgressBar,
 ) {
+	// Makes sure wg closes
+	defer wg.Done()
+
 	// All messages
 	var messages []kafka.Message
 
@@ -88,17 +90,13 @@ func KafkaWriter(
 		val, err := json.Marshal(v)
 		db.Check(err)
 
-		// Convert float to second, and then to the time
-		sec, dec := math.Modf(v.T)
-		t := time.Unix(int64(sec), int64(dec*(1e9)))
-
 		// Create the messages
 		messages = append(
 			messages,
 			kafka.Message{
 				Key:   []byte(res.Ticker),
 				Value: val,
-				Time:  t,
+				Time:  time.Time{},
 			},
 		)
 	}
@@ -109,7 +107,4 @@ func KafkaWriter(
 
 	// Progress bar update
 	bar.Add(1)
-
-	// Close the wg
-	wg.Done()
 }

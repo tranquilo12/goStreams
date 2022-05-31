@@ -72,7 +72,7 @@ func AggKafkaWriter(urls []*url.URL) error {
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
 
-	urls = urls[27299+72598+319843+872323+139078:]
+	//urls = urls[27299+72598+319843+872323+139078+882295+701004:]
 
 	// create a buffer of the waitGroup, of the same length as urls
 	wg.Add(len(urls))
