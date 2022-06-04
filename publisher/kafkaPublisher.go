@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"github.com/schollz/progressbar/v3"
 	"github.com/segmentio/kafka-go"
+	"go.uber.org/ratelimit"
 	"io/ioutil"
+	"lightning/utils/config"
 	"lightning/utils/db"
 	"lightning/utils/structs"
 	"log"
@@ -64,6 +66,48 @@ func CreateKafkaWriterConn(topic string) *kafka.Writer {
 	}
 
 	return w
+}
+
+// AggKafkaWriter writes the aggregates to Kafka
+func AggKafkaWriter(urls []*url.URL) error {
+	// use WaitGroup to make things more smooth with goroutines
+	var wg sync.WaitGroup
+
+	// create a buffer of the waitGroup, of the same length as urls
+	wg.Add(len(urls))
+
+	// Max allow 500 requests per second
+	prev := time.Now()
+	rateLimiter := ratelimit.New(300)
+
+	// Get Write client
+	writeConn := CreateKafkaWriterConn("agg")
+	defer writeConn.Close()
+
+	// Create ui progress bar, formatted
+	bar := progressbar.Default(int64(len(urls)))
+	defer bar.Close()
+
+	// Get the http client
+	httpClient := config.GetHttpClient()
+
+	// Iterate over every url
+	for _, u := range urls {
+		// rate limit the requests
+		now := rateLimiter.Take()
+
+		// Create the goroutine
+		go KafkaWriter(context.Background(), httpClient, u, writeConn, &wg, bar)
+
+		// Rate limit the requests, so note the time
+		now.Sub(prev)
+		prev = now
+	}
+
+	// Wait for all the goroutines to finish
+	wg.Wait()
+
+	return nil
 }
 
 func KafkaWriter(

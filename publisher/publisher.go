@@ -7,17 +7,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/schollz/progressbar/v3"
-	"go.uber.org/ratelimit"
-	config2 "lightning/utils/config"
 	"lightning/utils/db"
 	"lightning/utils/structs"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
-	"time"
 )
 
 // CreateAggKey creates the key for the aggregated data
@@ -65,49 +60,6 @@ func DownloadFromPolygonIO(client *http.Client, u url.URL, res *structs.Aggregat
 		db.Check(err)
 	}
 	return err
-}
-
-// AggKafkaWriter writes the aggregates to Kafka
-func AggKafkaWriter(urls []*url.URL) error {
-	// use WaitGroup to make things more smooth with goroutines
-	var wg sync.WaitGroup
-
-	//urls = urls[27299+72598+319843+872323+139078+882295+701004:]
-
-	// create a buffer of the waitGroup, of the same length as urls
-	wg.Add(len(urls))
-
-	// Max allow 500 requests per second
-	prev := time.Now()
-	rateLimiter := ratelimit.New(200)
-
-	// Get Write client
-	writeConn := CreateKafkaWriterConn("agg")
-	defer writeConn.Close()
-
-	// Create ui progress bar, formatted
-	bar := progressbar.Default(int64(len(urls)))
-	defer bar.Close()
-
-	// Get the http client
-	httpClient := config2.GetHttpClient()
-
-	// Iterate over every url
-	for _, u := range urls {
-		// rate limit the requests
-		now := rateLimiter.Take()
-
-		// Create the goroutine
-		go KafkaWriter(context.Background(), httpClient, u, writeConn, &wg, bar)
-
-		// Rate limit the requests, so note the time
-		now.Sub(prev)
-		prev = now
-	}
-	// Wait for all the goroutines to finish
-	wg.Wait()
-
-	return nil
 }
 
 // ListAllBucketObjsS3 lists all the objects in a bucket
