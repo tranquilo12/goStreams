@@ -1,2 +1,3 @@
 docker/config/
 docker/timescaledb
+.idea
