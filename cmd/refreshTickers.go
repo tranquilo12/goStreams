@@ -41,7 +41,7 @@ to quickly create a Cobra application.`,
 		// get database conn
 		DBParams := structs.DBParams{}
 		err := config.SetDBParams(&DBParams, "ec2db")
-		db.Check(err)
+		db.CheckErr(err)
 
 		// Get the DB connection
 		postgresDB := db.GetPostgresDBConn(&DBParams)

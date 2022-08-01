@@ -19,7 +19,7 @@ import (
 func GetInfluxDBClient(withOptions bool) influxdb2.Client {
 	params := new(structs.InfluxDBStruct)
 	err := config.SetInfluxDBCred(params)
-	Check(err)
+	CheckErr(err)
 
 	if withOptions == true {
 		// Create HTTP client,
@@ -103,9 +103,9 @@ func GetAllTickersFromInfluxDB(client influxdb2.Client) []string {
 
 	// Execute the query
 	result, err := queryAPI.Query(context.Background(), query)
-	Check(err)
+	CheckErr(err)
 
-	// Check for errors
+	// CheckErr for errors
 	if err == nil {
 		for result.Next() {
 			r := result.Record().Values()["_value"].(string)
@@ -137,10 +137,10 @@ func DeleteFromInfluxDB(client influxdb2.Client, measurement string, from_ strin
 	// from and to time conversion
 	layout := "2006-01-02"
 	fromTime, err := time.Parse(layout, from_)
-	Check(err)
+	CheckErr(err)
 
 	toTime, err := time.Parse(layout, to_)
-	Check(err)
+	CheckErr(err)
 
 	// Delete the point
 	err = deleteAPI.Delete(
@@ -151,5 +151,5 @@ func DeleteFromInfluxDB(client influxdb2.Client, measurement string, from_ strin
 		toTime,
 		m,
 	)
-	Check(err)
+	CheckErr(err)
 }

@@ -6,24 +6,21 @@ require (
 	github.com/adjust/rmq/v3 v3.0.0
 	github.com/aws/aws-sdk-go-v2 v1.9.0
 	github.com/aws/aws-sdk-go-v2/config v1.3.0
-	github.com/aws/aws-sdk-go-v2/service/firehose v1.6.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.10.0
 	github.com/go-pg/pg/v10 v10.9.1
 	github.com/gomodule/redigo v1.8.8
 	github.com/influxdata/influxdb-client-go/v2 v2.3.1-0.20210518120617-5d1fff431040
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/pkg/profile v1.6.0
 	github.com/schollz/progressbar/v3 v3.8.0
 	github.com/segmentio/kafka-go v0.4.31
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.7.1
+	github.com/sv/kdbgo v0.20.0
 	go.uber.org/ratelimit v0.2.0
 	gopkg.in/ini.v1 v1.62.0
 )
 
 require (
-	github.com/VividCortex/ewma v1.2.0 // indirect
-	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
 	github.com/andres-erbsen/clock v0.0.0-20160526145045-9e14626cd129 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.2.1 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.1.1 // indirect
@@ -59,9 +56,7 @@ require (
 	github.com/spf13/jwalterweatherman v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
-	github.com/sv/kdbgo v0.20.0 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
-	github.com/vbauerster/mpb/v7 v7.4.2 // indirect
 	github.com/vmihailenco/bufpool v0.1.11 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.0 // indirect
 	github.com/vmihailenco/tagparser v0.1.2 // indirect

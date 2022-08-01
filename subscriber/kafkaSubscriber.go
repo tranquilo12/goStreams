@@ -26,7 +26,7 @@ const (
 func CreateKafkaReaderConn(topic string, groupID string) *kafka.Reader {
 	// Load User's home directory
 	dirname, err := os.UserHomeDir()
-	db.Check(err)
+	db.CheckErr(err)
 
 	// Load the client cert
 	serviceCertPath := filepath.Join(dirname, ".avn", "service.cert")
@@ -96,7 +96,7 @@ func WriteFromKafkaToInfluxDB(kafkaReader *kafka.Reader, influxDBClient influxdb
 		// Get the data from the message
 		v := structs.AggregatesBarsResults{}
 		err = json.Unmarshal(m.Value, &v)
-		db.Check(err)
+		db.CheckErr(err)
 
 		// Convert the data to influx points
 		p := influxdb2.NewPoint(
@@ -116,7 +116,7 @@ func WriteFromKafkaToInfluxDB(kafkaReader *kafka.Reader, influxDBClient influxdb
 
 		// Update the progress bar
 		err = bar.Add(1)
-		db.Check(err)
+		db.CheckErr(err)
 	}
 
 	if err := kafkaReader.Close(); err != nil {

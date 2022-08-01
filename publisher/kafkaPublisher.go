@@ -25,7 +25,7 @@ import (
 func CreateKafkaWriterConn(topic string) *kafka.Writer {
 	// Load User's home directory
 	dirname, err := os.UserHomeDir()
-	db.Check(err)
+	db.CheckErr(err)
 
 	// Load the client cert
 	serviceCertPath := filepath.Join(dirname, ".avn", "service.cert")
@@ -34,10 +34,10 @@ func CreateKafkaWriterConn(topic string) *kafka.Writer {
 
 	// Get the key and cert files
 	keypair, err := tls.LoadX509KeyPair(serviceCertPath, serviceKeyPath)
-	db.Check(err)
+	db.CheckErr(err)
 
 	caCert, err := ioutil.ReadFile(serviceCAPath)
-	db.Check(err)
+	db.CheckErr(err)
 
 	// Get the CA cert pool
 	caCertPool := x509.NewCertPool()
@@ -127,12 +127,12 @@ func KafkaWriter(
 	// Download the data from PolygonIO
 	var res structs.AggregatesBarsResponse
 	err := DownloadFromPolygonIO(httpClient, *url, &res)
-	db.Check(err)
+	db.CheckErr(err)
 
 	for _, v := range res.Results {
 		// Convert the data to influx points
 		val, err := json.Marshal(v)
-		db.Check(err)
+		db.CheckErr(err)
 
 		// Create the messages
 		messages = append(
@@ -147,7 +147,7 @@ func KafkaWriter(
 
 	// Write the messages to Kafka
 	err = kafkaWriter.WriteMessages(ctx, messages...)
-	db.Check(err)
+	db.CheckErr(err)
 
 	// Progress bar update
 	bar.Add(1)

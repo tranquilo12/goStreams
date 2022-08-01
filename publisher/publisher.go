@@ -49,7 +49,7 @@ func CreateAggKey(url string, forceInsertDate string, adjusted int) string {
 func DownloadFromPolygonIO(client *http.Client, u url.URL, res *structs.AggregatesBarsResponse) error {
 	// Create a new client
 	resp, err := client.Get(u.String())
-	db.Check(err)
+	db.CheckErr(err)
 
 	// Defer the closing of the body
 	defer resp.Body.Close()
@@ -57,7 +57,7 @@ func DownloadFromPolygonIO(client *http.Client, u url.URL, res *structs.Aggregat
 	// Decode the response
 	if resp.StatusCode == http.StatusOK {
 		err = json.NewDecoder(resp.Body).Decode(&res)
-		db.Check(err)
+		db.CheckErr(err)
 	}
 	return err
 }
@@ -69,7 +69,7 @@ func ListAllBucketObjsS3(bucket string, prefix string) *[]string {
 		config.WithSharedConfigProfile("default"),
 		config.WithRegion("eu-central-1"),
 	)
-	db.Check(err)
+	db.CheckErr(err)
 
 	client := s3.NewFromConfig(cfg)
 

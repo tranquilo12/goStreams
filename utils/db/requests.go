@@ -125,11 +125,11 @@ func GetAllTickersFromRedis(rPool *redis.Pool) []string {
 	// First, try and get the tickers from redis
 	//args := []interface{}{"allTickers"}
 	res, err := Get(rPool, "allTickers")
-	Check(err)
+	CheckErr(err)
 
 	//res := ProcessRedisCommand[[]byte](rPool, "GET", args, false, "bytes")
 	err = json.Unmarshal(res, &result)
-	Check(err)
+	CheckErr(err)
 
 	if result == nil {
 		apiKey := config.SetPolygonCred("other")
@@ -142,13 +142,13 @@ func GetAllTickersFromRedis(rPool *redis.Pool) []string {
 
 		// Get the results from the channel and put it into redis
 		err := PushTickerVxIntoRedis(Chan1, rPool)
-		Check(err)
+		CheckErr(err)
 
 		res, err := Get(rPool, "allTickers")
-		Check(err)
+		CheckErr(err)
 
 		err = json.Unmarshal(res, &result)
-		Check(err)
+		CheckErr(err)
 	}
 
 	return result

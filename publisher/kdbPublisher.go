@@ -10,7 +10,7 @@ import (
 func CreateKdbConn() *kdb.KDBConn {
 	// Create a new kdb connection
 	kdbConn, err := kdb.DialKDB("localhost", 5000, "")
-	db.Check(err)
+	db.CheckErr(err)
 
 	res, err := kdbConn.Call("til", kdb.Int(10))
 	if err != nil {

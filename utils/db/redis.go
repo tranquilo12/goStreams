@@ -99,11 +99,11 @@ func PushTickerVxIntoRedis(insertIntoRedis <-chan []structs.TickerVx, pool *redi
 
 	// Create an args that's an array of strings, and process the redis command.
 	res, err := json.Marshal(allTickers)
-	Check(err)
+	CheckErr(err)
 
 	//args := []interface{}{"allTickers", res}
 	err = Set(pool, "allTickers", res)
-	Check(err)
+	CheckErr(err)
 
 	//_ = ProcessRedisCommand[[]string](pool, "SET", args, false, "string")
 	return nil
@@ -126,11 +126,11 @@ func ProcessRedisCommand[T []string | []byte](
 
 	// Send the command to redis, can be GET, SET, etc.
 	err := rConn.Send(cmd, args...)
-	Check(err)
+	CheckErr(err)
 
 	// Flush the buffer, clears the output buffer
 	err = rConn.Flush()
-	Check(err)
+	CheckErr(err)
 
 	// Receive the value from redis, if the command is GET, and depending on the type,
 	// can be either []string or []byte
@@ -140,11 +140,11 @@ func ProcessRedisCommand[T []string | []byte](
 		switch retType {
 		case "string":
 			r, err := redis.Strings(rConn.Receive())
-			Check(err)
+			CheckErr(err)
 			res = any(r).(T)
 		default:
 			r, err := redis.Bytes(rConn.Receive())
-			Check(err)
+			CheckErr(err)
 			res = any(r).(T)
 		}
 	}
@@ -152,7 +152,7 @@ func ProcessRedisCommand[T []string | []byte](
 	// if deleteKey, then delete the key
 	if deleteKey {
 		err = rConn.Send("DEL", args)
-		Check(err)
+		CheckErr(err)
 	}
 
 	return res
