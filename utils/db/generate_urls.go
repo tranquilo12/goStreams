@@ -11,7 +11,7 @@ import (
 const (
 	aggsHost        = "api.polygon.io/v2/aggs"
 	tickerTypesHost = "api.polygon.io/v3/reference/types"
-	tickersVxHost   = "api.polygon.io/v3/reference/tickers"
+	tickersHost     = "api.polygon.io/v3/reference/tickers"
 	tickerNews2Host = "api.polygon.io/v3/reference/news"
 	//tickerDetailsHost = "api.polygon.io/v1/meta"
 	//dailyOpenCloseHost   = "api.polygon.io/v1/open-close"
@@ -147,9 +147,9 @@ func MakeTickerTypesUrl(apiKey string) *url.URL {
 	return p
 }
 
-// MakeTickerVxQuery A function that takes the API string and time, and generates an url.
-func MakeTickerVxQuery(apiKey string) *url.URL {
-	p, err := url.Parse("https://" + tickersVxHost)
+// MakeTickerURL A function that takes the API string and time, and generates an url.
+func MakeTickerURL(apiKey string) *url.URL {
+	p, err := url.Parse("https://" + tickersHost)
 	if err != nil {
 		fmt.Println(err)
 		panic(err)

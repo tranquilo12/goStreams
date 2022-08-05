@@ -57,7 +57,7 @@ to quickly create a Cobra application.`,
 
 		// Make all the Ticker Vx queries
 		fmt.Printf("-- Making all Ticker VX Queries...\n")
-		url := db.MakeTickerVxQuery(apiKey)
+		url := db.MakeTickerURL(apiKey)
 
 		// Push all the Ticker Vx queries to a channel
 		Chan1 := db.MakeAllTickersVxRequests(url)

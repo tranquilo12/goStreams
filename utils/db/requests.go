@@ -3,14 +3,28 @@ package db
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gomodule/redigo/redis"
+	"github.com/schollz/progressbar/v3"
 	"io"
-	"lightning/utils/config"
 	"lightning/utils/structs"
 	"net/http"
 	"net/url"
-	"strings"
 )
+
+func AddApiKeyToUrl(u string, apiKey string) *url.URL {
+	parsedUrl, err := url.Parse(u)
+	CheckErr(err)
+	q := parsedUrl.Query()
+	q.Add("apiKey", apiKey)
+	parsedUrl.RawQuery = q.Encode()
+	return parsedUrl
+}
+
+func GetAndCheckResponse(u *url.URL) *http.Response {
+	// Make the query
+	response, err := http.Get(u.String())
+	CheckErr(err)
+	return response
+}
 
 // MakeTickerTypesRequest makes a request to the ticker types endpoint
 func MakeTickerTypesRequest(apiKey string) *structs.TickerTypeResponse {
@@ -107,82 +121,6 @@ func MakeAllTickersVxRequests(u *url.URL) chan []structs.TickerVx {
 	return c
 }
 
-// GetAllTickersFromPolygonioDirectly is a function that gets all tickers from polygon.io, without the hassle of
-// using a mid-level cache system like redis.
-func GetAllTickersFromPolygonioDirectly() []string {
-	apiKey := config.SetPolygonCred("other")
-	u := MakeTickerVxQuery(apiKey)
-	Chan1 := MakeAllTickersVxRequests(u)
-	strResult := GetTickerVxs(Chan1)
-	strArrResults := strings.Split(strResult, ",")
-	return strArrResults
-}
-
-// GetAllTickersFromRedis returns a slice of strings of all the tickers in the redis database
-func GetAllTickersFromRedis(rPool *redis.Pool) []string {
-	var result []string
-
-	// First, try and get the tickers from redis
-	//args := []interface{}{"allTickers"}
-	res, err := Get(rPool, "allTickers")
-	CheckErr(err)
-
-	//res := ProcessRedisCommand[[]byte](rPool, "GET", args, false, "bytes")
-	err = json.Unmarshal(res, &result)
-	CheckErr(err)
-
-	if result == nil {
-		apiKey := config.SetPolygonCred("other")
-
-		// Create url that will be used to make the request
-		u := MakeTickerVxQuery(apiKey)
-
-		// Make the requests and push it to the channel Chan1
-		Chan1 := MakeAllTickersVxRequests(u)
-
-		// Get the results from the channel and put it into redis
-		err := PushTickerVxIntoRedis(Chan1, rPool)
-		CheckErr(err)
-
-		res, err := Get(rPool, "allTickers")
-		CheckErr(err)
-
-		err = json.Unmarshal(res, &result)
-		CheckErr(err)
-	}
-
-	return result
-}
-
-// GetDifferenceBtwTickersInMemAndS3 returns a slice of strings of tickers that are in the S3 bucket but not in memory
-func GetDifferenceBtwTickersInMemAndS3(slice1 []string, slice2 []string) []string {
-	var diff []string
-
-	// Loop two times, first to find slice1 strings not in slice2,
-	// second loop to find slice2 strings not in slice1
-	for i := 0; i < 2; i++ {
-		for _, s1 := range slice1 {
-			found := false
-			for _, s2 := range slice2 {
-				if s1 == s2 {
-					found = true
-					break
-				}
-			}
-			// String not found. We add it to return slice
-			if !found {
-				diff = append(diff, s1)
-			}
-		}
-		// Swap the slices, only if it was the first loop
-		if i == 0 {
-			slice1, slice2 = slice2, slice1
-		}
-	}
-
-	return diff
-}
-
 // MakeAllTickerNews2Requests makes all the requests to polygon.io to get all the news for a ticker
 func MakeAllTickerNews2Requests(u *url.URL) chan []structs.TickerNews2 {
 	var News2Response *structs.TickerNews2Response
@@ -202,7 +140,7 @@ func MakeAllTickerNews2Requests(u *url.URL) chan []structs.TickerNews2 {
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-
+			panic(err)
 		}
 	}(response.Body)
 
@@ -260,4 +198,49 @@ func MakeAllTickerNews2Requests(u *url.URL) chan []structs.TickerNews2 {
 	}
 	close(c)
 	return c
+}
+
+// FetchAllTickers recursively fetches all tickers and pushes it to QuestDB
+func FetchAllTickers(apiKey string) chan structs.TickersStruct {
+	// Make a channel that will store all the results, of the flattened type
+	Tickerchan := make(chan structs.TickersStruct, 30000)
+
+	// Get a progress bar
+	bar := progressbar.Default(-1, "Fetching tickers...")
+
+	// Get the ticker URL
+	parsedURL := MakeTickerURL(apiKey)
+
+	// Get and clean response
+	response := GetAndCheckResponse(parsedURL)
+
+	// Push response to chan and make another request using the "next_url" and apiKey, until next_url is not available.
+	for {
+		if response.StatusCode == 200 {
+			// Decode to the structs.TickersStruct var
+			ticker := structs.TickersStruct{}
+			err := json.NewDecoder(response.Body).Decode(&ticker)
+			CheckErr(err)
+
+			// Push to channel
+			Tickerchan <- ticker
+
+			// Check if everything is good, and if we have a next url
+			if ticker.NextURL != "" {
+				nextURL := AddApiKeyToUrl(ticker.NextURL, apiKey)
+				response = GetAndCheckResponse(nextURL)
+			} else {
+				break
+			}
+		} else {
+			break
+		}
+
+		// Update the progress bar
+		err := bar.Add(1)
+		CheckErr(err)
+	}
+	close(Tickerchan)
+
+	return Tickerchan
 }
