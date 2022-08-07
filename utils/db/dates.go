@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-const TimeLayout = "2006-01-02"
-
 // GetNewDatePair gets a new Date Pair, with the Interval already initialized.
 func GetNewDatePair(start time.Time, end time.Time, target time.Time) structs.DatePairs {
 	// If we're intitiating a new DatePair, we don't have an end, just a target

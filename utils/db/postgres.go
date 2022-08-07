@@ -6,10 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"lightning/utils/config"
 	"lightning/utils/structs"
-	"time"
 )
-
-const dateFmt = "2006-01-02"
 
 // ReadPostgresDBParamsFromCMD A function that reads in parameters related to the postgres DB.
 func ReadPostgresDBParamsFromCMD(cmd *cobra.Command) structs.DBParams {
@@ -66,49 +63,13 @@ func ReadAggregateParamsFromCMD(cmd *cobra.Command) config.AggCliParams {
 		to_ = "2021-03-01"
 	}
 
-	// make multiplier 1 always
-	multiplier, _ := cmd.Flags().GetInt("mult")
-	if multiplier == 2 {
-		multiplier = 1
-	}
-
-	limit, _ := cmd.Flags().GetInt("limit")
-	if limit < 0 {
-		limit = 50000
-	}
-
-	useRedis, _ := cmd.Flags().GetInt("useRedis")
-	useRedis = 1
-
 	adjusted, _ := cmd.Flags().GetInt("adjusted")
-	adjusted = 1
-
-	withLinearDates, _ := cmd.Flags().GetInt("withLinearDates")
-	withLinearDates = 1
-
-	forceInsertDate, _ := cmd.Flags().GetString("forceInsertDate")
-	if forceInsertDate == "" {
-		currDate := time.Now()
-		forceInsertDate = currDate.Format(dateFmt)
-	}
-
-	gap, _ := cmd.Flags().GetInt("gap")
-	if gap%24 != 0 {
-		err := fmt.Errorf("gap must be a multiple of 24")
-		panic(err)
-	}
 
 	res := config.AggCliParams{
-		Timespan:        timespan,
-		From:            from_,
-		To:              to_,
-		Multiplier:      multiplier,
-		Limit:           limit,
-		WithLinearDates: withLinearDates,
-		ForceInsertDate: forceInsertDate,
-		UseRedis:        useRedis,
-		Adjusted:        adjusted,
-		Gap:             gap,
+		Timespan: timespan,
+		From:     from_,
+		To:       to_,
+		Adjusted: adjusted,
 	}
 
 	return res

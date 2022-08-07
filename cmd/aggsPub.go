@@ -55,9 +55,7 @@ var aggsPubCmd = &cobra.Command{
 			aggParams.From,
 			aggParams.To,
 			apiKey,
-			aggParams.WithLinearDates,
 			aggParams.Adjusted,
-			aggParams.Gap,
 		)
 
 		// Download all data and push the data into kafka
@@ -73,11 +71,6 @@ func init() {
 	aggsPubCmd.Flags().StringP("timespan", "T", "", "Timespan (minute, hour, day...)")
 	aggsPubCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")
 	aggsPubCmd.Flags().StringP("to", "t", "", "To which date? (format = %Y-%m-%d)")
-	aggsPubCmd.Flags().IntP("mult", "m", 2, "Multiplier to use with Timespan")
-	aggsPubCmd.Flags().IntP("withLinearDates", "l", 1, "With linear dates? (1/0)")
 	aggsPubCmd.Flags().IntP("adjusted", "a", 1, "Adjusted? (1/0)")
-	aggsPubCmd.Flags().IntP("gap", "g", 24, "Gap?")
-	aggsPubCmd.Flags().StringP("forceInsertDate", "i", "", "Force insert date?")
-	aggsPubCmd.Flags().IntP("useRedis", "r", 1, "Use redis?(1/0)")
 	aggsPubCmd.Flags().IntP("limit", "L", 50000, "Limit?")
 }

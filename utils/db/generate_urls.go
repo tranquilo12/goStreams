@@ -2,10 +2,8 @@ package db
 
 import (
 	"fmt"
-	"lightning/utils/structs"
 	"net/url"
 	"path"
-	"time"
 )
 
 const (
@@ -13,56 +11,14 @@ const (
 	tickerTypesHost = "api.polygon.io/v3/reference/types"
 	tickersHost     = "api.polygon.io/v3/reference/tickers"
 	tickerNews2Host = "api.polygon.io/v3/reference/news"
+
+	//TimeLayout for every time layout
+	TimeLayout = "2006-01-02" // go uses this date as a format specifier
+
 	//tickerDetailsHost = "api.polygon.io/v1/meta"
 	//dailyOpenCloseHost   = "api.polygon.io/v1/open-close"
 	//groupedDailyBarsHost = "api.polygon.io/v2/aggs/grouped/locale/us/market/stocks"
-	layout = "2006-01-02" // go uses this date as a format specifier
 )
-
-// CreateLinearDatePairs creates a slice of arrays [[date, date+1], [date+1, date+2]...]
-// gap has been added to the params, so the gap between the dates is defined by the gap * time.Hour
-// So it has to be a multiple of 24
-func CreateLinearDatePairs(from string, to string, gap int) []structs.StartEndDateStruct {
-	// Create a slice of structs
-	startDate, _ := time.Parse("2006-01-02", from)
-	endDate, _ := time.Parse("2006-01-02", to)
-
-	// Create the dateList slice
-	var dateList []structs.StartEndDateStruct
-
-	// Only allow for gaps that are multiples of 24
-	if gap%24 == 0 {
-		// Instantiate the prevDate and prevDatePlusOne
-		// For 50K minutes between time gaps, gap = 816
-		gapHours := time.Duration(gap) * time.Hour
-		prevDate := startDate
-		prevDatePlusOne := prevDate.Add(gapHours)
-
-		for {
-			// If the next date is after the end date, break
-			if prevDatePlusOne.Before(endDate) {
-				// Make sure start and end are well-defined
-				dp := structs.StartEndDateStruct{
-					Start: prevDate.Format(layout),
-					End:   prevDatePlusOne.Format(layout),
-				}
-				dateList = append(dateList, dp)
-
-				// make sure prevDate is set again
-				prevDate = prevDatePlusOne
-				prevDatePlusOne = prevDatePlusOne.Add(gapHours)
-			} else {
-				// The next date exceeds the end date, so break
-				break
-			}
-		}
-	} else {
-		// The gap is not a multiple of 24, so return an empty slice (dateList)
-		fmt.Println("Gap must be a multiple of 24")
-	}
-
-	return dateList
-}
 
 // MakeStocksAggUrl A function that makes urls like: /v2/aggs/ticker/{stocksTicker}/range/{multiplier}/{timespan}/{from}/{to}
 func MakeStocksAggUrl(
@@ -75,10 +31,7 @@ func MakeStocksAggUrl(
 	adjusted int,
 ) *url.URL {
 	p, err := url.Parse("https://" + aggsHost)
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
-	}
+	CheckErr(err)
 
 	// Make the entire path
 	p.Path = path.Join(p.Path, "ticker", stocksTicker, "range", multiplier, timespan, from_, to_)
@@ -104,30 +57,36 @@ func MakeAllStocksAggsUrls(
 	from_ string,
 	to_ string,
 	apiKey string,
-	withLinearSteps int,
 	adjusted int,
-	stepSize int,
 ) []*url.URL {
 	// no need for channels in this yet, just a quick function that makes all the queries and sends it back
-	fmt.Println("Making all urls...")
+	fmt.Println("-	Making all urls...")
 
+	// Just a slice that will hold all the results
 	var urls []*url.URL
-	if withLinearSteps == 1 {
-		datePairs := CreateLinearDatePairs(from_, to_, stepSize)
-		for _, ticker := range tickers {
-			for _, dp := range datePairs {
-				u := MakeStocksAggUrl(ticker, "1", timespan, dp.Start, dp.End, apiKey, adjusted)
-				urls = append(urls, u)
-			}
-		}
-	} else {
-		for _, ticker := range tickers {
-			u := MakeStocksAggUrl(ticker, "1", timespan, from_, to_, apiKey, adjusted)
-			urls = append(urls, u)
+
+	// First create all the date pairs required
+	datePairs := CreateDatePairs(from_, to_)
+
+	// Now for each ticker, and for each of the datePairs above, make urls.
+	for _, ticker := range tickers {
+		for _, dp := range *datePairs {
+			urls = append(urls,
+				MakeStocksAggUrl(
+					ticker,
+					"1",
+					timespan,
+					dp.Start.Format(TimeLayout),
+					dp.End.Format(TimeLayout),
+					apiKey,
+					adjusted,
+				),
+			)
 		}
 	}
 
-	fmt.Println("Done...")
+	// Just signal that it's done.
+	fmt.Println("-	Done...")
 	return urls
 }
 
@@ -165,8 +124,8 @@ func MakeTickerURL(apiKey string) *url.URL {
 	return p
 }
 
-// MakeTickerNews2Query A function that takes in the apikey + page number to make urls.
-func MakeTickerNews2Query(apiKey string, ticker string, from_ string) *url.URL {
+// MakeTickerNews2URL A function that takes in the apikey + page number to make urls.
+func MakeTickerNews2URL(apiKey string, ticker string, from_ string) *url.URL {
 	p, err := url.Parse("https://" + tickerNews2Host)
 	if err != nil {
 		fmt.Println(err)

@@ -60,7 +60,7 @@ to quickly create a Cobra application.`,
 
 		bar := progressbar.Default(int64(len(newsParams.Tickers)))
 		for _, ticker := range newsParams.Tickers {
-			url := db.MakeTickerNews2Query(apiKey, ticker, newsParams.From)
+			url := db.MakeTickerNews2URL(apiKey, ticker, newsParams.From)
 			Chan1 := db.MakeAllTickerNews2Requests(url)
 
 			err = db.PushTickerNews2IntoDB(Chan1, postgresDB)

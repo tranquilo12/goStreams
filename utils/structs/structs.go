@@ -852,6 +852,13 @@ type NewConsumerStruct struct {
 	DBConn          *pg.Conn
 }
 
+// NewAggStruct for just questDB
+type NewAggStruct struct {
+	AggBarsResponse AggregatesBarsResponse
+	Timespan        string
+	Multiplier      int
+}
+
 // NewBatchConsumerStruct Used by Consume
 type NewBatchConsumerStruct struct {
 	AggBarsResponse []AggregatesBarsResponse
