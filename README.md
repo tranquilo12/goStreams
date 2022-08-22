@@ -5,68 +5,49 @@
 .
 ├── LICENSE
 ├── README.md
-├── backfill_polygonio.sh
+├── main.go
 ├── cmd
 │   ├── aggsPub.go
-│   ├── aggsSub.go
+│   ├── aggsSub2.go
 │   ├── createTables.go
+│   ├── deleteFromDB.go
 │   ├── deleteObjs.go
 │   ├── refreshTickers.go
+│   ├── questdbInsertAggs.go
+│   ├── questdbRefreshTickers.go
 │   ├── root.go
 │   ├── tickerNews.go
 │   └── tickerTypes.go
-├── config.ini
-├── docker
-│   ├── config
-│   │   ├── config.env
-│   │   ├── grafana
-│   │   ├── pgbouncer
-│   │   ├── postgres
-│   │   ├── provisioning
-│   │   ├── rabbitmq
-│   │   └── redis
-│   ├── docker-compose.yml
-│   ├── prom.env
-│   ├── prometheus.yaml
-│   └── timescaledb
-│       └── data
-├── go.mod
-├── go.sum
-├── main.go
-├── make_ssh_tunnel.sh
+├── extras
+│   ├── make_ssh_tunnel.sh
+│   └── tmux-sessions.sh
 ├── subscriber
 │   └── subscriber.go
+│   └── kafkaSubscriber.go
 ├── publisher
 │   └── publisher.go
-├── tmux-sessions.sh
-├── urlErrors.log
+│   └── kafkaPublisher.go
 └── utils
     ├── config
     │   ├── config.go
     │   └── equities_list.csv
     ├── db
     │   ├── create_tables.go
+    │   ├── dates.go
     │   ├── generate_urls.go
     │   ├── inserts.go
     │   ├── postgres.go
+    │   ├── questDB.go
     │   ├── redis.go
     │   └── requests.go
     ├── mocks
     │   └── client.go
-    ├── responses
-    │   ├── daily_open_close.json
-    │   ├── grouped_daily_bars.json
-    │   ├── responses.json
-    │   ├── snapshot_all_tickers.json
-    │   ├── snapshot_gainers_losers.json
-    │   ├── snapshot_tickers.json
-    │   └── tickers_response.json
     └── structs
         └── structs.go
 ```
 
 ## Docker Setup and Usage
-To remain OS agnostic, postgres, pgbouncer and Redis are all docker containers. 
+To remain OS-agnostic, postgres, pgbouncer and Redis are all docker containers. 
 
 - Path to `docker-compose.yaml` - `./docker/docker-compose.yaml`
 - `docker-compose.yaml` contains: 
