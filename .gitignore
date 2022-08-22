@@ -3,3 +3,4 @@ docker/timescaledb
 .idea
 *.log
 *.json
+config.ini
