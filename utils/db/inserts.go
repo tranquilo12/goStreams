@@ -5,7 +5,6 @@ import (
 	"github.com/go-pg/pg/v10"
 	"github.com/schollz/progressbar/v3"
 	"lightning/utils/structs"
-	"strings"
 	"sync"
 )
 
@@ -23,22 +22,6 @@ func PushTickerTypesIntoDB(insertIntoDB *structs.TickerTypeResponse, db *pg.DB) 
 	}
 	println("Inserted all TickerTypes into the DB...")
 	return nil
-}
-
-func GetTickerVxs(insertIntoRedis <-chan []structs.TickerVx) string {
-	// use WaitGroup to make things more smooth with channels
-	var allTickers []string
-
-	// for each insertIntoDB that follows...spin off another go routine
-	for val, ok := <-insertIntoRedis; ok; val, ok = <-insertIntoRedis {
-		if ok && val != nil {
-			for _, v := range val {
-				allTickers = append(allTickers, v.Ticker)
-			}
-		}
-	}
-	allTickersStr := strings.Join(allTickers[:], ",")
-	return allTickersStr
 }
 
 func PushTickerNews2IntoDB(insertIntoDB <-chan []structs.TickerNews2, db *pg.DB) error {

@@ -201,12 +201,9 @@ func MakeAllTickerNews2Requests(u *url.URL) chan []structs.TickerNews2 {
 }
 
 // FetchAllTickers recursively fetches all tickers and pushes it to QuestDB
-func FetchAllTickers(apiKey string) chan structs.TickersStruct {
-	// Make a channel that will store all the results, of the flattened type
-	Tickerchan := make(chan structs.TickersStruct, 30000)
-
-	// Get a progress bar
-	bar := progressbar.Default(-1, "Fetching tickers...")
+func FetchAllTickers(apiKey string, Tickerchan chan structs.TickersStruct) {
+	// Get a progress bar2
+	bar2 := progressbar.Default(30, "Fetching tickers...")
 
 	// Get the ticker URL
 	parsedURL := MakeTickerURL(apiKey)
@@ -230,17 +227,14 @@ func FetchAllTickers(apiKey string) chan structs.TickersStruct {
 				nextURL := AddApiKeyToUrl(ticker.NextURL, apiKey)
 				response = GetAndCheckResponse(nextURL)
 			} else {
-				break
+				return
 			}
 		} else {
-			break
+			return
 		}
 
-		// Update the progress bar
-		err := bar.Add(1)
+		// Update the progress bar2
+		err := bar2.Add(1)
 		CheckErr(err)
 	}
-	close(Tickerchan)
-
-	return Tickerchan
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/schollz/progressbar/v3"
 	"lightning/utils/config"
 	"lightning/utils/db"
+	"lightning/utils/structs"
 
 	"github.com/spf13/cobra"
 )
@@ -24,31 +25,32 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("-	questdbRefreshTickers called...")
 
-		// Get the context background
-		ctx := context.Background()
+		// Get the context To-do (empty context)
+		ctx := context.TODO()
 
 		// Get a progress bar
-		bar := progressbar.Default(-1, "Inserting to questDB...")
-
-		// Connect to QDB and get sender
-		sender, _ := db.QDBConnectILP(ctx)
-		defer sender.Close()
+		bar := progressbar.Default(30, "Inserting into qdb...")
 
 		// Get the apiKey from the config.ini file
 		apiKey := config.SetPolygonCred("loving_aryabhata_key")
 
-		// Get the channel that does all the fetching
-		TickerChan := db.FetchAllTickers(apiKey)
+		// Make a channel that will store all the results, of the flattened type
+		Tickerchan := make(chan structs.TickersStruct, 35)
 
 		// For each of the tickers, send it to the db
-		for t := range TickerChan {
-			db.QDBInsertTickersILP(ctx, sender, t)
+		go func() {
+			for t := range Tickerchan {
+				db.QDBInsertTickersILP(ctx, t)
 
-			// Update the progress bar
-			err := bar.Add(1)
-			db.CheckErr(err)
-		}
+				// Update the progress bar
+				err := bar.Add(1)
+				db.CheckErr(err)
+			}
+		}()
 
+		// Get the channel that does all the fetching
+		db.FetchAllTickers(apiKey, Tickerchan)
+		close(Tickerchan)
 	},
 }
 

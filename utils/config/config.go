@@ -11,8 +11,6 @@ import (
 	"time"
 )
 
-//const configPath = "/Users/shriramsunder/GolandProjects/goStreams/config.ini"
-
 // AggCliParams Struct for parsing cli params
 type AggCliParams struct {
 	Timespan        string
@@ -73,17 +71,6 @@ func SetDBParams(params *structs.DBParams, section string) error {
 	return err
 }
 
-// GetElasticCacheEndpoint Function that reads the config.ini file within the directory, setting the Elastic cache endpoint.
-func GetElasticCacheEndpoint(section string) string {
-	configPath := getConfigPath()
-	config, err := ini.Load(configPath)
-	Check(err)
-
-	section = strings.ToUpper(section)
-	endpoint := config.Section(section).Key("primaryEndpoint").String()
-	return endpoint
-}
-
 // SetPolygonCred Function that reads the config.ini file within the directory, and returns the API Key.
 // param user has options 'me' and 'other'.
 func SetPolygonCred(user string) string {
@@ -107,20 +94,6 @@ func SetPolygonCred(user string) string {
 	return appId
 }
 
-// SetRedisCred Function that reads the config.ini file within the directory, setting the Redis db parameters.
-func SetRedisCred(params *RedisParams) error {
-	configPath := getConfigPath()
-	config, err := ini.Load(configPath)
-	Check(err)
-
-	params.Host = config.Section("REDIS").Key("host").String()
-	params.Port = config.Section("REDIS").Key("port").String()
-	params.Password = config.Section("REDIS").Key("password").String()
-	params.Db = config.Section("REDIS").Key("db").String()
-	params.SocketTimeout = config.Section("REDIS").Key("socket_timeout").String()
-	return err
-}
-
 // SetInfluxDBCred Function that reads the config.ini file within the directory, setting the Influx db parameters.
 func SetInfluxDBCred(params *structs.InfluxDBStruct) error {
 	configPath := getConfigPath()
@@ -138,7 +111,7 @@ func SetInfluxDBCred(params *structs.InfluxDBStruct) error {
 
 // GetHttpClient Get a modified http client with the correct timeout.
 func GetHttpClient() *http.Client {
-	timeout := time.Duration(900 * time.Second)
+	timeout := 900 * time.Second
 
 	dialer := &net.Dialer{
 		Timeout:   timeout,
