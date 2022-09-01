@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/spf13/cobra"
+	"lightning/publisher"
 	"lightning/utils/config"
 	"lightning/utils/db"
 )
@@ -45,7 +46,7 @@ to quickly create a Cobra application.`,
 		)
 
 		// Push into questDB
-		db.QDBPushAllAggIntoDB(ctx, urls, qdbAggParams.Timespan, qdbAggParams.Multiplier)
+		publisher.QDBPushAllAggIntoDB(ctx, urls, qdbAggParams.Timespan, qdbAggParams.Multiplier)
 	},
 }
 

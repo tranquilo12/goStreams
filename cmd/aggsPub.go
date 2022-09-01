@@ -17,11 +17,18 @@ limitations under the License.
 */
 
 import (
+	"context"
+	"flag"
 	"fmt"
 	"github.com/spf13/cobra"
 	"lightning/publisher"
 	"lightning/utils/config"
 	"lightning/utils/db"
+	"log"
+	"net/http"
+	_ "net/http/pprof"
+	"os"
+	"runtime/pprof"
 )
 
 // aggsPubCmd represents the aggs command
@@ -34,7 +41,26 @@ var aggsPubCmd = &cobra.Command{
 		interact with the Kafka topic.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("aggsSub called")
+		var memprofile = flag.String("memprofile", "", "write memory profile to this file")
+		if *memprofile != "" {
+			f, err := os.Create(*memprofile)
+			if err != nil {
+				fmt.Println(err)
+			}
+			err = pprof.WriteHeapProfile(f)
+			if err != nil {
+				return
+			}
+			f.Close()
+			return
+		}
+
+		go func() {
+			log.Println(http.ListenAndServe("localhost:6060", nil))
+		}()
+
+		fmt.Println("aggsPub called")
+		ctx := context.TODO()
 
 		// Get agg parameters from cli
 		aggParams := db.ReadAggregateParamsFromCMD(cmd)
@@ -42,11 +68,8 @@ var aggsPubCmd = &cobra.Command{
 		// Get the apiKey from the config.ini file
 		apiKey := config.SetPolygonCred("loving_aryabhata_key")
 
-		fmt.Println("Getting influxDB client...")
-		influxDBClient := db.GetInfluxDBClient(true)
-
-		// Get all the tickers from the redis db
-		tickers := db.GetAllTickersFromInfluxDB(influxDBClient)
+		// Now get all the tickers from QDB
+		tickers := db.QDBFetchUniqueTickersPG(ctx)
 
 		//Make all urls from the tickers
 		urls := db.MakeAllStocksAggsUrls(
@@ -59,7 +82,7 @@ var aggsPubCmd = &cobra.Command{
 		)
 
 		// Download all data and push the data into kafka
-		err := publisher.AggKafkaWriter(urls)
+		err := publisher.AggKafkaWriter(urls, "aggs")
 		db.CheckErr(err)
 	},
 }
