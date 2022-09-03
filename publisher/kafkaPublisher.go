@@ -73,47 +73,6 @@ func CreateKafkaWriterConn(topic string) *kafka.Writer {
 	return w
 }
 
-//// CreateKafkaWriterAws For everything related to creating a connection to aws
-//func CreateKafkaWriterAws(topic string) *kafka.Writer {
-//	// Load User's home directory
-//	dirname, err := os.UserHomeDir()
-//	db.CheckErr(err)
-//
-//	// Load the client cert
-//	serviceCAPath := filepath.Join(dirname, ".aws", "AWSCertificate.pem")
-//	caCert, err := ioutil.ReadFile(serviceCAPath)
-//	db.CheckErr(err)
-//
-//	// Get the CA cert pool
-//	caCertPool := x509.NewCertPool()
-//	ok := caCertPool.AppendCertsFromPEM(caCert)
-//	if !ok {
-//		log.Println(err)
-//	}
-//
-//	// Create the tls config
-//	//tlsConfig := &tls.Config{
-//	//	RootCAs: caCertPool,
-//	//}
-//
-//	w := kafka.Writer{
-//		Topic: topic,
-//		Addr: kafka.TCP(
-//			"b-3.lightningclusterfinal.9iviow.c7.kafka.us-east-2.amazonaws.com:9092",
-//			"b-2.lightningclusterfinal.9iviow.c7.kafka.us-east-2.amazonaws.com:9092",
-//			"b-1.lightningclusterfinal.9iviow.c7.kafka.us-east-2.amazonaws.com:9092",
-//		),
-//		Balancer:               &kafka.LeastBytes{},
-//		AllowAutoTopicCreation: true,
-//		Compression:            kafka.Lz4,
-//		RequiredAcks:           kafka.RequireOne,
-//		Transport:              &kafka.Transport{TLS: &tls.Config{InsecureSkipVerify: true}},
-//		WriteTimeout:           10 * time.Second,
-//		Async:                  true,
-//	}
-//	return &w
-//}
-
 // AggKafkaWriter writes the aggregates to Kafka
 func AggKafkaWriter(urls []*url.URL, topic string) error {
 	// use WaitGroup to make things more smooth with goroutines

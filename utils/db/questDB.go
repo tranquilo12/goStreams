@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"github.com/jackc/pgx/v4"
 	qdb "github.com/questdb/go-questdb-client"
 	"lightning/utils/structs"
@@ -48,40 +47,6 @@ func QDBInsertTickersILP(ctx context.Context, ticker structs.TickersStruct) {
 
 	// Close the sender here
 	sender.Close()
-}
-
-// QDBCreateAggTable For just creating the base agg table
-func QDBCreateAggTable(ctx context.Context) {
-	println("-	Creating Aggregates table and constraints...")
-	conn := QDBConnectPG(ctx)
-	defer conn.Close(ctx)
-
-	tx, err := conn.BeginTx(ctx, pgx.TxOptions{})
-	CheckErr(err)
-
-	// Create a table, using text-based query
-	_, err = tx.Exec(ctx,
-		"CREATE TABLE IF NOT EXISTS aggregates ("+
-			"ticker SYMBOL, timespan SYMBOL, multiplier SYMBOL, timestamp TIMESTAMP, "+
-			"open DOUBLE PRECISION, high DOUBLE PRECISION, low DOUBLE PRECISION, close DOUBLE PRECISION, volume DOUBLE PRECISION,"+
-			"vw DOUBLE PRECISION, n INT), "+
-			"index(ticker) timestamp(timestamp);",
-	)
-	CheckErr(err)
-
-	if err := tx.Commit(ctx); err != nil {
-		fmt.Printf("Failed to commit: %v\n", err)
-	}
-
-	//// Create the constraint here.
-	//_, err = tx.Exec(ctx, "ALTER TABLE aggregates ALTER COLUMN ticker ADD INDEX;")
-	//CheckErr(err)
-	//
-	//if err := tx.Commit(ctx); err != nil {
-	//	fmt.Printf("Failed to commit: %v\n", err)
-	//}
-
-	println("-	Done..")
 }
 
 // QDBFetchUniqueTickersPG just takes whichever query that requests data and returns the result

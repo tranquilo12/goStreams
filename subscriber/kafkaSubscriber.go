@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	qdb "github.com/questdb/go-questdb-client"
 	"github.com/schollz/progressbar/v3"
 	"github.com/segmentio/kafka-go"
@@ -74,54 +73,6 @@ func CreateKafkaReaderConn(topic string) *kafka.Reader {
 	})
 	return r
 }
-
-//// CreateKafkaReaderConnAws For everything related to creating a connection to aws
-//func CreateKafkaReaderConnAws(topic string) *kafka.Reader {
-//	// Load User's home directory
-//	dirname, err := os.UserHomeDir()
-//	db.CheckErr(err)
-//
-//	// Load the client cert
-//	serviceCAPath := filepath.Join(dirname, ".aws", "AWSCertificate.pem")
-//	caCert, err := ioutil.ReadFile(serviceCAPath)
-//	db.CheckErr(err)
-//
-//	// Get the CA cert pool
-//	caCertPool := x509.NewCertPool()
-//	ok := caCertPool.AppendCertsFromPEM(caCert)
-//	if !ok {
-//		log.Println(err)
-//	}
-//
-//	// Create the tls config
-//	//tlsConfig := &tls.Config{
-//	//	RootCAs: caCertPool,
-//	//}
-//
-//	// Get a new dialer
-//	dialer := &kafka.Dialer{
-//		Timeout: 90 * time.Second,
-//		//TLS:       tlsConfig,
-//		DualStack: true,
-//	}
-//
-//	// Create the reader
-//	r := kafka.NewReader(kafka.ReaderConfig{
-//		Brokers: []string{
-//			"b-3.lightningclusterfinal.9iviow.c7.kafka.us-east-2.amazonaws.com:9092",
-//			"b-2.lightningclusterfinal.9iviow.c7.kafka.us-east-2.amazonaws.com:9092",
-//			"b-1.lightningclusterfinal.9iviow.c7.kafka.us-east-2.amazonaws.com:9092",
-//		},
-//		Topic:          topic,
-//		Dialer:         dialer,
-//		Partition:      0,
-//		MinBytes:       batchSize, //
-//		MaxBytes:       batchSize, //
-//		CommitInterval: time.Second * 10,
-//	})
-//
-//	return r
-//}
 
 // WriteFromKafkaToQuestDB writes data from kafka to questdb
 func WriteFromKafkaToQuestDB(topic string, urls []*url.URL) {
@@ -209,56 +160,4 @@ func WriteFromKafkaToQuestDB(topic string, urls []*url.URL) {
 	// Wait for the progress bar to finish
 	_ = bar.Finish()
 	bar.Close()
-}
-
-// WriteFromKafkaToInfluxDB writes the data from kafka to influxdb
-func WriteFromKafkaToInfluxDB(kafkaReader *kafka.Reader, influxDBClient influxdb2.Client) {
-	// Get Write influxDBClient
-	writeAPI := influxDBClient.WriteAPI("lightning", "Lightning")
-	defer influxDBClient.Close()
-
-	// Get a progress bar
-	bar := progressbar.Default(-1)
-
-	for {
-		// Get the message
-		m, err := kafkaReader.ReadMessage(context.Background())
-		if err != nil {
-			log.Println("Error reading message: ", err)
-			break
-		}
-
-		// Get the ticker from the message
-		ticker := string(m.Key)
-
-		// Get the data from the message
-		v := structs.AggregatesBarsResults{}
-		err = json.Unmarshal(m.Value, &v)
-		db.CheckErr(err)
-
-		// Convert the data to influx points
-		p := influxdb2.NewPoint(
-			"aggregates",
-			map[string]string{"ticker": ticker},
-			map[string]interface{}{
-				"open": v.O, "high": v.H, "low": v.L, "close": v.C, "vWap": v.Vw, "volume": v.V,
-			},
-			time.Unix(int64(v.T)/1000, 0),
-		)
-
-		// Write messages to influxdb
-		writeAPI.WritePoint(p)
-
-		// Flush write API
-		writeAPI.Flush()
-
-		// Update the progress bar
-		err = bar.Add(1)
-		db.CheckErr(err)
-	}
-
-	if err := kafkaReader.Close(); err != nil {
-		log.Fatal("failed to close kafkaReader:", err)
-	}
-
 }
