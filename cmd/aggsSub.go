@@ -23,7 +23,6 @@ import (
 	_ "github.com/segmentio/kafka-go/snappy"
 	"github.com/spf13/cobra"
 	"lightning/subscriber"
-	"lightning/utils/config"
 	"lightning/utils/db"
 )
 
@@ -38,24 +37,8 @@ var aggsSubCmd = &cobra.Command{
 		fmt.Println("aggsSub called")
 		ctx := context.TODO()
 
-		// Get agg parameters from cli
-		aggParams := db.ReadAggregateParamsFromCMD(cmd)
-
-		// Get the apiKey from the config.ini file
-		apiKey := config.SetPolygonCred("loving_aryabhata_key")
-
-		// Now get all the tickers from QDB
-		tickers := db.QDBFetchUniqueTickersPG(ctx)
-
-		//Make all urls from the tickers
-		urls := db.MakeAllStocksAggsUrls(
-			tickers,
-			aggParams.Timespan,
-			aggParams.From,
-			aggParams.To,
-			apiKey,
-			aggParams.Adjusted,
-		)
+		// Fetch all urls that have not been pulled yet
+		urls := db.QDBFetchUrls(ctx)
 
 		fmt.Println("-	Starting to read from Kafka topic and pushing to QuestDB...")
 		subscriber.WriteFromKafkaToQuestDB("aggs", urls)

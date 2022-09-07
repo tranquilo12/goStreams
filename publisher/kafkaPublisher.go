@@ -154,6 +154,9 @@ func KafkaWriter(
 	err = kafkaWriter.WriteMessages(ctx, messages...)
 	db.CheckErr(err)
 
+	// Update the urls database that this url is completed
+	//db.QDBUpdateUrlPG(ctx, url)
+
 	// Progress bar update
 	bar.Add(1)
 }
@@ -210,9 +213,6 @@ func QDBPushAllAggIntoDB(ctx context.Context, urls []*url.URL, timespan string, 
 	var wg sync.WaitGroup
 	wg.Add(len(urls))
 
-	// Done channel
-	var doneCh chan bool
-
 	// Max 300 requests per second
 	prev := time.Now()
 	rateLimiter := ratelimit.New(300)
@@ -222,23 +222,7 @@ func QDBPushAllAggIntoDB(ctx context.Context, urls []*url.URL, timespan string, 
 
 	// Init a progress pbar here
 	progressbar.OptionSetWidth(500)
-	//pbar := progressbar.Default(int64(len(urls)), "Downloading...")
-	pbar := progressbar.NewOptions(len(urls),
-		progressbar.OptionSetDescription("Downloading..."),
-		progressbar.OptionEnableColorCodes(true),
-		progressbar.OptionSetWriter(os.Stderr),
-		progressbar.OptionSetWidth(10),
-		progressbar.OptionThrottle(65*time.Millisecond),
-		progressbar.OptionShowCount(),
-		progressbar.OptionShowIts(),
-		progressbar.OptionFullWidth(),
-		progressbar.OptionSpinnerType(14),
-		progressbar.OptionSetRenderBlankState(true),
-		progressbar.OptionOnCompletion(func() {
-			_, _ = fmt.Fprint(os.Stderr, "\n")
-			doneCh <- true
-		}),
-	)
+	pbar := progressbar.Default(int64(len(urls)), "Downloading...")
 
 	// Iterate over all these urls, and insert them into the db!
 	var err error
@@ -271,9 +255,6 @@ func QDBPushAllAggIntoDB(ctx context.Context, urls []*url.URL, timespan string, 
 
 	// Just close the progressbar
 	pbar.Close()
-
-	// Done
-	<-doneCh
 }
 
 // Retry A "decorator" function that wraps around every func that needs a retry.

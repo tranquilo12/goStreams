@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"lightning/publisher"
-	"lightning/utils/config"
 	"lightning/utils/db"
 	"log"
 	"net/http"
@@ -41,6 +40,7 @@ var aggsPubCmd = &cobra.Command{
 		interact with the Kafka topic.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
+		// Entire block is for profiling memory
 		var memprofile = flag.String("memprofile", "", "write memory profile to this file")
 		if *memprofile != "" {
 			f, err := os.Create(*memprofile)
@@ -58,28 +58,19 @@ var aggsPubCmd = &cobra.Command{
 		go func() {
 			log.Println(http.ListenAndServe("localhost:6060", nil))
 		}()
+		// End of profiling block
 
 		fmt.Println("aggsPub called")
 		ctx := context.TODO()
 
-		// Get agg parameters from cli
-		aggParams := db.ReadAggregateParamsFromCMD(cmd)
+		// Update the urls table with the data already present in aggs
+		isEmpty := db.QDBCheckAggsLenPG(ctx)
+		if !isEmpty {
+			db.QDBCheckAggsUrlsPG(ctx)
+		}
 
-		// Get the apiKey from the config.ini file
-		apiKey := config.SetPolygonCred("loving_aryabhata_key")
-
-		// Now get all the tickers from QDB
-		tickers := db.QDBFetchUniqueTickersPG(ctx)
-
-		//Make all urls from the tickers
-		urls := db.MakeAllStocksAggsUrls(
-			tickers,
-			aggParams.Timespan,
-			aggParams.From,
-			aggParams.To,
-			apiKey,
-			aggParams.Adjusted,
-		)
+		// Fetch all urls that have not been pulled yet
+		urls := db.QDBFetchUrls(ctx)
 
 		// Download all data and push the data into kafka
 		err := publisher.AggKafkaWriter(urls, "aggs")

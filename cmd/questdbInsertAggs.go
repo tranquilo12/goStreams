@@ -26,9 +26,6 @@ to quickly create a Cobra application.`,
 		// Get agg parameters from cli
 		qdbAggParams := db.ReadAggregateParamsFromCMD(cmd)
 
-		// Create the table if not exists... as well as the constraints...
-		//db.QDBCreateAggTable(ctx)
-
 		// Get the apiKey from the config.ini file
 		apiKey := config.SetPolygonCred("loving_aryabhata_key")
 
