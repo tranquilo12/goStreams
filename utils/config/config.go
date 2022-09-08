@@ -1,12 +1,16 @@
 package config
 
 import (
+	"flag"
+	"fmt"
 	"gopkg.in/ini.v1"
 	"lightning/utils/structs"
+	"log"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime/pprof"
 	"strings"
 	"time"
 )
@@ -133,4 +137,25 @@ func GetHttpClient() *http.Client {
 		Timeout:   timeout,
 		Transport: transport,
 	}
+}
+
+// MemProfiler Entire block is for profiling memory, exposing localhost:6060
+func MemProfiler() {
+	var memprofile = flag.String("memprofile", "", "write memory profile to this file")
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			fmt.Println(err)
+		}
+		err = pprof.WriteHeapProfile(f)
+		if err != nil {
+			return
+		}
+		f.Close()
+		return
+	}
+
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 }

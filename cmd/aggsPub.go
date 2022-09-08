@@ -18,16 +18,12 @@ limitations under the License.
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"github.com/spf13/cobra"
 	"lightning/publisher"
+	"lightning/utils/config"
 	"lightning/utils/db"
-	"log"
-	"net/http"
 	_ "net/http/pprof"
-	"os"
-	"runtime/pprof"
 )
 
 // aggsPubCmd represents the aggs command
@@ -40,25 +36,8 @@ var aggsPubCmd = &cobra.Command{
 		interact with the Kafka topic.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Entire block is for profiling memory
-		var memprofile = flag.String("memprofile", "", "write memory profile to this file")
-		if *memprofile != "" {
-			f, err := os.Create(*memprofile)
-			if err != nil {
-				fmt.Println(err)
-			}
-			err = pprof.WriteHeapProfile(f)
-			if err != nil {
-				return
-			}
-			f.Close()
-			return
-		}
-
-		go func() {
-			log.Println(http.ListenAndServe("localhost:6060", nil))
-		}()
-		// End of profiling block
+		fmt.Println("Profiling memory...")
+		config.MemProfiler()
 
 		fmt.Println("aggsPub called")
 		ctx := context.TODO()
