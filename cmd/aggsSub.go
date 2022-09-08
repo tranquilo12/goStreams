@@ -47,10 +47,4 @@ var aggsSubCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(aggsSubCmd)
-	aggsSubCmd.Flags().StringP("dbtype", "d", "ec2db", "One of two... ec2db or localdb")
-	aggsSubCmd.Flags().StringP("timespan", "T", "", "Timespan (minute, hour, day...)")
-	aggsSubCmd.Flags().StringP("from", "f", "", "From which date? (format = %Y-%m-%d)")
-	aggsSubCmd.Flags().StringP("to", "t", "", "To which date? (format = %Y-%m-%d)")
-	aggsSubCmd.Flags().IntP("adjusted", "a", 1, "Adjusted? (1/0)")
-	aggsSubCmd.Flags().IntP("limit", "L", 50000, "Limit?")
 }

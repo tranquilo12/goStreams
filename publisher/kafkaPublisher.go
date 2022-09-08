@@ -5,8 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"fmt"
-	qdb "github.com/questdb/go-questdb-client"
 	"github.com/schollz/progressbar/v3"
 	"github.com/segmentio/kafka-go"
 	"go.uber.org/ratelimit"
@@ -74,7 +72,7 @@ func CreateKafkaWriterConn(topic string) *kafka.Writer {
 }
 
 // AggKafkaWriter writes the aggregates to Kafka
-func AggKafkaWriter(urls []*url.URL, topic string) error {
+func AggKafkaWriter(urls []*url.URL, topic string, memProfile bool) error {
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
 
@@ -102,7 +100,7 @@ func AggKafkaWriter(urls []*url.URL, topic string) error {
 		now := rateLimiter.Take()
 
 		// Create the goroutine
-		go KafkaWriter(context.Background(), httpClient, u, writeConn, &wg, bar)
+		go KafkaWriter(context.Background(), httpClient, u, writeConn, &wg, bar, memProfile)
 
 		// Rate limit the requests, so note the time
 		now.Sub(prev)
@@ -122,6 +120,7 @@ func KafkaWriter(
 	kafkaWriter *kafka.Writer,
 	wg *sync.WaitGroup,
 	bar *progressbar.ProgressBar,
+	memProfile bool,
 ) {
 	// Makes sure wg closes
 	defer wg.Done()
@@ -150,124 +149,123 @@ func KafkaWriter(
 		)
 	}
 
-	// Write the messages to Kafka
-	err = kafkaWriter.WriteMessages(ctx, messages...)
-	db.CheckErr(err)
-
-	// Update the urls database that this url is completed
-	//db.QDBUpdateUrlPG(ctx, url)
+	if !memProfile {
+		// Write the messages to Kafka, if memProfile is false
+		err = kafkaWriter.WriteMessages(ctx, messages...)
+		db.CheckErr(err)
+	}
 
 	// Progress bar update
 	bar.Add(1)
 }
 
-// QDBQueryAndInsertAggILP to QuestDB.
-func QDBQueryAndInsertAggILP(
-	ctx context.Context,
-	pbar *progressbar.ProgressBar,
-	timespan string,
-	aggBar structs.AggregatesBarsResponse,
-	multiplier int,
-) error {
-	// Connect to QDB and get sender
-	sender, _ := qdb.NewLineSender(ctx)
-
-	// For each of these results, push!
-	for _, agg := range aggBar.Results {
-		err := sender.Table("aggs").
-			Symbol("ticker", aggBar.Ticker).
-			StringColumn("timespan", timespan).
-			Int64Column("multiplier", int64(multiplier)).
-			Float64Column("open", agg.O).
-			Float64Column("high", agg.H).
-			Float64Column("low", agg.L).
-			Float64Column("close", agg.C).
-			Float64Column("volume", agg.V).
-			Float64Column("vw", agg.Vw).
-			Float64Column("n", float64(agg.N)).
-			At(ctx, time.UnixMilli(int64(agg.T)).UnixNano())
-		if err != nil {
-			return err
-		}
-	}
-
-	// Make sure that the messages are sent over the network.
-	err := sender.Flush(ctx)
-	if err != nil {
-		return err
-	}
-
-	// Progress bar update
-	pbar.Add(1)
-
-	// close sender
-	sender.Close()
-
-	return nil
-}
+//// QDBQueryAndInsertAggILP to QuestDB.
+//func QDBQueryAndInsertAggILP(
+//	ctx context.Context,
+//	pbar *progressbar.ProgressBar,
+//	timespan string,
+//	aggBar structs.AggregatesBarsResponse,
+//	multiplier int,
+//) error {
+//	// Connect to QDB and get sender
+//	sender, _ := qdb.NewLineSender(ctx)
+//
+//	// For each of these results, push!
+//	for _, agg := range aggBar.Results {
+//		err := sender.Table("aggs").
+//			Symbol("ticker", aggBar.Ticker).
+//			StringColumn("timespan", timespan).
+//			Int64Column("multiplier", int64(multiplier)).
+//			Float64Column("open", agg.O).
+//			Float64Column("high", agg.H).
+//			Float64Column("low", agg.L).
+//			Float64Column("close", agg.C).
+//			Float64Column("volume", agg.V).
+//			Float64Column("vw", agg.Vw).
+//			Float64Column("n", float64(agg.N)).
+//			At(ctx, time.UnixMilli(int64(agg.T)).UnixNano())
+//		if err != nil {
+//			return err
+//		}
+//	}
+//
+//	// Make sure that the messages are sent over the network.
+//	err := sender.Flush(ctx)
+//	if err != nil {
+//		return err
+//	}
+//
+//	// Progress bar update
+//	pbar.Add(1)
+//
+//	// close sender
+//	sender.Close()
+//
+//	return nil
+//}
 
 // QDBPushAllAggIntoDB Entire pipeline of querying all tickers and then pushing it to the db
-func QDBPushAllAggIntoDB(ctx context.Context, urls []*url.URL, timespan string, multiplier int) {
-	// Use a WaitGroup to make things simpler.
-	// Create a buffer of the WaitGroup
-	var wg sync.WaitGroup
-	wg.Add(len(urls))
+//func QDBPushAllAggIntoDB(ctx context.Context, urls []*url.URL, timespan string, multiplier int) {
+//	// Use a WaitGroup to make things simpler.
+//	// Create a buffer of the WaitGroup
+//	var wg sync.WaitGroup
+//	wg.Add(len(urls))
+//
+//	// Max 300 requests per second
+//	prev := time.Now()
+//	rateLimiter := ratelimit.New(300)
+//
+//	// Get the http client
+//	httpClient := config.GetHttpClient()
+//
+//	// Init a progress pbar here
+//	progressbar.OptionSetWidth(500)
+//	pbar := progressbar.Default(int64(len(urls)), "Downloading...")
+//
+//	// Iterate over all these urls, and insert them into the db!
+//	var err error
+//	for _, u := range urls {
+//		// Rate limit
+//		now := rateLimiter.Take()
+//
+//		// Create a goroutine that will take care of the querying and insert
+//		go func() {
+//			err = Retry(10, 2, func() error {
+//				// First query, then insert. If anything goes wrong with this go-routine, it should start with querying it again.
+//				var aggBar structs.AggregatesBarsResponse
+//				err = DownloadFromPolygonIO(httpClient, *u, &aggBar)
+//				if err != nil {
+//					return err
+//				}
+//
+//				err = QDBQueryAndInsertAggILP(ctx, pbar, timespan, aggBar, multiplier)
+//				return err
+//			})
+//		}()
+//
+//		// Rate limit, recalculate
+//		now.Sub(prev)
+//		prev = now
+//	}
+//
+//	// Wait for all of them to finish.
+//	wg.Wait()
+//
+//	// Just close the progressbar
+//	pbar.Close()
+//}
 
-	// Max 300 requests per second
-	prev := time.Now()
-	rateLimiter := ratelimit.New(300)
-
-	// Get the http client
-	httpClient := config.GetHttpClient()
-
-	// Init a progress pbar here
-	progressbar.OptionSetWidth(500)
-	pbar := progressbar.Default(int64(len(urls)), "Downloading...")
-
-	// Iterate over all these urls, and insert them into the db!
-	var err error
-	for _, u := range urls {
-		// Rate limit
-		now := rateLimiter.Take()
-
-		// Create a goroutine that will take care of the querying and insert
-		go func() {
-			err = Retry(10, 2, func() error {
-				// First query, then insert. If anything goes wrong with this go-routine, it should start with querying it again.
-				var aggBar structs.AggregatesBarsResponse
-				err = DownloadFromPolygonIO(httpClient, *u, &aggBar)
-				if err != nil {
-					return err
-				}
-
-				err = QDBQueryAndInsertAggILP(ctx, pbar, timespan, aggBar, multiplier)
-				return err
-			})
-		}()
-
-		// Rate limit, recalculate
-		now.Sub(prev)
-		prev = now
-	}
-
-	// Wait for all of them to finish.
-	wg.Wait()
-
-	// Just close the progressbar
-	pbar.Close()
-}
-
-// Retry A "decorator" function that wraps around every func that needs a retry.
-func Retry(attempts int, sleep time.Duration, f func() error) (err error) {
-	for i := 0; i < attempts; i++ {
-		if i > 0 {
-			log.Println("Retrying after error: ", err)
-			time.Sleep(sleep)
-		}
-		err = f()
-		if err == nil {
-			return nil
-		}
-	}
-	return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
-}
+//// Retry A "decorator" function that wraps around every func that needs a retry.
+//func Retry(attempts int, sleep time.Duration, f func() error) (err error) {
+//	for i := 0; i < attempts; i++ {
+//		if i > 0 {
+//			log.Println("Retrying after error: ", err)
+//			time.Sleep(sleep)
+//		}
+//		err = f()
+//		if err == nil {
+//			return nil
+//		}
+//	}
+//	return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
+//}
