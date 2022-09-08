@@ -9,6 +9,12 @@ import (
 	"time"
 )
 
+func CheckErr(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
 // QDBConnectPG creates a Postgres conn to QuestDB.
 func QDBConnectPG(ctx context.Context) *pgx.Conn {
 	conn, _ := pgx.Connect(ctx, "postgresql://admin:quest@localhost:8812/")
@@ -104,16 +110,6 @@ func QDBFetchUrls(ctx context.Context) []*url.URL {
 	}
 
 	return results
-}
-
-// QDBUpdateUrlPG updates the url in the database as done = true, where the url is the same as the one passed in.
-func QDBUpdateUrlPG(ctx context.Context, u *url.URL) {
-	conn := QDBConnectPG(ctx)
-	defer conn.Close(ctx)
-
-	query := "UPDATE 'urls' SET done = true WHERE url = $1;"
-	_, err := conn.Exec(ctx, query, u.String())
-	CheckErr(err)
 }
 
 // QDBCheckAggsUrlsPG Checks if the data in aggs is already pulled from the urls table
