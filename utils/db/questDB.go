@@ -5,7 +5,6 @@ import (
 	"github.com/jackc/pgx/v4"
 	qdb "github.com/questdb/go-questdb-client"
 	"lightning/utils/structs"
-	"net/url"
 	"time"
 )
 
@@ -81,7 +80,7 @@ func QDBFetchUniqueTickersPG(ctx context.Context) []string {
 	return results
 }
 
-func QDBFetchUrls(ctx context.Context) []*url.URL {
+func QDBFetchUrls(ctx context.Context) []string {
 	// Connect to QDB
 	conn := QDBConnectPG(ctx)
 	defer conn.Close(ctx)
@@ -92,21 +91,21 @@ func QDBFetchUrls(ctx context.Context) []*url.URL {
 	defer rows.Close()
 	CheckErr(err)
 
-	var results []*url.URL
+	var results []string
 	for rows.Next() {
 		// Create a new url.URL and scan the row into it
 		var s string
-		var u *url.URL
+		//var u *url.URL
 
 		// Scan the row, into the string
 		err = rows.Scan(&s)
 		CheckErr(err)
 
 		// Parse the url
-		u, err = url.Parse(s)
-		CheckErr(err)
+		//u, err = url.Parse(s)
+		//CheckErr(err)
 
-		results = append(results, u)
+		results = append(results, s)
 	}
 
 	return results

@@ -13,7 +13,6 @@ import (
 	"lightning/utils/db"
 	"lightning/utils/structs"
 	"log"
-	"net/url"
 	"os"
 	"path/filepath"
 	"sync"
@@ -75,7 +74,7 @@ func CreateKafkaReaderConn(topic string) *kafka.Reader {
 }
 
 // WriteFromKafkaToQuestDB writes data from kafka to questdb
-func WriteFromKafkaToQuestDB(topic string, urls []*url.URL) {
+func WriteFromKafkaToQuestDB(topic string, urls []string) {
 	// Create a new context
 	ctx := context.TODO()
 
@@ -96,6 +95,7 @@ func WriteFromKafkaToQuestDB(topic string, urls []*url.URL) {
 
 	// Connect to QDB and get sender
 	sender, _ := qdb.NewLineSender(ctx)
+	defer sender.Close()
 
 	// Create a new go routine to insert data into the channel
 	go func() {

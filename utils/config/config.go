@@ -115,7 +115,7 @@ func SetInfluxDBCred(params *structs.InfluxDBStruct) error {
 
 // GetHttpClient Get a modified http client with the correct timeout.
 func GetHttpClient() *http.Client {
-	timeout := 900 * time.Second
+	timeout := 10 * time.Second
 
 	dialer := &net.Dialer{
 		Timeout:   timeout,
@@ -124,10 +124,10 @@ func GetHttpClient() *http.Client {
 
 	// Create a new transport
 	transport := &http.Transport{
-		MaxIdleConns:        1000,
-		MaxIdleConnsPerHost: 1000,
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 100,
 		IdleConnTimeout:     timeout,
-		MaxConnsPerHost:     1000,
+		MaxConnsPerHost:     100,
 		ForceAttemptHTTP2:   true,
 		DialContext:         dialer.DialContext,
 	}
