@@ -49,7 +49,15 @@ to quickly create a Cobra application.`,
 		apiKey := config.SetPolygonCred("loving_aryabhata_key")
 
 		// Push all the urls to the urls table
-		db.PushAllUrlsToTable(ctx, tickers, params.Timespan, params.From, params.To, apiKey, params.Adjusted)
+		db.PushAllUrlsToTable(
+			ctx,
+			tickers,
+			params.Timespan,
+			params.From,
+			params.To,
+			apiKey,
+			params.Adjusted,
+		)
 
 		// Mark as done...
 		fmt.Println("createUrls finished...")
