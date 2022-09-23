@@ -1,15 +1,13 @@
-// Package cmd /*
 package cmd
 
 import (
 	"context"
 	"fmt"
 	"github.com/schollz/progressbar/v3"
+	"github.com/spf13/cobra"
 	"lightning/utils/config"
 	"lightning/utils/db"
 	"lightning/utils/structs"
-
-	"github.com/spf13/cobra"
 )
 
 // questdbPubCmd represents the questdbPub command
@@ -35,11 +33,11 @@ to quickly create a Cobra application.`,
 		apiKey := config.SetPolygonCred("loving_aryabhata_key")
 
 		// Make a channel that will store all the results, of the flattened type
-		Tickerchan := make(chan structs.TickersStruct, 35)
+		TickerChan := make(chan structs.TickersStruct, 35)
 
 		// For each of the tickers, send it to the db
 		go func() {
-			for t := range Tickerchan {
+			for t := range TickerChan {
 				db.QDBInsertTickersILP(ctx, t)
 
 				// Update the progress bar
@@ -49,21 +47,11 @@ to quickly create a Cobra application.`,
 		}()
 
 		// Get the channel that does all the fetching
-		db.FetchAllTickers(apiKey, Tickerchan)
-		close(Tickerchan)
+		db.FetchAllTickers(apiKey, TickerChan)
+		close(TickerChan)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(questdbPubCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// questdbPubCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// questdbPubCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

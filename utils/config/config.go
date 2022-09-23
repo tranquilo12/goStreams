@@ -2,16 +2,14 @@ package config
 
 import (
 	"flag"
-	"fmt"
 	"gopkg.in/ini.v1"
-	"lightning/utils/structs"
+	"lightning/utils/db"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime/pprof"
-	"strings"
 	"time"
 )
 
@@ -45,34 +43,11 @@ type RedisParams struct {
 	SocketTimeout string
 }
 
-func Check(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
 func getConfigPath() string {
 	wd, err := os.Getwd()
-	Check(err)
+	db.CheckErr(err)
 	configPath := filepath.Join(wd, "config.ini")
 	return configPath
-}
-
-// SetDBParams Function that reads the config.ini file within the directory, setting the Postgres db parameters.
-// param user has options 'grafana' and 'postgres'.
-func SetDBParams(params *structs.DBParams, section string) error {
-	configPath := getConfigPath()
-	config, err := ini.Load(configPath)
-	Check(err)
-
-	section = strings.ToUpper(section)
-	params.Host = config.Section(section).Key("host").String()
-	params.Port = config.Section(section).Key("port").String()
-	params.Dbname = config.Section(section).Key("name").String()
-	params.User = config.Section(section).Key("user").String()
-	params.Password = config.Section(section).Key("password").String()
-
-	return err
 }
 
 // SetPolygonCred Function that reads the config.ini file within the directory, and returns the API Key.
@@ -83,7 +58,7 @@ func SetPolygonCred(user string) string {
 
 	// Load the config file
 	config, err := ini.Load(configPath)
-	Check(err)
+	db.CheckErr(err)
 
 	// Get the API Key depending upon the username
 	var appId string
@@ -96,21 +71,6 @@ func SetPolygonCred(user string) string {
 		appId = config.Section("POLYGON").Key("reverent_visvesvaraya_key").String()
 	}
 	return appId
-}
-
-// SetInfluxDBCred Function that reads the config.ini file within the directory, setting the Influx db parameters.
-func SetInfluxDBCred(params *structs.InfluxDBStruct) error {
-	configPath := getConfigPath()
-	config, err := ini.Load(configPath)
-	Check(err)
-
-	params.Url = config.Section("INFLUXDB").Key("url").String()
-	params.Bucket = config.Section("INFLUXDB").Key("bucket").String()
-	params.Org = config.Section("INFLUXDB").Key("org").String()
-	params.ApiKey = config.Section("INFLUXDB").Key("apikey2").String()
-	params.PersonalApiKey = config.Section("INFLUXDB").Key("personalApiKey2").String()
-
-	return err
 }
 
 // GetHttpClient Get a modified http client with the correct timeout.
@@ -144,14 +104,11 @@ func MemProfiler() {
 	var memprofile = flag.String("memprofile", "", "write memory profile to this file")
 	if *memprofile != "" {
 		f, err := os.Create(*memprofile)
-		if err != nil {
-			fmt.Println(err)
-		}
+		db.CheckErr(err)
+
 		err = pprof.WriteHeapProfile(f)
-		if err != nil {
-			return
-		}
-		f.Close()
+		db.CheckErr(err)
+
 		return
 	}
 
