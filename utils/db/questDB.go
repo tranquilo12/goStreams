@@ -53,6 +53,9 @@ func QDBInsertTickersILP(ctx context.Context, ticker structs.TickersStruct) {
 
 	// Close the sender here
 	sender.Close()
+
+	// delete the ticker struct
+	ticker = structs.TickersStruct{}
 }
 
 // QDBFetchUniqueTickersPG just takes whichever query that requests data and returns the result
@@ -65,8 +68,10 @@ func QDBFetchUniqueTickersPG(ctx context.Context) []string {
 	// Query the database
 	query := "SELECT DISTINCT ticker FROM 'tickers' ORDER BY ticker asc;"
 	rows, err := conn.Query(ctx, query)
-	defer rows.Close()
 	CheckErr(err)
+
+	// Close the rows
+	defer rows.Close()
 
 	// Iterate through the rows and append the results to the slice
 	var results []string
@@ -76,6 +81,9 @@ func QDBFetchUniqueTickersPG(ctx context.Context) []string {
 		CheckErr(err)
 		results = append(results, s)
 	}
+
+	// Delete the rows and return the results
+	rows = nil
 
 	return results
 }
@@ -107,6 +115,9 @@ func QDBFetchUrls(ctx context.Context) []string {
 
 		results = append(results, s)
 	}
+
+	// Delete the rows and return the results
+	rows = nil
 
 	return results
 }
