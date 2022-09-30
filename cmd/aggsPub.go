@@ -23,15 +23,15 @@ var aggsPubCmd = &cobra.Command{
 		// Check if memory profiling is enabled
 		memProfile, _ := cmd.Flags().GetBool("memprofile")
 
-		// If memory profiling is enabled, start the profiler
-		if memProfile {
-			fmt.Println("memprofile flag set, Profiling memory...")
-			config.MemProfiler()
-		}
-
 		// Get the context
 		fmt.Println("aggsPub called")
 		ctx := context.TODO()
+
+		// If memory profiling is enabled, start the profiler
+		if memProfile {
+			fmt.Println("memprofile flag set, Profiling memory...")
+			config.MemProfiler(ctx)
+		}
 
 		// Update the urls table with the data already present in aggs
 		isEmpty := db.QDBCheckAggsLenPG(ctx)
@@ -42,8 +42,11 @@ var aggsPubCmd = &cobra.Command{
 		// Fetch all urls that have not been pulled yet
 		urls := db.QDBFetchUrls(ctx)
 
+		// Get the logger here
+		logger := config.GetLogger()
+
 		// Download all data and push the data into kafka
-		err := publisher.AggKafkaWriter(urls, "aggs", memProfile)
+		err := publisher.AggKafkaWriter(urls, "aggs", memProfile, logger)
 		db.CheckErr(err)
 	},
 }

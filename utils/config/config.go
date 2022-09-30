@@ -1,10 +1,10 @@
 package config
 
 import (
+	"context"
 	"flag"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/ini.v1"
-	"lightning/utils/db"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -43,11 +43,50 @@ type RedisParams struct {
 	SocketTimeout string
 }
 
+// getConfigPath Get the config file path
 func getConfigPath() string {
 	wd, err := os.Getwd()
-	db.CheckErr(err)
+	if err != nil {
+		panic(err)
+	}
+
 	configPath := filepath.Join(wd, "config.ini")
 	return configPath
+}
+
+// getLogfilePath Get the log file path
+func getLogfilePath() string {
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	logfilePath := filepath.Join(wd, "logs", "log.txt")
+	return logfilePath
+}
+
+// GetLogger Get the logger
+func GetLogger() *log.Logger {
+	// Create a new instance of the logger and ensure fields.
+	var logger = log.New()
+	logger.SetFormatter(&log.JSONFormatter{})
+	logger.WithFields(log.Fields{
+		"app": "lightning",
+		"url": "",
+		"err": "",
+	})
+
+	// Make sure to create the log file, or append to it
+	logfilePath := getLogfilePath()
+	logfile, err := os.OpenFile(logfilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		panic(err)
+	}
+
+	// Set the output to the log file
+	logger.SetOutput(logfile)
+
+	return logger
 }
 
 // SetPolygonCred Function that reads the config.ini file within the directory, and returns the API Key.
@@ -58,7 +97,9 @@ func SetPolygonCred(user string) string {
 
 	// Load the config file
 	config, err := ini.Load(configPath)
-	db.CheckErr(err)
+	if err != nil {
+		panic(err)
+	}
 
 	// Get the API Key depending upon the username
 	var appId string
@@ -75,7 +116,7 @@ func SetPolygonCred(user string) string {
 
 // GetHttpClient Get a modified http client with the correct timeout.
 func GetHttpClient() *http.Client {
-	timeout := 10 * time.Second
+	timeout := 120 * time.Second
 
 	dialer := &net.Dialer{
 		Timeout:   timeout,
@@ -84,12 +125,13 @@ func GetHttpClient() *http.Client {
 
 	// Create a new transport
 	transport := &http.Transport{
-		MaxIdleConns:        100,
-		MaxIdleConnsPerHost: 100,
+		MaxIdleConns:        1000,
+		MaxIdleConnsPerHost: 1000,
 		IdleConnTimeout:     timeout,
-		MaxConnsPerHost:     100,
-		ForceAttemptHTTP2:   true,
+		MaxConnsPerHost:     1000,
+		ForceAttemptHTTP2:   false,
 		DialContext:         dialer.DialContext,
+		DisableKeepAlives:   true,
 	}
 
 	// Create a new http client and return it
@@ -100,17 +142,29 @@ func GetHttpClient() *http.Client {
 }
 
 // MemProfiler Entire block is for profiling memory, exposing localhost:6060
-func MemProfiler() {
+func MemProfiler(ctx context.Context) {
 	var memprofile = flag.String("memprofile", "", "write memory profile to this file")
 	if *memprofile != "" {
 		f, err := os.Create(*memprofile)
-		db.CheckErr(err)
+		if err != nil {
+			panic(err)
+		}
 
 		err = pprof.WriteHeapProfile(f)
-		db.CheckErr(err)
+		if err != nil {
+			panic(err)
+		}
+
+		pprof.SetGoroutineLabels(ctx)
+		if err != nil {
+			panic(err)
+		}
 
 		return
 	}
+
+	// Start the fgprof server
+	//http.DefaultServeMux.Handle("/debug/fgprof", fgprof.Handler())
 
 	go func() {
 		log.Println(http.ListenAndServe("localhost:6060", nil))

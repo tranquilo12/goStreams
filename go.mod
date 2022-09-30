@@ -4,15 +4,13 @@ go 1.18
 
 require (
 	github.com/adjust/rmq/v3 v3.0.0
-	github.com/aws/aws-sdk-go-v2 v1.16.11
-	github.com/aws/aws-sdk-go-v2/config v1.17.1
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.27.5
 	github.com/go-pg/pg/v10 v10.10.6
 	github.com/jackc/pgx/v4 v4.17.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/questdb/go-questdb-client v0.0.0-20220815160458-2d927fc0933d
 	github.com/schollz/progressbar/v3 v3.9.0
 	github.com/segmentio/kafka-go v0.4.34
+	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.12.0
 	go.uber.org/ratelimit v0.2.0
@@ -21,20 +19,6 @@ require (
 
 require (
 	github.com/andres-erbsen/clock v0.0.0-20160526145045-9e14626cd129 // indirect
-	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.4 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.12.14 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.12 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.18 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.12 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.19 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.0.9 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.1.13 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.12 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.13.12 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.11.17 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.16.13 // indirect
-	github.com/aws/smithy-go v1.12.1 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/go-pg/zerochecker v0.2.0 // indirect
 	github.com/go-redis/redis/v7 v7.4.1 // indirect

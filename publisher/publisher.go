@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"github.com/schollz/progressbar/v3"
 	"github.com/segmentio/kafka-go"
+	"github.com/sirupsen/logrus"
 	"go.uber.org/ratelimit"
 	"lightning/utils/config"
 	"lightning/utils/db"
@@ -21,11 +22,15 @@ import (
 )
 
 // DownloadFromPolygonIO downloads the prices from PolygonIO
-func DownloadFromPolygonIO(client *http.Client, u url.URL, res *structs.AggregatesBarsResponse) error {
+func DownloadFromPolygonIO(client *http.Client, logger *logrus.Logger, u url.URL, res *structs.AggregatesBarsResponse) error {
 	// Create a new client
 	resp, err := client.Get(u.String())
 	if err != nil {
-		panic(err)
+		logger.WithFields(logrus.Fields{
+			"url":   u.String(),
+			"error": err,
+		}).Info("Error in downloading data from PolygonIO")
+		return nil
 	}
 
 	// Defer the closing of the body
@@ -86,7 +91,7 @@ func CreateKafkaWriterConn(topic string) *kafka.Writer {
 }
 
 // AggKafkaWriter writes the aggregates to Kafka
-func AggKafkaWriter(urls []string, topic string, memProfile bool) error {
+func AggKafkaWriter(urls []string, topic string, memProfile bool, logger *logrus.Logger) error {
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
 
@@ -95,7 +100,7 @@ func AggKafkaWriter(urls []string, topic string, memProfile bool) error {
 
 	// Max allow 500 requests per second
 	prev := time.Now()
-	rateLimiter := ratelimit.New(3000)
+	rateLimiter := ratelimit.New(2000)
 
 	// Get Write client
 	writeConn := CreateKafkaWriterConn(topic)
@@ -114,7 +119,7 @@ func AggKafkaWriter(urls []string, topic string, memProfile bool) error {
 		now := rateLimiter.Take()
 
 		// Create the goroutine
-		go KafkaWriter(context.Background(), httpClient, u, writeConn, &wg, bar, memProfile)
+		go KafkaWriter(context.Background(), logger, httpClient, u, writeConn, &wg, bar, memProfile)
 
 		// Rate limit the requests, so note the time
 		now.Sub(prev)
@@ -129,6 +134,7 @@ func AggKafkaWriter(urls []string, topic string, memProfile bool) error {
 
 func KafkaWriter(
 	ctx context.Context,
+	logger *logrus.Logger,
 	httpClient *http.Client,
 	u string,
 	kafkaWriter *kafka.Writer,
@@ -148,7 +154,7 @@ func KafkaWriter(
 
 	// Download the data from PolygonIO
 	var res structs.AggregatesBarsResponse
-	err = DownloadFromPolygonIO(httpClient, *FinalUrl, &res)
+	err = DownloadFromPolygonIO(httpClient, logger, *FinalUrl, &res)
 	db.CheckErr(err)
 
 	for _, v := range res.Results {
@@ -177,5 +183,5 @@ func KafkaWriter(
 	bar.Add(1)
 
 	// Close idle connections
-	httpClient.CloseIdleConnections()
+	//httpClient.CloseIdleConnections()
 }
