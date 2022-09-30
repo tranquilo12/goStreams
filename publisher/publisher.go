@@ -22,7 +22,12 @@ import (
 )
 
 // DownloadFromPolygonIO downloads the prices from PolygonIO
-func DownloadFromPolygonIO(client *http.Client, logger *logrus.Logger, u url.URL, res *structs.AggregatesBarsResponse) error {
+func DownloadFromPolygonIO(
+	client *http.Client,
+	logger *logrus.Logger,
+	u url.URL,
+	res *structs.AggregatesBarsResponse,
+) error {
 	// Create a new client
 	resp, err := client.Get(u.String())
 	if err != nil {
@@ -91,7 +96,12 @@ func CreateKafkaWriterConn(topic string) *kafka.Writer {
 }
 
 // AggKafkaWriter writes the aggregates to Kafka
-func AggKafkaWriter(urls []string, topic string, memProfile bool, logger *logrus.Logger) error {
+func AggKafkaWriter(
+	urls []string,
+	topic string,
+	memProfile bool,
+	logger *logrus.Logger,
+) error {
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
 
