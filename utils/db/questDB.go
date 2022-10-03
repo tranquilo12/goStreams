@@ -28,7 +28,6 @@ func QDBInsertTickersILP(ctx context.Context, ticker structs.TickersStruct) {
 
 	// Send all the data within the ticker
 	for _, t := range ticker.Results {
-		// Push ticker
 		err := sender.
 			Table("tickers").
 			Symbol("ticker", t.Ticker).
@@ -45,17 +44,14 @@ func QDBInsertTickersILP(ctx context.Context, ticker structs.TickersStruct) {
 			StringColumn("last_updated_utc", t.LastUpdatedUtc.String()).
 			At(ctx, time.Now().UnixNano())
 		CheckErr(err)
-	}
 
-	// Make sure that the messages are sent over the network.
-	err := sender.Flush(ctx)
-	CheckErr(err)
+		// Make sure that the messages are sent over the network.
+		err = sender.Flush(ctx)
+		CheckErr(err)
+	}
 
 	// Close the sender here
 	sender.Close()
-
-	// delete the ticker struct
-	ticker = structs.TickersStruct{}
 }
 
 // QDBFetchUniqueTickersPG just takes whichever query that requests data and returns the result
