@@ -2,7 +2,7 @@ package db
 
 import (
 	"context"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 	qdb "github.com/questdb/go-questdb-client"
 	"lightning/utils/structs"
 	"time"
@@ -15,9 +15,9 @@ func CheckErr(err error) {
 }
 
 // QDBConnectPG creates a Postgres conn to QuestDB.
-func QDBConnectPG(ctx context.Context) *pgx.Conn {
-	conn, _ := pgx.Connect(ctx, "postgresql://admin:quest@localhost:8812/")
-	return conn
+func QDBConnectPG(ctx context.Context) *pgxpool.Pool {
+	pool, _ := pgxpool.Connect(ctx, "postgresql://admin:quest@localhost:8812/")
+	return pool
 }
 
 // QDBInsertTickersILP to QuestDB.
@@ -63,7 +63,7 @@ func QDBInsertTickersILP(ctx context.Context, ticker structs.TickersStruct) {
 func QDBFetchUniqueTickersPG(ctx context.Context) []string {
 	// Connect to QDB
 	conn := QDBConnectPG(ctx)
-	defer conn.Close(ctx)
+	defer conn.Close()
 
 	// Query the database
 	query := "SELECT DISTINCT ticker FROM 'tickers' ORDER BY ticker asc;"
@@ -91,7 +91,7 @@ func QDBFetchUniqueTickersPG(ctx context.Context) []string {
 func QDBFetchUrls(ctx context.Context) []string {
 	// Connect to QDB
 	conn := QDBConnectPG(ctx)
-	defer conn.Close(ctx)
+	defer conn.Close()
 
 	// Query the database
 	query := "SELECT url FROM 'urls' WHERE done = false ORDER BY ticker asc;"
@@ -125,7 +125,7 @@ func QDBFetchUrls(ctx context.Context) []string {
 // QDBCheckAggsUrlsPG Checks if the data in aggs is already pulled from the urls table
 func QDBCheckAggsUrlsPG(ctx context.Context) {
 	conn := QDBConnectPG(ctx)
-	defer conn.Close(ctx)
+	defer conn.Close()
 
 	subquery1 := "SELECT ticker, timestamp FROM aggs LATEST on timestamp PARTITION BY ticker"
 	subquery2 := "SELECT q.* FROM q JOIN urls ON (ticker) WHERE `timestamp` <= end"
@@ -138,7 +138,7 @@ func QDBCheckAggsUrlsPG(ctx context.Context) {
 // QDBCheckAggsLenPG checks if the length of the aggs table is 0
 func QDBCheckAggsLenPG(ctx context.Context) bool {
 	conn := QDBConnectPG(ctx)
-	defer conn.Close(ctx)
+	defer conn.Close()
 
 	query := "SELECT count(*) FROM aggs;"
 	rows, err := conn.Query(ctx, query)
@@ -156,4 +156,23 @@ func QDBCheckAggsLenPG(ctx context.Context) bool {
 	}
 
 	return false
+}
+
+// QDBGetUrlsLenPG get the length of the urls table
+func QDBGetUrlsLenPG(ctx context.Context) int64 {
+	conn := QDBConnectPG(ctx)
+	defer conn.Close()
+
+	query := "SELECT count(*) FROM urls;"
+	rows, err := conn.Query(ctx, query)
+	defer rows.Close()
+	CheckErr(err)
+
+	var count int
+	for rows.Next() {
+		err = rows.Scan(&count)
+		CheckErr(err)
+	}
+
+	return int64(count)
 }

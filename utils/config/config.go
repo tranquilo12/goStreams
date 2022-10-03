@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"flag"
+	"github.com/mattn/go-colorable"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/ini.v1"
 	"net"
@@ -69,22 +70,29 @@ func getLogfilePath() string {
 func GetLogger() *log.Logger {
 	// Create a new instance of the logger and ensure fields.
 	var logger = log.New()
-	logger.SetFormatter(&log.JSONFormatter{})
+	//logger.SetFormatter(&log.JSONFormatter{})
 	logger.WithFields(log.Fields{
 		"app": "lightning",
 		"url": "",
 		"err": "",
 	})
 
-	// Make sure to create the log file, or append to it
-	logfilePath := getLogfilePath()
-	logfile, err := os.OpenFile(logfilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		panic(err)
-	}
+	//// Make sure to create the log file, or append to it
+	//logfilePath := getLogfilePath()
+	//logfile, err := os.OpenFile(logfilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	// Set the output to the log file
-	logger.SetOutput(logfile)
+	//logger.SetOutput(logfile)
+	log.SetOutput(colorable.NewColorableStdout())
+	log.SetFormatter(&log.TextFormatter{
+		PadLevelText:    true,
+		ForceColors:     true,
+		FullTimestamp:   true,
+		TimestampFormat: "2006-01-02 15:04:05",
+	})
 
 	return logger
 }
@@ -116,7 +124,7 @@ func SetPolygonCred(user string) string {
 
 // GetHttpClient Get a modified http client with the correct timeout.
 func GetHttpClient() *http.Client {
-	timeout := 120 * time.Second
+	timeout := 600 * time.Second
 
 	dialer := &net.Dialer{
 		Timeout:   timeout,

@@ -1,20 +1,14 @@
 package subscriber
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
-	qdb "github.com/questdb/go-questdb-client"
-	"github.com/schollz/progressbar/v3"
 	"github.com/segmentio/kafka-go"
 	_ "github.com/segmentio/kafka-go/snappy"
 	"lightning/utils/db"
-	"lightning/utils/structs"
 	"log"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 )
 
@@ -72,92 +66,93 @@ func CreateKafkaReaderConn(topic string) *kafka.Reader {
 	return r
 }
 
-// WriteFromKafkaToQuestDB writes data from kafka to questdb
-func WriteFromKafkaToQuestDB(topic string, urls []string) {
-	// Create a new context
-	ctx := context.TODO()
-
-	// Create a new questdb client
-	readerConns := CreateKafkaReaderConn(topic)
-	defer readerConns.Close()
-
-	// Create new progress bar
-	progLen := int64(len(urls))
-	bar := progressbar.Default(-1)
-
-	// Create a new channel
-	ch := make(chan structs.NewAggStruct, progLen)
-	defer close(ch)
-
-	// Create waitGroup for goroutines, buffered
-	var wg sync.WaitGroup
-	wg.Add(int(progLen))
-
-	// Connect to QDB and get sender
-	sender, _ := qdb.NewLineSender(ctx)
-	defer sender.Close()
-
-	// Create a new go routine to insert data into the channel
-	go func() {
-		for {
-			// Get the message
-			m, err := readerConns.ReadMessage(ctx)
-			if err != nil {
-				log.Println("Error reading message: ", err)
-				break
-			}
-
-			// Get the data from the message
-			v := structs.AggregatesBarsResults{}
-			err = json.Unmarshal(m.Value, &v)
-			db.CheckErr(err)
-
-			// Add the message to the channel
-			ch <- structs.NewAggStruct{Ticker: string(m.Key), AggBarsResponse: v}
-		}
-	}()
-
-	// Create a new go routine
-	go func(wg1 *sync.WaitGroup) {
-		for {
-			// Complete the waitGroup
-			defer wg1.Done()
-
-			// Get the message from the channel
-			data := <-ch
-
-			// Send the data to QDB
-			err := sender.Table("aggs").
-				Symbol("ticker", data.Ticker).
-				StringColumn("timespan", "minute").
-				Int64Column("multiplier", int64(1)).
-				Float64Column("open", data.AggBarsResponse.O).
-				Float64Column("high", data.AggBarsResponse.H).
-				Float64Column("low", data.AggBarsResponse.L).
-				Float64Column("close", data.AggBarsResponse.C).
-				Float64Column("volume", data.AggBarsResponse.V).
-				Float64Column("vw", data.AggBarsResponse.Vw).
-				Float64Column("n", float64(data.AggBarsResponse.N)).
-				At(ctx, time.UnixMilli(int64(data.AggBarsResponse.T)).UnixNano())
-			if err != nil {
-				panic(err)
-			}
-
-			// Make sure the sender is flushed
-			sender.Flush(ctx)
-
-			// Increment the progress bar
-			bar.Add(1)
-		}
-	}(&wg)
-
-	// Close the channel
-	//close(ch)
-
-	// Wait for the waitGroup to finish
-	wg.Wait()
-
-	// Wait for the progress bar to finish
-	_ = bar.Finish()
-	bar.Close()
-}
+//
+//// WriteFromKafkaToQuestDB writes data from kafka to questdb
+//func WriteFromKafkaToQuestDB(topic string, urls []string) {
+//	// Create a new context
+//	ctx := context.TODO()
+//
+//	// Create a new questdb client
+//	readerConns := CreateKafkaReaderConn(topic)
+//	defer readerConns.Close()
+//
+//	// Create new progress bar
+//	progLen := int64(len(urls))
+//	bar := progressbar.Default(-1)
+//
+//	// Create a new channel
+//	ch := make(chan structs.NewAggStruct, progLen)
+//	defer close(ch)
+//
+//	// Create waitGroup for goroutines, buffered
+//	var wg sync.WaitGroup
+//	wg.Add(int(progLen))
+//
+//	// Connect to QDB and get sender
+//	sender, _ := qdb.NewLineSender(ctx)
+//	defer sender.Close()
+//
+//	// Create a new go routine to insert data into the channel
+//	go func() {
+//		for {
+//			// Get the message
+//			m, err := readerConns.ReadMessage(ctx)
+//			if err != nil {
+//				log.Println("Error reading message: ", err)
+//				break
+//			}
+//
+//			// Get the data from the message
+//			v := structs.AggregatesBarsResults{}
+//			err = json.Unmarshal(m.Value, &v)
+//			db.CheckErr(err)
+//
+//			// Add the message to the channel
+//			ch <- structs.NewAggStruct{Ticker: string(m.Key), AggBarsResults: v}
+//		}
+//	}()
+//
+//	// Create a new go routine
+//	go func(wg1 *sync.WaitGroup) {
+//		for {
+//			// Complete the waitGroup
+//			defer wg1.Done()
+//
+//			// Get the message from the channel
+//			data := <-ch
+//
+//			// Send the data to QDB
+//			err := sender.Table("aggs").
+//				Symbol("ticker", data.Ticker).
+//				StringColumn("timespan", "minute").
+//				Int64Column("multiplier", int64(1)).
+//				Float64Column("open", data.AggBarsResults.O).
+//				Float64Column("high", data.AggBarsResults.H).
+//				Float64Column("low", data.AggBarsResults.L).
+//				Float64Column("close", data.AggBarsResults.C).
+//				Float64Column("volume", data.AggBarsResults.V).
+//				Float64Column("vw", data.AggBarsResults.Vw).
+//				Float64Column("n", float64(data.AggBarsResults.N)).
+//				At(ctx, time.UnixMilli(int64(data.AggBarsResults.T)).UnixNano())
+//			if err != nil {
+//				panic(err)
+//			}
+//
+//			// Make sure the sender is flushed
+//			sender.Flush(ctx)
+//
+//			// Increment the progress bar
+//			bar.Add(1)
+//		}
+//	}(&wg)
+//
+//	// Close the channel
+//	//close(ch)
+//
+//	// Wait for the waitGroup to finish
+//	wg.Wait()
+//
+//	// Wait for the progress bar to finish
+//	_ = bar.Finish()
+//	bar.Close()
+//}

@@ -854,8 +854,8 @@ type NewConsumerStruct struct {
 
 // NewAggStruct for just questDB
 type NewAggStruct struct {
-	Ticker          string
-	AggBarsResponse AggregatesBarsResults
+	Ticker         string
+	AggBarsResults []AggregatesBarsResults
 }
 
 // NewBatchConsumerStruct Used by Consume
