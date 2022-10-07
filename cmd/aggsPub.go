@@ -47,7 +47,7 @@ var aggsPubCmd = &cobra.Command{
 		urls := db.QDBFetchUrls(ctx)
 
 		// Download all data and push the data into kafka
-		err := publisher.AggKafkaWriter(urls, "aggs", memProfile, logger)
+		err := publisher.AggChannelWriter(urls, "aggs", memProfile, logger)
 		db.CheckErr(err)
 
 		//db.Combined(ctx, logger)

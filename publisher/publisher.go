@@ -96,8 +96,8 @@ func CreateKafkaWriterConn(topic string) *kafka.Writer {
 	return w
 }
 
-// AggKafkaWriter writes the aggregates to Kafka
-func AggKafkaWriter(
+// AggChannelWriter writes the aggregates to Kafka
+func AggChannelWriter(
 	urls []string,
 	topic string,
 	memProfile bool,
