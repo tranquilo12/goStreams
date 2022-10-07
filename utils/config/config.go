@@ -70,22 +70,13 @@ func getLogfilePath() string {
 func GetLogger() *log.Logger {
 	// Create a new instance of the logger and ensure fields.
 	var logger = log.New()
-	//logger.SetFormatter(&log.JSONFormatter{})
 	logger.WithFields(log.Fields{
 		"app": "lightning",
 		"url": "",
 		"err": "",
 	})
 
-	//// Make sure to create the log file, or append to it
-	//logfilePath := getLogfilePath()
-	//logfile, err := os.OpenFile(logfilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	//if err != nil {
-	//	panic(err)
-	//}
-
 	// Set the output to the log file
-	//logger.SetOutput(logfile)
 	log.SetOutput(colorable.NewColorableStdout())
 	log.SetFormatter(&log.TextFormatter{
 		PadLevelText:    true,

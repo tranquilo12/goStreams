@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/spf13/cobra"
+	"lightning/publisher"
 	"lightning/utils/config"
 	"lightning/utils/db"
 	_ "net/http/pprof"
@@ -38,16 +39,18 @@ var aggsPubCmd = &cobra.Command{
 		//	db.QDBCheckAggsUrlsPG(ctx)
 		//}
 
-		// Fetch all urls that have not been pulled yet
-		//urls := db.QDBFetchUrls(ctx)
-
 		// Get the logger here
 		logger := config.GetLogger()
 
+		// Fetch all urls that have not been pulled yet
+		logger.Info("Fetching all urls that have not been pulled yet...")
+		urls := db.QDBFetchUrls(ctx)
+
 		// Download all data and push the data into kafka
-		//err := publisher.AggKafkaWriter(urls, "aggs", memProfile, logger)
-		db.Combined(ctx, logger)
-		//db.CheckErr(err)
+		err := publisher.AggKafkaWriter(urls, "aggs", memProfile, logger)
+		db.CheckErr(err)
+
+		//db.Combined(ctx, logger)
 	},
 }
 

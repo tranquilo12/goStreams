@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"github.com/jackc/pgx/v4/pgxpool"
 	qdb "github.com/questdb/go-questdb-client"
 	"lightning/utils/structs"
@@ -10,7 +11,7 @@ import (
 
 func CheckErr(err error) {
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 }
 
@@ -28,7 +29,6 @@ func QDBInsertTickersILP(ctx context.Context, ticker structs.TickersStruct) {
 
 	// Send all the data within the ticker
 	for _, t := range ticker.Results {
-		// Push ticker
 		err := sender.
 			Table("tickers").
 			Symbol("ticker", t.Ticker).
@@ -94,7 +94,7 @@ func QDBFetchUrls(ctx context.Context) []string {
 	defer conn.Close()
 
 	// Query the database
-	query := "SELECT url FROM 'urls' WHERE done = false ORDER BY ticker asc;"
+	query := "SELECT url FROM 'urls' WHERE done = true ORDER BY ticker asc;"
 	rows, err := conn.Query(ctx, query)
 	defer rows.Close()
 	CheckErr(err)
@@ -117,7 +117,7 @@ func QDBFetchUrls(ctx context.Context) []string {
 	}
 
 	// Delete the rows and return the results
-	rows = nil
+	//rows = nil
 
 	return results
 }
