@@ -54,47 +54,6 @@ func MakeStocksAggUrl(
 	return p
 }
 
-// MakeAllStocksAggsUrls A quick function that uses MakeStocksAggUrl
-// and iterates through combos and returns a list of urls that will be queried.
-func MakeAllStocksAggsUrls(
-	tickers []string,
-	timespan string,
-	from_ string,
-	to_ string,
-	apiKey string,
-	adjusted int,
-) []*url.URL {
-	// no need for channels in this yet, just a quick function that makes all the queries and sends it back
-	fmt.Println("-	Making all urls...")
-
-	// Just a slice that will hold all the results
-	var urls []*url.URL
-
-	// First create all the date pairs required
-	datePairs := CreateDatePairs(from_, to_)
-
-	// Now for each ticker, and for each of the datePairs above, make urls.
-	for _, ticker := range tickers {
-		for _, dp := range *datePairs {
-			urls = append(urls,
-				MakeStocksAggUrl(
-					ticker,
-					"1",
-					timespan,
-					dp.Start.Format(TimeLayout),
-					dp.End.Format(TimeLayout),
-					apiKey,
-					adjusted,
-				),
-			)
-		}
-	}
-
-	// Just signal that it's done.
-	fmt.Println("-	Done...")
-	return urls
-}
-
 // PushAllUrlsToTable A function that takes in a list of urls and pushes them to the database.
 func PushAllUrlsToTable(
 	ctx context.Context,
@@ -197,23 +156,5 @@ func MakeTickerURL(apiKey string) *url.URL {
 	q.Add("apiKey", apiKey)
 	p.RawQuery = q.Encode()
 
-	return p
-}
-
-// MakeTickerNews2URL A function that takes in the apikey + page number to make urls.
-func MakeTickerNews2URL(apiKey string, ticker string, from_ string) *url.URL {
-	p, err := url.Parse("https://" + tickerNews2Host)
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
-	}
-
-	// make the url values
-	q := url.Values{}
-	q.Add("ticker", ticker)
-	q.Add("limit", "1000")
-	q.Add("apiKey", apiKey)
-	q.Add("published_utc.gte", from_)
-	p.RawQuery = q.Encode()
 	return p
 }

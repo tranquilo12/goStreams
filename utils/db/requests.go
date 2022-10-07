@@ -25,7 +25,7 @@ func GetAndCheckResponse(u *url.URL) *http.Response {
 }
 
 // FetchAllTickers recursively fetches all tickers and pushes it to QuestDB
-func FetchAllTickers(apiKey string, Tickerchan chan structs.TickersStruct) {
+func FetchAllTickers(apiKey string, TickerChan chan structs.TickersStruct) {
 	// Get a progress bar2
 	bar2 := progressbar.Default(30, "Fetching tickers...")
 
@@ -44,7 +44,7 @@ func FetchAllTickers(apiKey string, Tickerchan chan structs.TickersStruct) {
 			CheckErr(err)
 
 			// Push to channel
-			Tickerchan <- ticker
+			TickerChan <- ticker
 
 			// Check if everything is good, and if we have a next url
 			if ticker.NextURL != "" {
