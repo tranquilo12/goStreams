@@ -2,22 +2,16 @@ package publisher
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	qdb "github.com/questdb/go-questdb-client"
 	"github.com/schollz/progressbar/v3"
-	"github.com/segmentio/kafka-go"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/ratelimit"
 	"lightning/utils/config"
 	"lightning/utils/db"
 	"lightning/utils/structs"
-	"log"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
 )
@@ -49,58 +43,9 @@ func DownloadFromPolygonIO(
 	return err
 }
 
-// CreateKafkaWriterConn creates a new kafka producer connection
-func CreateKafkaWriterConn(topic string) *kafka.Writer {
-	// Load User's home directory
-	dirname, err := os.UserHomeDir()
-	db.CheckErr(err)
-
-	// Load the client cert
-	serviceCertPath := filepath.Join(dirname, ".avn", "service.cert")
-	serviceKeyPath := filepath.Join(dirname, ".avn", "service.key")
-	serviceCAPath := filepath.Join(dirname, ".avn", "ca.pem")
-
-	// Get the key and cert files
-	keypair, err := tls.LoadX509KeyPair(serviceCertPath, serviceKeyPath)
-	db.CheckErr(err)
-
-	caCert, err := os.ReadFile(serviceCAPath)
-	db.CheckErr(err)
-
-	// Get the CA cert pool
-	caCertPool := x509.NewCertPool()
-	ok := caCertPool.AppendCertsFromPEM(caCert)
-	if !ok {
-		log.Println(err)
-	}
-
-	// Create the tls config
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{keypair},
-		RootCAs:      caCertPool,
-	}
-
-	// Create a writer connection
-	w := &kafka.Writer{
-		Addr:         kafka.TCP("kafka-trial-shriram-c8ec.aivencloud.com:26032"),
-		Topic:        topic,
-		RequiredAcks: kafka.RequireOne,
-		Async:        true,
-		Balancer:     &kafka.LeastBytes{},
-		Transport: &kafka.Transport{
-			TLS: tlsConfig,
-		},
-		Compression: kafka.Lz4,
-	}
-
-	return w
-}
-
 // AggChannelWriter writes the aggregates to Kafka
 func AggChannelWriter(
 	urls []string,
-	topic string,
-	memProfile bool,
 	logger *logrus.Logger,
 ) error {
 	// use WaitGroup to make things more smooth with goroutines
@@ -108,10 +53,6 @@ func AggChannelWriter(
 
 	// create a buffer of the waitGroup, of the same length as urls
 	wg.Add(len(urls))
-
-	// Get Write client
-	//writeConn := CreateKafkaWriterConn(topic)
-	//defer writeConn.Close()
 
 	// Create ui progress bar, formatted
 	bar := progressbar.Default(int64(len(urls)))
@@ -122,11 +63,11 @@ func AggChannelWriter(
 
 	// Get the channel that will be used to write to QuestDB
 	c := make(chan structs.AggregatesBarsResponse, len(urls))
-	defer close(c)
 
 	// Make a goroutine that will accept data from a channel and push to questDB
 	ctx := context.Background()
 	wg.Add(1)
+
 	go func() {
 		defer wg.Done()
 
@@ -157,79 +98,25 @@ func AggChannelWriter(
 		}
 	}()
 
-	// Max allow 500 requests per second
+	// Max allow 1000 requests per second
 	prev := time.Now()
-	rateLimiter := ratelimit.New(300)
+	rateLimiter := ratelimit.New(1000)
 
-	// Iterate over every url
+	// Iterate over every url, create goroutine for each url download and rate limit the requests
 	for _, u := range urls {
-		// rate limit the requests
 		now := rateLimiter.Take()
-
-		// Create the goroutine
 		go channelWriter(c, logger, httpClient, u, &wg, bar)
-
-		// Rate limit the requests, so note the time
 		now.Sub(prev)
 		prev = now
 	}
 
-	// Wait for all the goroutines to finish
-	wg.Wait()
+	// Wait for all the goroutines to finish, and close the channel
+	go func() {
+		wg.Wait()
+		close(c)
+	}()
 
 	return nil
-}
-
-func KafkaWriter(
-	ctx context.Context,
-	logger *logrus.Logger,
-	httpClient *http.Client,
-	u string,
-	kafkaWriter *kafka.Writer,
-	wg *sync.WaitGroup,
-	bar *progressbar.ProgressBar,
-	memProfile bool,
-) {
-	// Makes sure wg closes
-	defer wg.Done()
-
-	// All messages
-	var messages []kafka.Message
-
-	// Convert the u(string) to a *url.URL
-	FinalUrl, err := url.Parse(u)
-	db.CheckErr(err)
-
-	// Download the data from PolygonIO
-	var res structs.AggregatesBarsResponse
-	err = DownloadFromPolygonIO(httpClient, logger, *FinalUrl, &res)
-	db.CheckErr(err)
-
-	for _, v := range res.Results {
-		// Convert the data to influx points
-		val, err := json.Marshal(v)
-		db.CheckErr(err)
-
-		// Create the messages
-		messages = append(
-			messages,
-			kafka.Message{
-				Key:   []byte(res.Ticker),
-				Value: val,
-				Time:  time.Time{},
-			},
-		)
-	}
-
-	// Write the messages to Kafka, if memProfile is false
-	if !memProfile {
-		err = kafkaWriter.WriteMessages(ctx, messages...)
-		db.CheckErr(err)
-	}
-
-	// Progress bar update
-	bar.Add(1)
-
 }
 
 func channelWriter(

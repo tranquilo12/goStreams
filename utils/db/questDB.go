@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// CheckErr checks for errors and panics if there is one
 func CheckErr(err error) {
 	if err != nil {
 		fmt.Println(err)
@@ -85,13 +86,12 @@ func QDBFetchUniqueTickersPG(ctx context.Context) []string {
 	return results
 }
 
-func QDBFetchUrls(ctx context.Context) []string {
-	// Connect to QDB
+func QDBFetchUrls(ctx context.Context, retry bool, limit int) []string {
 	conn := QDBConnectPG(ctx)
 	defer conn.Close()
 
 	// Query the database
-	query := "SELECT url FROM 'urls' WHERE done = true ORDER BY ticker asc;"
+	query := fmt.Sprintf("SELECT url FROM 'urls' WHERE retry = %t ORDER BY ticker, start asc LIMIT %d;", retry, limit)
 	rows, err := conn.Query(ctx, query)
 	defer rows.Close()
 	CheckErr(err)
@@ -100,76 +100,13 @@ func QDBFetchUrls(ctx context.Context) []string {
 	for rows.Next() {
 		// Create a new url.URL and scan the row into it
 		var s string
-		//var u *url.URL
 
 		// Scan the row, into the string
 		err = rows.Scan(&s)
 		CheckErr(err)
 
-		// Parse the url
-		//u, err = url.Parse(s)
-		//CheckErr(err)
-
 		results = append(results, s)
 	}
 
-	// Delete the rows and return the results
-	//rows = nil
-
 	return results
-}
-
-// QDBCheckAggsUrlsPG Checks if the data in aggs is already pulled from the urls table
-func QDBCheckAggsUrlsPG(ctx context.Context) {
-	conn := QDBConnectPG(ctx)
-	defer conn.Close()
-
-	subquery1 := "SELECT ticker, timestamp FROM aggs LATEST on timestamp PARTITION BY ticker"
-	subquery2 := "SELECT q.* FROM q JOIN urls ON (ticker) WHERE `timestamp` <= end"
-	query := "WITH q AS (" + subquery1 + "), q_url AS (" + subquery2 + ") UPDATE urls u SET done = true FROM q_url WHERE u.ticker = q_url.ticker;"
-
-	_, err := conn.Exec(ctx, query)
-	CheckErr(err)
-}
-
-// QDBCheckAggsLenPG checks if the length of the aggs table is 0
-func QDBCheckAggsLenPG(ctx context.Context) bool {
-	conn := QDBConnectPG(ctx)
-	defer conn.Close()
-
-	query := "SELECT count(*) FROM aggs;"
-	rows, err := conn.Query(ctx, query)
-	defer rows.Close()
-	CheckErr(err)
-
-	var count int
-	for rows.Next() {
-		err = rows.Scan(&count)
-		CheckErr(err)
-	}
-
-	if count == 0 {
-		return true
-	}
-
-	return false
-}
-
-// QDBGetUrlsLenPG get the length of the urls table
-func QDBGetUrlsLenPG(ctx context.Context) int64 {
-	conn := QDBConnectPG(ctx)
-	defer conn.Close()
-
-	query := "SELECT count(*) FROM urls;"
-	rows, err := conn.Query(ctx, query)
-	defer rows.Close()
-	CheckErr(err)
-
-	var count int
-	for rows.Next() {
-		err = rows.Scan(&count)
-		CheckErr(err)
-	}
-
-	return int64(count)
 }
