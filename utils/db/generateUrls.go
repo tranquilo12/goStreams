@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	aggsHost        = "api.polygon.io/v2/aggs"
-	tickerTypesHost = "api.polygon.io/v3/reference/types"
-	tickersHost     = "api.polygon.io/v3/reference/tickers"
-	tickerNews2Host = "api.polygon.io/v3/reference/news"
+	aggsHost = "api.polygon.io/v2/aggs"
+	//tickerTypesHost = "api.polygon.io/v3/reference/types"
+	tickersHost = "api.polygon.io/v3/reference/tickers"
+	//tickerNews2Host = "api.polygon.io/v3/reference/news"
 
 	//TimeLayout for every time layout
 	TimeLayout = "2006-01-02" // go uses this date as a format specifier
@@ -95,7 +95,7 @@ func PushAllUrlsToTable(
 				Symbol("ticker", ticker).
 				Int64Column("start", dp.Start.UnixMicro()).
 				StringColumn("url", u.String()).
-				BoolColumn("done", false).
+				BoolColumn("retry", false).
 				At(ctx, dp.End.UnixNano())
 			if err != nil {
 				panic(err)
@@ -125,21 +125,21 @@ func PushAllUrlsToTable(
 	fmt.Println("-	Done...")
 }
 
-// MakeTickerTypesUrl A function that takes the API Key and generates the TickerTypes host.
-func MakeTickerTypesUrl(apiKey string) *url.URL {
-	p, err := url.Parse("https://" + tickerTypesHost)
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
-	}
-
-	// make the url values
-	q := url.Values{}
-	q.Add("apiKey", apiKey)
-	p.RawQuery = q.Encode()
-
-	return p
-}
+//// MakeTickerTypesUrl A function that takes the API Key and generates the TickerTypes host.
+//func MakeTickerTypesUrl(apiKey string) *url.URL {
+//	p, err := url.Parse("https://" + tickerTypesHost)
+//	if err != nil {
+//		fmt.Println(err)
+//		panic(err)
+//	}
+//
+//	// make the url values
+//	q := url.Values{}
+//	q.Add("apiKey", apiKey)
+//	p.RawQuery = q.Encode()
+//
+//	return p
+//}
 
 // MakeTickerURL A function that takes the API string and time, and generates an url.
 func MakeTickerURL(apiKey string) *url.URL {
