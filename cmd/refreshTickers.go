@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
+	"lightning/utils/config"
 	"lightning/utils/db"
 	"lightning/utils/structs"
 )
@@ -29,8 +30,7 @@ to quickly create a Cobra application.`,
 		bar := progressbar.Default(30, "Inserting into qdb...")
 
 		// Get the apiKey from the config.ini file
-		//apiKey := config.SetPolygonCred("loving_aryabhata_key")
-		apiKey := "f113pnMkVXGrpyW6lfeSoHs1iL57shaD"
+		apiKey := config.SetPolygonCred("loving_aryabhata_key")
 
 		// Make a channel that will store all the results, of the flattened type
 		TickerChan := make(chan structs.TickersStruct, 35)
