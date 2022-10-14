@@ -90,8 +90,17 @@ func QDBFetchUrls(ctx context.Context, retry bool, limit int) []string {
 	conn := QDBConnectPG(ctx)
 	defer conn.Close()
 
+	query := ""
+
 	// Query the database
-	query := fmt.Sprintf("SELECT url FROM 'urls' WHERE retry = %t ORDER BY ticker, start asc LIMIT %d;", retry, limit)
+	switch limit {
+	case -1:
+		query = fmt.Sprintf("SELECT url FROM 'urls' WHERE retry = %t ORDER BY ticker, start asc;", retry)
+	default:
+		query = fmt.Sprintf("SELECT url FROM 'urls' WHERE retry = %t ORDER BY ticker, start asc LIMIT %d;", retry, limit)
+	}
+
+	// Finally make the query here
 	rows, err := conn.Query(ctx, query)
 	defer rows.Close()
 	CheckErr(err)

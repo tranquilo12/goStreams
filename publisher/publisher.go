@@ -3,9 +3,9 @@ package publisher
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	qdb "github.com/questdb/go-questdb-client"
 	"github.com/schollz/progressbar/v3"
-	"github.com/sirupsen/logrus"
 	"go.uber.org/ratelimit"
 	"lightning/utils/config"
 	"lightning/utils/db"
@@ -16,21 +16,37 @@ import (
 	"time"
 )
 
+// UpdateUrlsRetry updates the urls that failed to download
+func UpdateUrlsRetry(ctx context.Context, u string) {
+	// Connect to QDB
+	conn := db.QDBConnectPG(ctx)
+	defer conn.Close()
+
+	// Form the query
+	query := fmt.Sprintf("UPDATE 'urls' set retry = true where url = '%s';", u)
+
+	// Begin the transaction, execute the query, and commit the transaction
+	tx, err := conn.Begin(ctx)
+	db.CheckErr(err)
+
+	_, err = tx.Exec(ctx, query)
+	db.CheckErr(err)
+
+	err = tx.Commit(ctx)
+	db.CheckErr(err)
+}
+
 // DownloadFromPolygonIO downloads the prices from PolygonIO
 func DownloadFromPolygonIO(
+	ctx context.Context,
 	client *http.Client,
-	logger *logrus.Logger,
 	u url.URL,
 	res *structs.AggregatesBarsResponse,
 ) error {
 	// Create a new client
 	resp, err := client.Get(u.String())
 	if err != nil {
-		logger.WithFields(logrus.Fields{
-			"url":   u.String(),
-			"error": err,
-		}).Info("Error in downloading data from PolygonIO")
-		return nil
+		UpdateUrlsRetry(ctx, u.String())
 	}
 
 	// Defer the closing of the body
@@ -46,7 +62,6 @@ func DownloadFromPolygonIO(
 // AggChannelWriter writes the aggregates to Kafka
 func AggChannelWriter(
 	urls []string,
-	logger *logrus.Logger,
 ) error {
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
@@ -105,7 +120,7 @@ func AggChannelWriter(
 	// Iterate over every url, create goroutine for each url download and rate limit the requests
 	for _, u := range urls {
 		now := rateLimiter.Take()
-		go channelWriter(c, logger, httpClient, u, &wg, bar)
+		go channelWriter(ctx, c, httpClient, u, &wg, bar)
 		now.Sub(prev)
 		prev = now
 	}
@@ -120,8 +135,8 @@ func AggChannelWriter(
 }
 
 func channelWriter(
+	ctx context.Context,
 	chan1 chan structs.AggregatesBarsResponse,
-	logger *logrus.Logger,
 	httpClient *http.Client,
 	u string,
 	wg *sync.WaitGroup,
@@ -136,7 +151,7 @@ func channelWriter(
 
 	// Download the data from PolygonIO
 	var res structs.AggregatesBarsResponse
-	err = DownloadFromPolygonIO(httpClient, logger, *FinalUrl, &res)
+	err = DownloadFromPolygonIO(ctx, httpClient, *FinalUrl, &res)
 	db.CheckErr(err)
 
 	// Send the data to QDB, if response is not empty

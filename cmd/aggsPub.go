@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"lightning/publisher"
-	"lightning/utils/config"
 	"lightning/utils/db"
 	_ "net/http/pprof"
 )
@@ -24,15 +23,11 @@ var aggsPubCmd = &cobra.Command{
 		fmt.Println("aggsPub called")
 		ctx := context.TODO()
 
-		// Get the logger here
-		logger := config.GetLogger()
-
 		// Fetch all urls that have not been pulled yet
-		logger.Info("Fetching all urls that have not been pulled yet...")
-		urls := db.QDBFetchUrls(ctx, false, 1000)
+		urls := db.QDBFetchUrls(ctx, false, -1)
 
 		// Download all data and push the data into kafka
-		err := publisher.AggChannelWriter(urls, logger)
+		err := publisher.AggChannelWriter(urls)
 		db.CheckErr(err)
 	},
 }
