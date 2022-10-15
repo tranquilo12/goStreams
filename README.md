@@ -2,48 +2,40 @@
 
 ## Project Structure
 ```bash
-.
+- .
 ├── LICENSE
 ├── README.md
-├── main.go
 ├── cmd
-│   ├── aggsPub.go
-│   ├── aggsSub2.go
-│   ├── createTables.go
-│   ├── deleteFromDB.go
-│   ├── deleteObjs.go
-│   ├── refreshTickers.go
-│   ├── questdbInsertAggs.go
-│   ├── questdbRefreshTickers.go
-│   ├── root.go
-│   ├── tickerNews.go
-│   └── tickerTypes.go
+│   ├── aggsPub.go
+│   ├── createUrls.go
+│   ├── refreshTickers.go
+│   └── root.go
+├── dir_struct.txt
 ├── extras
-│   ├── make_ssh_tunnel.sh
-│   └── tmux-sessions.sh
-├── subscriber
-│   └── subscriber.go
-│   └── kafkaSubscriber.go
+│   ├── make_ssh_tunnel.sh
+│   └── tmux-sessions.sh
+├── go.mod
+├── go.sum
+├── main.go
 ├── publisher
-│   └── publisher.go
-│   └── kafkaPublisher.go
+│   └── publisher.go
 └── utils
     ├── config
-    │   ├── config.go
-    │   └── equities_list.csv
+    │   ├── config.go
+    │   └── equities_list.csv
     ├── db
-    │   ├── create_tables.go
-    │   ├── dates.go
-    │   ├── generate_urls.go
-    │   ├── inserts.go
-    │   ├── postgres.go
-    │   ├── questDB.go
-    │   ├── redis.go
-    │   └── requests.go
+    │   ├── createTables.go
+    │   ├── dates.go
+    │   ├── generateUrls.go
+    │   ├── postgres.go
+    │   ├── questDB.go
+    │   └── requests.go
     ├── mocks
-    │   └── client.go
+    │   └── client.go
     └── structs
         └── structs.go
+
+8 directories, 23 files
 ```
 
 ## Docker Setup and Usage
@@ -178,6 +170,3 @@ Create Tables in a raw database:
 - `docker exec -i docker_timescale_1 /bin/bash -c "PGPASSWORD={} pg_dump --dbname=polygonio --host=host.docker.internal --port=5432 --username=postgres --schema='public' --table=public."aggregates_bars" --data-only" > C:\Users\SHIRAM\Documents\Numerai\aggregates_bars-2015-01-01-2021-06-05-dump.sql`
 - Example for converting from sql to txt: `awk 'NR >= 57890000 && NR <= 57890010' /path/to/file > new_file.txt`
 - or an easier way of doing things: `sudo docker exec -u postgres ${CONTAINER} psql -d ${DB} -c "COPY ${TABLE} TO STDOUT WITH CSV HEADER " > ${FILE}`
-
-### AWS Firehose notes
-- 
