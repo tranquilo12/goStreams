@@ -23,12 +23,19 @@ var aggsPubCmd = &cobra.Command{
 		fmt.Println("aggsPub called")
 		ctx := context.TODO()
 
-		// Fetch all urls that have not been pulled yet
-		urls := db.QDBFetchUrls(ctx, false, -1)
+		// Fetch all urls, ticker by ticker, so fetch all the tickers first
+		tickers := db.QDBFetchUniqueTickersPG(ctx)
 
-		// Download all data and push the data into kafka
-		err := publisher.AggChannelWriter(urls)
-		db.CheckErr(err)
+		for i, ticker := range tickers {
+			fmt.Printf("Fetching all data for ticker: %s, %d/%d \n", ticker, i, len(tickers))
+
+			// Get the urls for this ticker
+			urls := db.QDBFetchUrlsByTicker(ctx, ticker)
+
+			// Download all agg data and push the data into QuestDB
+			err := publisher.AggChannelWriter(urls)
+			db.CheckErr(err)
+		}
 	},
 }
 

@@ -84,8 +84,10 @@ func AggChannelWriter(
 	wg.Add(1)
 
 	go func() {
+		// Makes sure wg closes
 		defer wg.Done()
 
+		// Get newline sender
 		sender, _ := qdb.NewLineSender(ctx)
 		defer sender.Close()
 
