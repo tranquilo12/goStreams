@@ -94,7 +94,7 @@ func AggChannelWriter(
 		// Get the values from the channel
 		for res := range c {
 			for _, v := range res.Results {
-				err := sender.Table("aggs").
+				err := sender.Table("aggs2").
 					Symbol("ticker", res.Ticker).
 					StringColumn("timespan", "minute").
 					Int64Column("multiplier", int64(1)).
@@ -117,7 +117,7 @@ func AggChannelWriter(
 
 	// Max allow 1000 requests per second
 	prev := time.Now()
-	rateLimiter := ratelimit.New(1000)
+	rateLimiter := ratelimit.New(300)
 
 	// Iterate over every url, create goroutine for each url download and rate limit the requests
 	for _, u := range urls {
