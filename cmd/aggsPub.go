@@ -4,10 +4,33 @@ import (
 	"context"
 	"fmt"
 	"github.com/spf13/cobra"
+	"github.com/vbauerster/mpb/v8"
 	"lightning/publisher"
 	"lightning/utils/db"
 	_ "net/http/pprof"
+
+	"github.com/vbauerster/mpb/v8/decor"
 )
+
+// Get new pbar
+func getNewPbar(p *mpb.Progress, total int, name string) *mpb.Bar {
+	// create a single bar, which will inherit container's width
+	bar := p.New(int64(total),
+		// BarFillerBuilder with custom style
+		mpb.BarStyle().Lbound("╢").Filler("▌").Tip("▌").Padding("░").Rbound("╟"),
+		mpb.PrependDecorators(
+			// display our name with one space on the right
+			decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
+			decor.CountersNoUnit("%d / %d", decor.WCSyncWidth),
+			// replace ETA decorator with "done" message, OnComplete event
+			decor.OnComplete(
+				decor.AverageETA(decor.ET_STYLE_GO, decor.WC{W: 4}), "done",
+			),
+		),
+		mpb.AppendDecorators(decor.Percentage()),
+	)
+	return bar
+}
 
 // aggsPubCmd represents the aggs command
 var aggsPubCmd = &cobra.Command{
@@ -26,16 +49,28 @@ var aggsPubCmd = &cobra.Command{
 		// Fetch all urls, ticker by ticker, so fetch all the tickers first
 		tickers := db.QDBFetchUniqueTickersPG(ctx)
 
-		for i, ticker := range tickers {
-			fmt.Printf("Fetching all data for ticker: %s, %d/%d \n", ticker, i, len(tickers))
+		// initialize progress container, with custom width
+		p := mpb.New(mpb.WithWidth(64))
+		total := len(tickers)
+		name := "Downloading :"
+		bar := getNewPbar(p, total, name)
 
+		// #TODO: Make this progress bar not suck, it shouldn't output a new line!
+		fmt.Printf("Fetching all data for each ticker...")
+		for _, ticker := range tickers {
 			// Get the urls for this ticker
 			urls := db.QDBFetchUrlsByTicker(ctx, ticker)
 
 			// Download all agg data and push the data into QuestDB
 			err := publisher.AggChannelWriter(urls)
 			db.CheckErr(err)
+
+			// increment bar
+			bar.Increment()
 		}
+
+		// wait for our bar to complete and flush
+		p.Wait()
 	},
 }
 

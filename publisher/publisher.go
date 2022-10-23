@@ -94,7 +94,7 @@ func AggChannelWriter(
 		// Get the values from the channel
 		for res := range c {
 			for _, v := range res.Results {
-				err := sender.Table("aggs").
+				err := sender.Table("aggs2").
 					Symbol("ticker", res.Ticker).
 					StringColumn("timespan", "minute").
 					Int64Column("multiplier", int64(1)).
