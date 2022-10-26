@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	qdb "github.com/questdb/go-questdb-client"
-	"github.com/schollz/progressbar/v3"
 	"go.uber.org/ratelimit"
 	"lightning/utils/config"
 	"lightning/utils/db"
@@ -49,13 +48,20 @@ func DownloadFromPolygonIO(
 		UpdateUrlsRetry(ctx, u.String())
 	}
 
-	// Defer the closing of the body
-	defer resp.Body.Close()
+	// Defer Close the body
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			UpdateUrlsRetry(ctx, u.String())
+		}
+	}()
 
 	// Decode the response
 	if resp.StatusCode == http.StatusOK {
 		err = json.NewDecoder(resp.Body).Decode(&res)
+	} else {
+		UpdateUrlsRetry(ctx, u.String())
 	}
+
 	return err
 }
 
@@ -68,10 +74,6 @@ func AggChannelWriter(
 
 	// create a buffer of the waitGroup, of the same length as urls
 	wg.Add(len(urls))
-
-	// Create ui progress bar, formatted
-	bar := progressbar.Default(int64(len(urls)))
-	defer bar.Close()
 
 	// Get the http client
 	httpClient := config.GetHttpClient()
@@ -94,7 +96,7 @@ func AggChannelWriter(
 		// Get the values from the channel
 		for res := range c {
 			for _, v := range res.Results {
-				err := sender.Table("aggs2").
+				err := sender.Table("aggs").
 					Symbol("ticker", res.Ticker).
 					StringColumn("timespan", "minute").
 					Int64Column("multiplier", int64(1)).
@@ -117,12 +119,12 @@ func AggChannelWriter(
 
 	// Max allow 1000 requests per second
 	prev := time.Now()
-	rateLimiter := ratelimit.New(1000)
+	rateLimiter := ratelimit.New(50000)
 
 	// Iterate over every url, create goroutine for each url download and rate limit the requests
 	for _, u := range urls {
 		now := rateLimiter.Take()
-		go channelWriter(ctx, c, httpClient, u, &wg, bar)
+		go channelWriter(ctx, c, httpClient, u, &wg)
 		now.Sub(prev)
 		prev = now
 	}
@@ -142,7 +144,6 @@ func channelWriter(
 	httpClient *http.Client,
 	u string,
 	wg *sync.WaitGroup,
-	bar *progressbar.ProgressBar,
 ) {
 	// Makes sure wg closes
 	defer wg.Done()
@@ -162,6 +163,5 @@ func channelWriter(
 	}
 
 	// Progress bar update
-	err = bar.Add(1)
 	db.CheckErr(err)
 }

@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/vbauerster/mpb/v8"
+	"github.com/vbauerster/mpb/v8/decor"
 	"lightning/publisher"
 	"lightning/utils/db"
-	_ "net/http/pprof"
-
-	"github.com/vbauerster/mpb/v8/decor"
 )
 
 // Get new pbar
@@ -24,10 +22,10 @@ func getNewPbar(p *mpb.Progress, total int, name string) *mpb.Bar {
 			decor.CountersNoUnit("%d / %d", decor.WCSyncWidth),
 			// replace ETA decorator with "done" message, OnComplete event
 			decor.OnComplete(
-				decor.AverageETA(decor.ET_STYLE_GO, decor.WC{W: 4}), "done",
+				decor.AverageETA(decor.ET_STYLE_GO, decor.WC{W: 4, C: decor.DSyncSpace}), "Done!",
 			),
 		),
-		mpb.AppendDecorators(decor.Percentage()),
+		mpb.AppendDecorators(decor.Percentage(decor.WC{W: 5})),
 	)
 	return bar
 }
@@ -43,7 +41,7 @@ var aggsPubCmd = &cobra.Command{
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Get the context
-		fmt.Println("aggsPub called")
+		fmt.Println("Downloading data into 'aggs' table...")
 		ctx := context.TODO()
 
 		// Fetch all urls, ticker by ticker, so fetch all the tickers first
