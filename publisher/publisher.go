@@ -72,6 +72,8 @@ func AggChannelWriter(
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
 
+	urls = urls[260:]
+
 	// create a buffer of the waitGroup, of the same length as urls
 	wg.Add(len(urls))
 
