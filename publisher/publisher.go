@@ -37,11 +37,13 @@ func UpdateUrlsRetry(ctx context.Context, u string) {
 
 // DownloadFromPolygonIO downloads the prices from PolygonIO
 func DownloadFromPolygonIO(
-	ctx context.Context,
 	client *http.Client,
 	u url.URL,
 	res *structs.AggregatesBarsResponse,
 ) error {
+	// Get a context that can be cancelled within this function
+	ctx, cancel := context.WithCancel(context.Background())
+
 	// Create a new client
 	resp, err := client.Get(u.String())
 	if err != nil {
@@ -50,17 +52,22 @@ func DownloadFromPolygonIO(
 
 	// Defer Close the body
 	defer func() {
-		if err := resp.Body.Close(); err != nil {
+		if err = resp.Body.Close(); err != nil {
 			UpdateUrlsRetry(ctx, u.String())
 		}
 	}()
 
 	// Decode the response
 	if resp.StatusCode == http.StatusOK {
-		err = json.NewDecoder(resp.Body).Decode(&res)
+		if err = json.NewDecoder(resp.Body).Decode(&res); err != nil {
+			UpdateUrlsRetry(ctx, u.String())
+		}
 	} else {
 		UpdateUrlsRetry(ctx, u.String())
 	}
+
+	// Cancel the context
+	cancel()
 
 	return err
 }
@@ -72,28 +79,36 @@ func AggChannelWriter(
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
 
-	urls = urls[260:]
-
 	// create a buffer of the waitGroup, of the same length as urls
 	wg.Add(len(urls))
 
-	// Get the http client
+	// Get the http client, it's a modified version with extended timeout and other features.
 	httpClient := config.GetHttpClient()
 
 	// Get the channel that will be used to write to QuestDB
 	c := make(chan structs.AggregatesBarsResponse, len(urls))
 
-	// Make a goroutine that will accept data from a channel and push to questDB
-	ctx := context.Background()
+	// Add another wait group for the goroutine below
 	wg.Add(1)
 
+	// Go Func to insert data into the database, reads from the channel
 	go func() {
 		// Makes sure wg closes
 		defer wg.Done()
 
+		// Make a goroutine that will accept data from a channel and push to questDB
+		ctx, cancel := context.WithCancel(context.Background())
+
 		// Get newline sender
-		sender, _ := qdb.NewLineSender(ctx)
-		defer sender.Close()
+		sender, err := qdb.NewLineSender(ctx)
+		db.CheckErr(err)
+
+		// Defer close the sender
+		defer func() {
+			if err = sender.Close(); err != nil {
+				fmt.Println(err)
+			}
+		}()
 
 		// Get the values from the channel
 		for res := range c {
@@ -117,6 +132,9 @@ func AggChannelWriter(
 			err := sender.Flush(ctx)
 			db.CheckErr(err)
 		}
+
+		// Cancel the context
+		cancel()
 	}()
 
 	// Max allow 1000 requests per second
@@ -126,7 +144,7 @@ func AggChannelWriter(
 	// Iterate over every url, create goroutine for each url download and rate limit the requests
 	for _, u := range urls {
 		now := rateLimiter.Take()
-		go channelWriter(ctx, c, httpClient, u, &wg)
+		go channelWriter(c, httpClient, u, &wg)
 		now.Sub(prev)
 		prev = now
 	}
@@ -141,7 +159,6 @@ func AggChannelWriter(
 }
 
 func channelWriter(
-	ctx context.Context,
 	chan1 chan structs.AggregatesBarsResponse,
 	httpClient *http.Client,
 	u string,
@@ -156,7 +173,7 @@ func channelWriter(
 
 	// Download the data from PolygonIO
 	var res structs.AggregatesBarsResponse
-	err = DownloadFromPolygonIO(ctx, httpClient, *FinalUrl, &res)
+	err = DownloadFromPolygonIO(httpClient, *FinalUrl, &res)
 	db.CheckErr(err)
 
 	// Send the data to QDB, if response is not empty
