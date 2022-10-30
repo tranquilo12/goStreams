@@ -91,24 +91,17 @@ func AggChannelWriter(
 	// Add another wait group for the goroutine below
 	wg.Add(1)
 
+	// Make a goroutine that will accept data from a channel and push to questDB
+	ctx := context.TODO()
+
+	// Get newline sender
+	sender, err := qdb.NewLineSender(ctx)
+	db.CheckErr(err)
+
 	// Go Func to insert data into the database, reads from the channel
 	go func() {
 		// Makes sure wg closes
 		defer wg.Done()
-
-		// Make a goroutine that will accept data from a channel and push to questDB
-		ctx, cancel := context.WithCancel(context.Background())
-
-		// Get newline sender
-		sender, err := qdb.NewLineSender(ctx)
-		db.CheckErr(err)
-
-		// Defer close the sender
-		defer func() {
-			if err = sender.Close(); err != nil {
-				fmt.Println(err)
-			}
-		}()
 
 		// Get the values from the channel
 		for res := range c {
@@ -132,9 +125,6 @@ func AggChannelWriter(
 			err := sender.Flush(ctx)
 			db.CheckErr(err)
 		}
-
-		// Cancel the context
-		cancel()
 	}()
 
 	// Max allow 1000 requests per second
@@ -149,10 +139,18 @@ func AggChannelWriter(
 		prev = now
 	}
 
-	// Wait for all the goroutines to finish, and close the channel
+	// Wait for all the goroutines to finish, and close the channel, and then the sender.
 	go func() {
+		// Wait for all the goroutines to finish
 		wg.Wait()
+
+		// Close the channel
 		close(c)
+
+		// Close the sender
+		if err = sender.Close(); err != nil {
+			fmt.Println(err)
+		}
 	}()
 
 	return nil
