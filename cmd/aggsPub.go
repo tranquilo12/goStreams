@@ -49,11 +49,8 @@ var aggsPubCmd = &cobra.Command{
 
 		// initialize progress container, with custom width
 		p := mpb.New(mpb.WithWidth(64))
-		total := len(tickers)
-		name := "Downloading :"
-		bar := getNewPbar(p, total, name)
+		bar := getNewPbar(p, len(tickers), "Downloading :")
 
-		// #TODO: Make this progress bar not suck, it shouldn't output a new line!
 		fmt.Printf("Fetching all data for each ticker...")
 		for _, ticker := range tickers {
 			// Get the urls for this ticker
