@@ -1,16 +1,11 @@
 package config
 
 import (
-	"context"
-	"flag"
-	"github.com/mattn/go-colorable"
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/ini.v1"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime/pprof"
 	"time"
 )
 
@@ -56,37 +51,8 @@ func getConfigPath() string {
 }
 
 // getLogfilePath Get the log file path
-func getLogfilePath() string {
-	wd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-
-	logfilePath := filepath.Join(wd, "logs", "log.txt")
-	return logfilePath
-}
 
 // GetLogger Get the logger
-func GetLogger() *log.Logger {
-	// Create a new instance of the logger and ensure fields.
-	var logger = log.New()
-	logger.WithFields(log.Fields{
-		"app": "lightning",
-		"url": "",
-		"err": "",
-	})
-
-	// Set the output to the log file
-	log.SetOutput(colorable.NewColorableStdout())
-	log.SetFormatter(&log.TextFormatter{
-		PadLevelText:    true,
-		ForceColors:     true,
-		FullTimestamp:   true,
-		TimestampFormat: "2006-01-02 15:04:05",
-	})
-
-	return logger
-}
 
 // SetPolygonCred Function that reads the config.ini file within the directory, and returns the API Key.
 // param user has options 'me' and 'other'.
@@ -141,31 +107,3 @@ func GetHttpClient() *http.Client {
 }
 
 // MemProfiler Entire block is for profiling memory, exposing localhost:6060
-func MemProfiler(ctx context.Context) {
-	var memprofile = flag.String("memprofile", "", "write memory profile to this file")
-	if *memprofile != "" {
-		f, err := os.Create(*memprofile)
-		if err != nil {
-			panic(err)
-		}
-
-		err = pprof.WriteHeapProfile(f)
-		if err != nil {
-			panic(err)
-		}
-
-		pprof.SetGoroutineLabels(ctx)
-		if err != nil {
-			panic(err)
-		}
-
-		return
-	}
-
-	// Start the fgprof server
-	//http.DefaultServeMux.Handle("/debug/fgprof", fgprof.Handler())
-
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
-}

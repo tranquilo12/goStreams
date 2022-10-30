@@ -867,71 +867,8 @@ type NewBatchConsumerStruct struct {
 }
 
 // TickersVxFlattenPayloadBeforeInsert Function that flattens result from '/v3/reference/tickers'
-func TickersVxFlattenPayloadBeforeInsert(target TickersVxResponse) []TickerVx {
-	var output []TickerVx
-	var results = target.Results
-
-	for i := range results {
-		var res = results[i]
-		r := TickerVx{
-			InsertDatetime:  time.Now(),
-			Ticker:          res.Ticker,
-			Name:            res.Name,
-			Market:          res.Market,
-			Locale:          res.Locale,
-			PrimaryExchange: res.PrimaryExchange,
-			Type:            res.Type,
-			Active:          res.Active,
-			CurrencyName:    res.CurrencyName,
-			Cik:             res.Cik,
-			CompositeFigi:   res.CompositeFigi,
-			ShareClassFigi:  res.ShareClassFigi,
-			LastUpdatedUtc:  res.LastUpdatedUtc,
-		}
-		output = append(output, r)
-	}
-
-	return output
-}
 
 // TickerTypesFlattenPayloadBeforeInsert Function that flattens result from '/v2/reference/types'
-func TickerTypesFlattenPayloadBeforeInsert(target *TickerTypeResponse) TickerType {
-	var Tt TickerType
-	Tt.Cs = target.Results.Types.Cs
-	Tt.Adr = target.Results.Types.Adr
-	Tt.Nvdr = target.Results.Types.Nvdr
-	Tt.Gdr = target.Results.Types.Gdr
-	Tt.Sdr = target.Results.Types.Sdr
-	Tt.Cef = target.Results.Types.Cef
-	Tt.Etp = target.Results.Types.Etp
-	Tt.Reit = target.Results.Types.Reit
-	Tt.Mlp = target.Results.Types.Mlp
-	Tt.Wrt = target.Results.Types.Wrt
-	Tt.Pub = target.Results.Types.Pub
-	Tt.Nyrs = target.Results.Types.Nyrs
-	Tt.Unit = target.Results.Types.Unit
-	Tt.Right = target.Results.Types.Right
-	Tt.Track = target.Results.Types.Track
-	Tt.Ltdp = target.Results.Types.Ltdp
-	Tt.Rylt = target.Results.Types.Rylt
-	Tt.Mf = target.Results.Types.Mf
-	Tt.Pfd = target.Results.Types.Pfd
-	Tt.Fdr = target.Results.Types.Fdr
-	Tt.Ost = target.Results.Types.Ost
-	Tt.Fund = target.Results.Types.Fund
-	Tt.Sp = target.Results.Types.Sp
-	Tt.Si = target.Results.Types.Si
-	Tt.Index = target.Results.IndexTypes.Index
-	Tt.Etf = target.Results.IndexTypes.Etf
-	Tt.Etn = target.Results.IndexTypes.Etf
-	Tt.Etmf = target.Results.IndexTypes.Etmf
-	Tt.Settlement = target.Results.IndexTypes.Settlement
-	Tt.Spot = target.Results.IndexTypes.Spot
-	Tt.Subprod = target.Results.IndexTypes.Subprod
-	Tt.Wc = target.Results.IndexTypes.Wc
-	Tt.Alphaindex = target.Results.IndexTypes.Alphaindex
-	return Tt
-}
 
 // msToTime Function that takes in the string within the json, and returns the time.Unix element.
 func msToTime(ms string) (time.Time, error) {
@@ -974,36 +911,6 @@ func AggBarFlattenPayloadBeforeInsert(target AggregatesBarsResponse, timespan st
 			RequestID:    target.RequestID,
 			Multiplier:   multiplier,
 			Timespan:     timespan,
-		}
-		output = append(output, newArr)
-	}
-	return output
-}
-
-func TickerNews2FlattenPayloadBeforeInsert(target TickerNews2Response) []TickerNews2 {
-	var output []TickerNews2
-	results := target.Results
-	for i := range results {
-		var r = results[i]
-		newArr := TickerNews2{
-			ID:                   r.ID,
-			PublisherName:        r.Publisher.Name,
-			PublisherHomepageURL: r.Publisher.HomepageURL,
-			PublisherLogoURL:     r.Publisher.LogoURL,
-			PublisherFaviconURL:  r.Publisher.FaviconURL,
-			Title:                r.Title,
-			Author:               r.Author,
-			PublishedUtc:         r.PublishedUtc,
-			ArticleURL:           r.ArticleURL,
-			Tickers:              r.Tickers,
-			AmpURL:               r.AmpURL,
-			ImageURL:             r.ImageURL,
-			Description:          r.Description,
-			Keywords:             r.Keywords,
-			Status:               target.Status,
-			RequestID:            target.RequestID,
-			Count:                target.Count,
-			NextURL:              target.NextURL,
 		}
 		output = append(output, newArr)
 	}

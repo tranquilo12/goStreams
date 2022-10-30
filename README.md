@@ -145,7 +145,7 @@ To remain OS-agnostic, postgres, pgbouncer and Redis are all docker containers.
   
 ### Typical commands
 Create Tables in a raw database:
-- Ensure there's a database called 'polygonio"
+- Ensure there's a database called "polygonio"
 - go install lightning; go createTables
   
 - Publisher:
