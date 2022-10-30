@@ -86,41 +86,6 @@ func QDBFetchUniqueTickersPG(ctx context.Context) []string {
 	return results
 }
 
-// QDBFetchAllUrls returns all the urls from the database, based on the retry flag, and the limit flag
-func QDBFetchAllUrls(ctx context.Context, retry bool, limit int) []string {
-	conn := QDBConnectPG(ctx)
-	defer conn.Close()
-
-	query := ""
-
-	// Query the database
-	switch limit {
-	case -1:
-		query = fmt.Sprintf("SELECT url FROM 'urls' WHERE retry = %t ORDER BY ticker, start asc;", retry)
-	default:
-		query = fmt.Sprintf("SELECT url FROM 'urls' WHERE retry = %t ORDER BY ticker, start asc LIMIT %d;", retry, limit)
-	}
-
-	// Finally make the query here
-	rows, err := conn.Query(ctx, query)
-	defer rows.Close()
-	CheckErr(err)
-
-	var results []string
-	for rows.Next() {
-		// Create a new url.URL and scan the row into it
-		var s string
-
-		// Scan the row, into the string
-		err = rows.Scan(&s)
-		CheckErr(err)
-
-		results = append(results, s)
-	}
-
-	return results
-}
-
 // QDBFetchUrlsByTicker returns the urls for a specific ticker, no limits.
 func QDBFetchUrlsByTicker(ctx context.Context, ticker string) []string {
 	conn := QDBConnectPG(ctx)
