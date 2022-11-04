@@ -48,14 +48,9 @@ func DownloadFromPolygonIO(
 	resp, err := client.Get(u.String())
 	if err != nil {
 		UpdateUrlsRetry(ctx, u.String())
+	} else {
+		defer resp.Body.Close()
 	}
-
-	// Defer Close the body
-	defer func() {
-		if err = resp.Body.Close(); err != nil {
-			UpdateUrlsRetry(ctx, u.String())
-		}
-	}()
 
 	// Decode the response
 	if resp.StatusCode == http.StatusOK {
@@ -66,9 +61,7 @@ func DownloadFromPolygonIO(
 		UpdateUrlsRetry(ctx, u.String())
 	}
 
-	// Cancel the context
 	cancel()
-
 	return err
 }
 
@@ -105,25 +98,27 @@ func AggChannelWriter(
 
 		// Get the values from the channel
 		for res := range c {
-			for _, v := range res.Results {
-				err := sender.Table("aggs").
-					Symbol("ticker", res.Ticker).
-					StringColumn("timespan", "minute").
-					Int64Column("multiplier", int64(1)).
-					Float64Column("open", v.O).
-					Float64Column("high", v.H).
-					Float64Column("low", v.L).
-					Float64Column("close", v.C).
-					Float64Column("volume", v.V).
-					Float64Column("vw", v.Vw).
-					Float64Column("n", float64(v.N)).
-					At(ctx, time.UnixMilli(int64(v.T)).UnixNano())
+			if res.Results != nil {
+				for _, v := range res.Results {
+					err := sender.Table("aggs").
+						Symbol("ticker", res.Ticker).
+						StringColumn("timespan", "minute").
+						Int64Column("multiplier", int64(1)).
+						Float64Column("open", v.O).
+						Float64Column("high", v.H).
+						Float64Column("low", v.L).
+						Float64Column("close", v.C).
+						Float64Column("volume", v.V).
+						Float64Column("vw", v.Vw).
+						Float64Column("n", float64(v.N)).
+						At(ctx, time.UnixMilli(int64(v.T)).UnixNano())
+					db.CheckErr(err)
+				}
+
+				// Make sure the sender is flushed
+				err := sender.Flush(ctx)
 				db.CheckErr(err)
 			}
-
-			// Make sure the sender is flushed
-			err := sender.Flush(ctx)
-			db.CheckErr(err)
 		}
 	}()
 
@@ -172,13 +167,16 @@ func channelWriter(
 	// Download the data from PolygonIO
 	var res structs.AggregatesBarsResponse
 	err = DownloadFromPolygonIO(httpClient, *FinalUrl, &res)
-	db.CheckErr(err)
-
-	// Send the data to QDB, if response is not empty
-	if res.Results != nil {
-		chan1 <- res
+	if err != nil {
+		// Send a nil results to the channel
+		chan1 <- structs.AggregatesBarsResponse{Results: nil}
+	} else {
+		// Send the data to QDB, if response is not empty
+		if res.Results != nil {
+			chan1 <- res
+		} else {
+			// Send a nil results to the channel
+			chan1 <- structs.AggregatesBarsResponse{Results: nil}
+		}
 	}
-
-	// Progress bar update
-	db.CheckErr(err)
 }

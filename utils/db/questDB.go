@@ -12,7 +12,7 @@ import (
 // CheckErr checks for errors and panics if there is one
 func CheckErr(err error) {
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 }
 

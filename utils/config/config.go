@@ -50,10 +50,6 @@ func getConfigPath() string {
 	return configPath
 }
 
-// getLogfilePath Get the log file path
-
-// GetLogger Get the logger
-
 // SetPolygonCred Function that reads the config.ini file within the directory, and returns the API Key.
 // param user has options 'me' and 'other'.
 func SetPolygonCred(user string) string {
@@ -81,7 +77,7 @@ func SetPolygonCred(user string) string {
 
 // GetHttpClient Get a modified http client with the correct timeout.
 func GetHttpClient() *http.Client {
-	timeout := 600 * time.Second
+	timeout := 60000 * time.Second
 
 	dialer := &net.Dialer{
 		Timeout:   timeout,
@@ -105,5 +101,3 @@ func GetHttpClient() *http.Client {
 		Transport: transport,
 	}
 }
-
-// MemProfiler Entire block is for profiling memory, exposing localhost:6060
