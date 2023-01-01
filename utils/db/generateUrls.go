@@ -125,22 +125,6 @@ func PushAllUrlsToTable(
 	fmt.Println("-	Done...")
 }
 
-//// MakeTickerTypesUrl A function that takes the API Key and generates the TickerTypes host.
-//func MakeTickerTypesUrl(apiKey string) *url.URL {
-//	p, err := url.Parse("https://" + tickerTypesHost)
-//	if err != nil {
-//		fmt.Println(err)
-//		panic(err)
-//	}
-//
-//	// make the url values
-//	q := url.Values{}
-//	q.Add("apiKey", apiKey)
-//	p.RawQuery = q.Encode()
-//
-//	return p
-//}
-
 // MakeTickerURL A function that takes the API string and time, and generates an url.
 func MakeTickerURL(apiKey string) *url.URL {
 	p, err := url.Parse("https://" + tickersHost)

@@ -12,13 +12,12 @@ import (
 // createUrlsCmd represents the createUrls command
 var createUrlsCmd = &cobra.Command{
 	Use:   "createUrls",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Creates the urls for the data to be fetched from the polygon.io API",
+	Long: `
+	Creates the urls for the data to be fetched from the polygon.io API.
+	First reads from the config.ini file to get the apiKey, fetches the ticker symbols from the database.
+	Then creates the urls for the data to be fetched and finally inserts the urls into the database.
+	`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("createUrls called...")
 		ctx := context.TODO()

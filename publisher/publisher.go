@@ -22,7 +22,7 @@ func UpdateUrlsRetry(ctx context.Context, u string) {
 	defer conn.Close()
 
 	// Form the query
-	query := fmt.Sprintf("UPDATE 'urls' set retry = true where url = '%s';", u)
+	query := fmt.Sprintf("UPDATE urls set retry = true where url = '%s';", u)
 
 	// Begin the transaction, execute the query, and commit the transaction
 	tx, err := conn.Begin(ctx)

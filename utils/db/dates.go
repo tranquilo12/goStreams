@@ -7,7 +7,7 @@ import (
 
 // GetNewDatePair gets a new Date Pair, with the Interval already initialized.
 func GetNewDatePair(start time.Time, end time.Time, target time.Time) structs.DatePairs {
-	// If we're intitiating a new DatePair, we don't have an end, just a target
+	// If we're initiating a new DatePair, we don't have an end, just a target
 	// So just make sure the end is one more day ahead of the start date.
 	if end.IsZero() {
 		end = start.Add(24 * time.Hour)

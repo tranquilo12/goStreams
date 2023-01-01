@@ -10,16 +10,15 @@ import (
 	"lightning/utils/structs"
 )
 
-// questdbPubCmd represents the questdbPub command
-var questdbPubCmd = &cobra.Command{
-	Use:   "questdbRefreshTickers",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+// refreshTickersCmd represents the questDBPub command
+var refreshTickersCmd = &cobra.Command{
+	Use:   "refreshTickers",
+	Short: "A command to refresh the tickers in the database",
+	Long: `
+	Refreshes the tickers in the database.
+	First reads from the config.ini file to get the apiKey, 
+	then fetches the ticker symbols from the polygon.io API.
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("-	refreshTickers called...")
 
@@ -53,5 +52,5 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	rootCmd.AddCommand(questdbPubCmd)
+	rootCmd.AddCommand(refreshTickersCmd)
 }

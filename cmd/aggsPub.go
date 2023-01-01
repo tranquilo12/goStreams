@@ -10,8 +10,8 @@ import (
 	"lightning/utils/db"
 )
 
-// Get new pbar
-func getNewPbar(p *mpb.Progress, total int, name string) *mpb.Bar {
+// Get new progress bar
+func getNewPBar(p *mpb.Progress, total int, name string) *mpb.Bar {
 	// create a single bar, which will inherit container's width
 	bar := p.New(int64(total),
 		// BarFillerBuilder with custom style
@@ -49,7 +49,7 @@ var aggsPubCmd = &cobra.Command{
 
 		// initialize progress container, with custom width
 		p := mpb.New(mpb.WithWidth(64))
-		bar := getNewPbar(p, len(tickers), "Downloading :")
+		bar := getNewPBar(p, len(tickers), "Downloading :")
 
 		fmt.Printf("Fetching all data for each ticker...")
 		for _, ticker := range tickers {

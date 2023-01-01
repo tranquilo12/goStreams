@@ -17,7 +17,7 @@ func AddApiKeyToUrl(u string, apiKey string) *url.URL {
 	return parsedUrl
 }
 
-func GetAndCheckResponse(u *url.URL) *http.Response {
+func FetchResponse(u *url.URL) *http.Response {
 	// Make the query
 	response, err := http.Get(u.String())
 	CheckErr(err)
@@ -33,7 +33,7 @@ func FetchAllTickers(apiKey string, TickerChan chan structs.TickersStruct) {
 	parsedURL := MakeTickerURL(apiKey)
 
 	// Get and clean response
-	response := GetAndCheckResponse(parsedURL)
+	response := FetchResponse(parsedURL)
 
 	// Push response to chan and make another request using the "next_url" and apiKey, until next_url is not available.
 	for {
@@ -49,7 +49,7 @@ func FetchAllTickers(apiKey string, TickerChan chan structs.TickersStruct) {
 			// Check if everything is good, and if we have a next url
 			if ticker.NextURL != "" {
 				nextURL := AddApiKeyToUrl(ticker.NextURL, apiKey)
-				response = GetAndCheckResponse(nextURL)
+				response = FetchResponse(nextURL)
 			} else {
 				return
 			}
