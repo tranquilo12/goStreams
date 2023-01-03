@@ -1,52 +1,58 @@
 package db
 
 import (
-	"lightning/utils/structs"
+	"fmt"
 	"time"
 )
 
-// GetNewDatePair gets a new Date Pair, with the Interval already initialized.
-func GetNewDatePair(start time.Time, end time.Time, target time.Time) structs.DatePairs {
-	// If we're initiating a new DatePair, we don't have an end, just a target
-	// So just make sure the end is one more day ahead of the start date.
-	if end.IsZero() {
-		end = start.Add(24 * time.Hour)
+func NYSEHolidays(startYear, endYear int) map[string]bool {
+	holidays := map[string]bool{}
+	for year := startYear; year <= endYear; year++ {
+		// New Year's Day
+		holidays[fmt.Sprintf("%d-01-01", year)] = true
+		// Martin Luther King Jr. Day
+		holidays[fmt.Sprintf("%d-01-17", year)] = true
+		// Presidents' Day
+		holidays[fmt.Sprintf("%d-02-21", year)] = true
+		// Memorial Day
+		holidays[fmt.Sprintf("%d-05-30", year)] = true
+		// Independence Day
+		holidays[fmt.Sprintf("%d-07-04", year)] = true
+		// Labor Day
+		holidays[fmt.Sprintf("%d-09-05", year)] = true
+		// Thanksgiving Day
+		holidays[fmt.Sprintf("%d-11-25", year)] = true
+		// Day after Thanksgiving
+		holidays[fmt.Sprintf("%d-11-26", year)] = true
+		// Christmas Eve (early close)
+		holidays[fmt.Sprintf("%d-12-24", year)] = true
+		// Christmas Day
+		holidays[fmt.Sprintf("%d-12-25", year)] = true
 	}
-	dp := structs.DatePairs{Start: start, End: end, Target: target}
-	_ = dp.SetInterval()
-	return dp
+	return holidays
 }
 
-// RecursivelyAddOneDay Just adds one day to the date pair, depending upon the end date
-// if the interval between the two times is less than a day, just return end else add one more day
-func RecursivelyAddOneDay(dp structs.DatePairs, end time.Time, results *[]structs.DatePairs) {
-	// Check if the gap between the days is more than 1 day, and if so create a new DatePair with one day interval
-	// And add it to results
-	if dp.End.Before(dp.Target) || (dp.Interval >= 24) {
-		// Establish that Start and End have to be updated, and Interval is set/updated.
-		dp.Start = dp.Start.Add(24 * time.Hour)
-		dp.End = dp.Start.Add(24 * time.Hour)
-		dp.Target = end
-		_ = dp.SetInterval()
-		// Append to results
-		*results = append(*results, dp)
-		// Now recursively call self till it's done.
-		RecursivelyAddOneDay(dp, end, results)
-	} else {
-		// Else, just finish up
-		dp.End = end
-		*results = append(*results, dp)
+func BusinessDayPairs(start, end string) [][2]string {
+	s, err := time.Parse(TimeLayout, start)
+	if err != nil {
+		fmt.Println(err)
+		return nil
 	}
-}
 
-func CreateDatePairs(from string, to string) *[]structs.DatePairs {
-	// Parse the datetime provided
-	Start, _ := time.Parse(TimeLayout, from)
-	End, _ := time.Parse(TimeLayout, to)
-	dp := GetNewDatePair(Start, time.Time{}, End)
+	e, err := time.Parse(TimeLayout, end)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
 
-	// Now, according to the dates provided, make a slice consisting of DatePairs each with a gap of one day.
-	var results []structs.DatePairs
-	RecursivelyAddOneDay(dp, End, &results)
-	return &results
+	holidays := NYSEHolidays(s.Year(), e.Year())
+
+	var pairs [][2]string
+	for d := s; d.Before(e) || d.Equal(e); d = d.AddDate(0, 0, 1) {
+		if d.Weekday() == time.Saturday || d.Weekday() == time.Sunday || holidays[d.Format(TimeLayout)] {
+			continue
+		}
+		pairs = append(pairs, [2]string{d.Format(TimeLayout), d.AddDate(0, 0, 1).Format(TimeLayout)})
+	}
+	return pairs
 }

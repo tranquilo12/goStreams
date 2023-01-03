@@ -7,6 +7,7 @@ import (
 	"github.com/schollz/progressbar/v3"
 	"net/url"
 	"path"
+	"time"
 )
 
 const (
@@ -71,32 +72,38 @@ func PushAllUrlsToTable(
 	fmt.Println("-	Making and pushing all urls to db...")
 
 	// First create all the date pairs required
-	datePairs := CreateDatePairs(from_, to_)
+	datePairs := BusinessDayPairs(from_, to_)
 
 	// Connect to QDB and get sender
 	sender, _ := qdb.NewLineSender(ctx)
 
 	// Now for each ticker, and for each of the datePairs above, make urls.
 	for _, ticker := range tickers {
-		for _, dp := range *datePairs {
+		for _, d := range datePairs {
 			// Make the urls here
 			u := MakeStocksAggUrl(
 				ticker,
 				"1",
 				timespan,
-				dp.Start.Format(TimeLayout),
-				dp.End.Format(TimeLayout),
+				d[0],
+				d[1],
 				apiKey,
 				adjusted,
 			)
 
+			// Parse the dates
+			s, err := time.Parse(TimeLayout, d[0])
+			CheckErr(err)
+			e, err := time.Parse(TimeLayout, d[1])
+			CheckErr(err)
+
 			// Push to db
-			err := sender.Table("urls").
+			err = sender.Table("urls").
 				Symbol("ticker", ticker).
-				Int64Column("start", dp.Start.UnixMicro()).
+				Int64Column("start", s.UnixMicro()).
 				StringColumn("url", u.String()).
 				BoolColumn("retry", false).
-				At(ctx, dp.End.UnixNano())
+				At(ctx, e.UnixNano())
 			if err != nil {
 				panic(err)
 			}
