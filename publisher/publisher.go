@@ -72,8 +72,8 @@ func AggChannelWriter(
 	// use WaitGroup to make things more smooth with goroutines
 	var wg sync.WaitGroup
 
-	// create a buffer of the waitGroup, of the same length as urls
-	wg.Add(len(urls))
+	// create a buffer of the waitGroup, of the same length as urls + 1 for the goroutine below
+	wg.Add(len(urls) + 1)
 
 	// Get the http client, it's a modified version with extended timeout and other features.
 	httpClient := config.GetHttpClient()
@@ -81,17 +81,16 @@ func AggChannelWriter(
 	// Get the channel that will be used to write to QuestDB
 	c := make(chan structs.AggregatesBarsResponse, len(urls))
 
-	// Add another wait group for the goroutine below
-	wg.Add(1)
-
 	// Make a goroutine that will accept data from a channel and push to questDB
 	ctx := context.TODO()
 
-	// Get newline sender
+	// Get newline sender, no need to create a new one for each goroutine
+	// it will be closed right after the channel is closed.
 	sender, err := qdb.NewLineSender(ctx)
 	db.CheckErr(err)
 
-	// Go Func to insert data into the database, reads from the channel
+	// goroutine to insert data into the database, reads from the channel
+	// necessary to put this within a goroutine, as this is a blocking operation.
 	go func() {
 		// Makes sure wg closes
 		defer wg.Done()
@@ -102,8 +101,6 @@ func AggChannelWriter(
 				for _, v := range res.Results {
 					err := sender.Table("aggs").
 						Symbol("ticker", res.Ticker).
-						StringColumn("timespan", "minute").
-						Int64Column("multiplier", int64(1)).
 						Float64Column("open", v.O).
 						Float64Column("high", v.H).
 						Float64Column("low", v.L).
@@ -124,7 +121,7 @@ func AggChannelWriter(
 
 	// Max allow 1000 requests per second
 	prev := time.Now()
-	rateLimiter := ratelimit.New(50000)
+	rateLimiter := ratelimit.New(1000)
 
 	// Iterate over every url, create goroutine for each url download and rate limit the requests
 	for _, u := range urls {
@@ -148,7 +145,7 @@ func AggChannelWriter(
 		}
 	}()
 
-	return nil
+	return err
 }
 
 func channelWriter(
@@ -172,7 +169,7 @@ func channelWriter(
 		chan1 <- structs.AggregatesBarsResponse{Results: nil}
 	} else {
 		// Send the data to QDB, if response is not empty
-		if res.Results != nil {
+		if res.Resultscount > 0 {
 			chan1 <- res
 		} else {
 			// Send a nil results to the channel
