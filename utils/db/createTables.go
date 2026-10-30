@@ -83,7 +83,7 @@ func CreateAllTablesModel(user string, password string, database string, host st
 					 END IF;
 					 END$$;
 
-					 CREATE USER grafanareader WITH PASSWORD 'Complicated@Password@Here';
+					 CREATE USER grafanareader WITH PASSWORD 'REDACTED';
 					 GRANT USAGE ON SCHEMA public TO grafanareader;
 					 GRANT SELECT ON public.aggregates_bars TO grafanareader;
 					 GRANT SELECT ON public.ticker_vxes TO grafanareader;
